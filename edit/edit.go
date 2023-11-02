@@ -1,10 +1,10 @@
 package edit
 
 import (
-	"github.com/revelaction/segrob/file"
-	"github.com/revelaction/segrob/topic"
 	"errors"
 	"fmt"
+	"github.com/revelaction/segrob/file"
+	"github.com/revelaction/segrob/topic"
 	"strings"
 
 	prompt "github.com/c-bata/go-prompt"
@@ -52,7 +52,6 @@ func (h *Handler) Run() error {
 		if in == "quit" {
 			return nil
 		}
-
 
 		history = append(history, in)
 		tp, expr, action, err := h.parse(in)
