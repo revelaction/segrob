@@ -1,13 +1,13 @@
 package query
 
 import (
+	"errors"
 	"fmt"
 	"github.com/revelaction/segrob/file"
 	"github.com/revelaction/segrob/match"
 	"github.com/revelaction/segrob/render"
 	sent "github.com/revelaction/segrob/sentence"
 	"github.com/revelaction/segrob/topic"
-	"errors"
 	"strings"
 
 	prompt "github.com/c-bata/go-prompt"
