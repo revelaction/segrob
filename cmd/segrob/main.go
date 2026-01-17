@@ -142,6 +142,22 @@ func runCommand(cmd string, args []string, ui UI) error {
 			return err
 		}
 		return statCommand(docId, sentId, ui)
+
+	case "bash":
+		if err := parseBashArgs(args, ui); err != nil {
+			if errors.Is(err, flag.ErrHelp) {
+				return nil
+			}
+			return err
+		}
+		return bashCommand(ui)
+
+	case "complete":
+		completeArgs, err := parseCompleteArgs(args, ui)
+		if err != nil {
+			return err
+		}
+		return completeCommand(completeArgs, ui)
 	}
 
 	return fmt.Errorf("unknown command: %s", cmd)
@@ -385,10 +401,6 @@ func docCommand(opts DocOptions, first string, start, end *int, ui UI) error {
 		if err != nil {
 			return err
 		}
-	}
-
-	if opts.Token {
-		return nil
 	}
 
 	for i, sentence := range doc.Tokens {

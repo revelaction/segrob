@@ -35,7 +35,6 @@ type TopicsOptions struct {
 }
 
 type DocOptions struct {
-	Token bool
 }
 
 // stringSliceFlag implements flag.Value for multi-value strings
@@ -127,8 +126,6 @@ func parseDocArgs(args []string, ui UI) (DocOptions, string, *int, *int, error) 
 	fs.SetOutput(io.Discard)
 
 	var opts DocOptions
-	fs.BoolVar(&opts.Token, "token", false, "Show Doc (parts) as json Lesson document")
-	fs.BoolVar(&opts.Token, "t", false, "alias for -token")
 
 	fs.Usage = func() {
 		_, _ = fmt.Fprintf(fs.Output(), "Usage: %s doc [options] [docId|match] [startSentence] [endSentence]\n", os.Args[0])
@@ -471,6 +468,40 @@ func parseStatArgs(args []string, ui UI) (int, *int, error) {
 	return docId, sentId, nil
 }
 
+func parseBashArgs(args []string, ui UI) error {
+	fs := flag.NewFlagSet("bash", flag.ContinueOnError)
+	fs.SetOutput(io.Discard)
+	fs.Usage = func() {
+		_, _ = fmt.Fprintf(fs.Output(), "Usage: %s bash\n", os.Args[0])
+		_, _ = fmt.Fprintf(fs.Output(), "\nDescription:\n")
+		_, _ = fmt.Fprintf(fs.Output(), "  Output bash completion script.\n")
+	}
+
+	if err := fs.Parse(args); err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			fs.SetOutput(ui.Out)
+			fs.Usage()
+			return err
+		}
+		fs.SetOutput(ui.Err)
+		fprintErr(ui.Err, err)
+		fs.Usage()
+		return err
+	}
+	return nil
+}
+
+func parseCompleteArgs(args []string, ui UI) ([]string, error) {
+	fs := flag.NewFlagSet("complete", flag.ContinueOnError)
+	fs.SetOutput(io.Discard)
+
+	if err := fs.Parse(args); err != nil {
+		return nil, err
+	}
+
+	return fs.Args(), nil
+}
+
 func setupUsage(fs *flag.FlagSet) {
 	fs.Usage = func() {
 		output := fs.Output()
@@ -486,6 +517,7 @@ func setupUsage(fs *flag.FlagSet) {
 		_, _ = fmt.Fprintf(output, "  edit      Enter interactive edit mode.\n")
 		_, _ = fmt.Fprintf(output, "  topic     List topics or show expressions of a topic.\n")
 		_, _ = fmt.Fprintf(output, "  stat      Show statistics for a document or sentence.\n")
+		_, _ = fmt.Fprintf(output, "  bash      Output bash completion script.\n")
 		_, _ = fmt.Fprintf(output, "  help      Show help for a command.\n")
 	}
 }
