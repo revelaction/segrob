@@ -31,7 +31,7 @@ type UI struct {
 func main() {
 	ui := UI{Out: os.Stdout, Err: os.Stderr}
 
-	cmd, args, opts, err := parseMainArgs(os.Args[1:], ui)
+	cmd, args, err := parseMainArgs(os.Args[1:], ui)
 	if err != nil {
 		if errors.Is(err, flag.ErrHelp) {
 			os.Exit(0)
@@ -39,7 +39,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err := runCommand(cmd, args, opts, ui); err != nil {
+	if err := runCommand(cmd, args, ui); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
 			os.Exit(0)
 		}
@@ -52,11 +52,11 @@ func fprintErr(w io.Writer, err error) {
 	_, _ = fmt.Fprintf(w, "segrob: %v\n", err)
 }
 
-func runCommand(cmd string, args []string, opts GlobalOptions, ui UI) error {
+func runCommand(cmd string, args []string, ui UI) error {
 	switch cmd {
 	case "help":
 		if len(args) > 0 {
-			return runCommand(args[0], []string{"--help"}, opts, ui)
+			return runCommand(args[0], []string{"--help"}, ui)
 		}
 		fs := flag.NewFlagSet("segrob", flag.ContinueOnError)
 		fs.SetOutput(ui.Out)
@@ -65,7 +65,7 @@ func runCommand(cmd string, args []string, opts GlobalOptions, ui UI) error {
 		return nil
 
 	case "doc":
-		first, start, end, err := parseDocArgs(args, ui)
+		opts, first, start, end, err := parseDocArgs(args, ui)
 		if err != nil {
 			if errors.Is(err, flag.ErrHelp) {
 				return nil
@@ -82,10 +82,10 @@ func runCommand(cmd string, args []string, opts GlobalOptions, ui UI) error {
 			}
 			return err
 		}
-		return sentenceCommand(opts, docId, sentId, offset, ui)
+		return sentenceCommand(docId, sentId, offset, ui)
 
 	case "topics":
-		docId, sentId, err := parseTopicsArgs(args, ui)
+		opts, docId, sentId, err := parseTopicsArgs(args, ui)
 		if err != nil {
 			if errors.Is(err, flag.ErrHelp) {
 				return nil
@@ -95,7 +95,7 @@ func runCommand(cmd string, args []string, opts GlobalOptions, ui UI) error {
 		return topicsCommand(opts, docId, sentId, ui)
 
 	case "expr":
-		cmdArgs, err := parseExprArgs(args, ui)
+		opts, cmdArgs, err := parseExprArgs(args, ui)
 		if err != nil {
 			if errors.Is(err, flag.ErrHelp) {
 				return nil
@@ -105,7 +105,8 @@ func runCommand(cmd string, args []string, opts GlobalOptions, ui UI) error {
 		return exprCommand(opts, cmdArgs, ui)
 
 	case "query":
-		if err := parseQueryArgs(args, ui); err != nil {
+		opts, err := parseQueryArgs(args, ui)
+		if err != nil {
 			if errors.Is(err, flag.ErrHelp) {
 				return nil
 			}
@@ -120,7 +121,7 @@ func runCommand(cmd string, args []string, opts GlobalOptions, ui UI) error {
 			}
 			return err
 		}
-		return editCommand(opts, ui)
+		return editCommand(ui)
 
 	case "topic":
 		name, err := parseTopicArgs(args, ui)
@@ -130,7 +131,7 @@ func runCommand(cmd string, args []string, opts GlobalOptions, ui UI) error {
 			}
 			return err
 		}
-		return topicCommand(opts, name, ui)
+		return topicCommand(name, ui)
 
 	case "stat":
 		docId, sentId, err := parseStatArgs(args, ui)
@@ -140,14 +141,14 @@ func runCommand(cmd string, args []string, opts GlobalOptions, ui UI) error {
 			}
 			return err
 		}
-		return statCommand(opts, docId, sentId, ui)
+		return statCommand(docId, sentId, ui)
 	}
 
 	return fmt.Errorf("unknown command: %s", cmd)
 }
 
 // Query command
-func queryCommand(opts GlobalOptions, ui UI) error {
+func queryCommand(opts QueryOptions, ui UI) error {
 
 	// Load docs
 	fhr, err := file.NewDocHandler()
@@ -240,10 +241,10 @@ func topicLibrary(th *file.TopicHandler, ui UI) (topic.Library, error) {
 	return library, nil
 }
 
-func matchDocs(matcher *match.Matcher, opts GlobalOptions, ui UI) error {
+func matchDocs(matcher *match.Matcher, opts ExprOptions, ui UI) error {
 
-	if opts.Sent != -1 {
-		if opts.Doc == -1 {
+	if opts.Sent != nil {
+		if opts.Doc == nil {
 			return errors.New("--sent flag given but no --doc")
 		}
 	}
@@ -260,8 +261,8 @@ func matchDocs(matcher *match.Matcher, opts GlobalOptions, ui UI) error {
 		return err
 	}
 
-	if opts.Doc != -1 {
-		docId := opts.Doc
+	if opts.Doc != nil {
+		docId := *opts.Doc
 		doc, err := fhr.Doc(docId)
 		if err != nil {
 			return err
@@ -269,8 +270,8 @@ func matchDocs(matcher *match.Matcher, opts GlobalOptions, ui UI) error {
 
 		doc.Id = docId
 
-		if opts.Sent != -1 {
-			doc = sent.Doc{Tokens: [][]sent.Token{doc.Tokens[opts.Sent]}}
+		if opts.Sent != nil {
+			doc = sent.Doc{Tokens: [][]sent.Token{doc.Tokens[*opts.Sent]}}
 		}
 
 		matcher.Match(doc)
@@ -304,7 +305,7 @@ func matchDocs(matcher *match.Matcher, opts GlobalOptions, ui UI) error {
 	return nil
 }
 
-func statCommand(opts GlobalOptions, docId, sentId int, ui UI) error {
+func statCommand(docId int, sentId *int, ui UI) error {
 
 	fhr, err := file.NewDocHandler()
 	if err != nil {
@@ -316,9 +317,9 @@ func statCommand(opts GlobalOptions, docId, sentId int, ui UI) error {
 		return err
 	}
 
-	if sentId != -1 {
+	if sentId != nil {
 		// rewrite
-		doc = sent.Doc{Tokens: [][]sent.Token{doc.Tokens[sentId]}}
+		doc = sent.Doc{Tokens: [][]sent.Token{doc.Tokens[*sentId]}}
 	}
 
 	hdl := stat.NewHandler()
@@ -330,7 +331,7 @@ func statCommand(opts GlobalOptions, docId, sentId int, ui UI) error {
 	return nil
 }
 
-func exprCommand(opts GlobalOptions, args []string, ui UI) error {
+func exprCommand(opts ExprOptions, args []string, ui UI) error {
 
 	// args is guaranteed to have at least 1 element by parseExprArgs
 	// parse the expr expression
@@ -349,7 +350,7 @@ func exprCommand(opts GlobalOptions, args []string, ui UI) error {
 	return nil
 }
 
-func docCommand(opts GlobalOptions, first string, start, end int, ui UI) error {
+func docCommand(opts DocOptions, first string, start, end *int, ui UI) error {
 
 	fhr, err := file.NewDocHandler()
 	if err != nil {
@@ -391,11 +392,11 @@ func docCommand(opts GlobalOptions, first string, start, end int, ui UI) error {
 	}
 
 	for i, sentence := range doc.Tokens {
-		if i < start {
+		if start != nil && i < *start {
 			continue
 		}
 
-		if end > 0 && i > end {
+		if end != nil && i > *end {
 			continue
 		}
 
@@ -408,7 +409,7 @@ func docCommand(opts GlobalOptions, first string, start, end int, ui UI) error {
 	return nil
 }
 
-func sentenceCommand(opts GlobalOptions, docId, sentId, offset int, ui UI) error {
+func sentenceCommand(docId, sentId int, offset *int, ui UI) error {
 
 	fhr, err := file.NewDocHandler()
 	if err != nil {
@@ -427,12 +428,17 @@ func sentenceCommand(opts GlobalOptions, docId, sentId, offset int, ui UI) error
 	r.Sentence(s, prefix)
 	fmt.Fprintln(ui.Out)
 
+	offVal := 0
+	if offset != nil {
+		offVal = *offset
+	}
+
 	// check len
-	if offset > len(s) {
+	if offVal > len(s) {
 		return errors.New("offset is greater than length of sentence. Usage <docId> <sentenceId> [offset]")
 	}
 
-	for _, token := range s[offset:] {
+	for _, token := range s[offVal:] {
 		// print
 		fmt.Fprintf(ui.Out, "%20q %15q %8s %6d %6d %8s %s\n", token.Text, token.Lemma, token.Pos, token.Id, token.Head, token.Dep, token.Tag)
 	}
@@ -440,7 +446,7 @@ func sentenceCommand(opts GlobalOptions, docId, sentId, offset int, ui UI) error
 	return nil
 }
 
-func editCommand(opts GlobalOptions, ui UI) error {
+func editCommand(ui UI) error {
 
 	th := file.NewTopicHandler()
 
@@ -453,7 +459,7 @@ func editCommand(opts GlobalOptions, ui UI) error {
 	return hdl.Run()
 }
 
-func topicsCommand(opts GlobalOptions, docId, sentId int, ui UI) error {
+func topicsCommand(opts TopicsOptions, docId, sentId int, ui UI) error {
 
 	fhr, err := file.NewDocHandler()
 	if err != nil {
@@ -527,7 +533,7 @@ func hasLabels(fileLabels, cmdLabels []string) bool {
 }
 
 // topicCommand prints the expressions of a topic
-func topicCommand(opts GlobalOptions, name string, ui UI) error {
+func topicCommand(name string, ui UI) error {
 
 	fhr := file.NewTopicHandler()
 

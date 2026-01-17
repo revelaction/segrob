@@ -12,17 +12,30 @@ import (
 	"github.com/revelaction/segrob/render"
 )
 
-// GlobalOptions holds all global flag values
-type GlobalOptions struct {
+// Option structs for subcommands that have flags
+type ExprOptions struct {
 	Labels   []string
 	NoColor  bool
 	NoPrefix bool
-	Doc      int
-	Sent     int
+	Doc      *int // nil = not set
+	Sent     *int // nil = not set
 	NMatches int
 	Format   string
-	Expr     string
-	Token    bool
+}
+
+type QueryOptions struct {
+	NoColor  bool
+	NoPrefix bool
+	NMatches int
+	Format   string
+}
+
+type TopicsOptions struct {
+	Format string
+}
+
+type DocOptions struct {
+	Token bool
 }
 
 // stringSliceFlag implements flag.Value for multi-value strings
@@ -60,113 +73,110 @@ func (e *enumFlag) Set(value string) error {
 	return fmt.Errorf("allowed values are %s", strings.Join(e.allowed, ", "))
 }
 
-func parseMainArgs(args []string, ui UI) (string, []string, GlobalOptions, error) {
+// optionalInt implements flag.Value for optional integer flags
+type optionalInt struct {
+	value *int
+}
+
+func (o *optionalInt) String() string {
+	if o.value == nil {
+		return ""
+	}
+	return strconv.Itoa(*o.value)
+}
+
+func (o *optionalInt) Set(s string) error {
+	v, err := strconv.Atoi(s)
+	if err != nil {
+		return err
+	}
+	o.value = &v
+	return nil
+}
+
+func parseMainArgs(args []string, ui UI) (string, []string, error) {
 	fs := flag.NewFlagSet("segrob", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
-
-	var opts GlobalOptions
-	labels := (*stringSliceFlag)(&opts.Labels)
-	fs.Var(labels, "label", "Only scan those token files that match the labels (contains)")
-	fs.Var(labels, "l", "alias for -label")
-
-	fs.BoolVar(&opts.NoColor, "no-color", false, "Show matched sentences without formatting (color)")
-	fs.BoolVar(&opts.NoColor, "c", false, "alias for -no-color")
-
-	fs.BoolVar(&opts.NoPrefix, "no-prefix", false, "Show matched sentences without prefixes with metadata")
-	fs.BoolVar(&opts.NoPrefix, "x", false, "alias for -no-prefix")
-
-	fs.IntVar(&opts.Doc, "doc", -1, "Limit searched to the doc specified by this number")
-	fs.IntVar(&opts.Doc, "d", -1, "alias for -doc")
-
-	fs.IntVar(&opts.Sent, "sent", -1, "Limit searched to the sentence specified by this number. Needs --doc")
-	fs.IntVar(&opts.Sent, "s", -1, "alias for -sent")
-
-	fs.IntVar(&opts.NMatches, "nmatches", 0, "Only show matched sentences with score greater than this number")
-	fs.IntVar(&opts.NMatches, "n", 0, "alias for -nmatches")
-
-	opts.Format = render.Defaultformat
-	formatFlag := &enumFlag{allowed: render.SupportedFormats(), value: &opts.Format}
-	fs.Var(formatFlag, "format", "Show whole sentence (all), only surrounding of matched words (part) or only matches words (lemma)")
-	fs.Var(formatFlag, "f", "alias for -format")
-
-	fs.StringVar(&opts.Expr, "expr", "", "train: Select words in prompt that match this expression token (only Tag supported)")
-	fs.StringVar(&opts.Expr, "e", "", "alias for -expr")
-
-	fs.BoolVar(&opts.Token, "token", false, "doc: Show Doc (parts) as json Lesson document")
-	fs.BoolVar(&opts.Token, "t", false, "alias for -token")
-
 	setupUsage(fs)
 
 	if err := fs.Parse(args); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
 			fs.SetOutput(ui.Out)
 			fs.Usage()
-			return "", nil, opts, err
+			return "", nil, err
 		}
 		fs.SetOutput(ui.Err)
 		fprintErr(ui.Err, err)
 		fs.Usage()
-		return "", nil, opts, err
+		return "", nil, err
 	}
 
 	if fs.NArg() == 0 {
 		fs.SetOutput(ui.Err)
 		fs.Usage()
-		return "", nil, opts, errors.New("no command provided")
+		return "", nil, errors.New("no command provided")
 	}
 
 	cmd := fs.Arg(0)
 	cmdArgs := fs.Args()[1:]
-	return cmd, cmdArgs, opts, nil
+	return cmd, cmdArgs, nil
 }
 
-func parseDocArgs(args []string, ui UI) (string, int, int, error) {
+func parseDocArgs(args []string, ui UI) (DocOptions, string, *int, *int, error) {
 	fs := flag.NewFlagSet("doc", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
+
+	var opts DocOptions
+	fs.BoolVar(&opts.Token, "token", false, "Show Doc (parts) as json Lesson document")
+	fs.BoolVar(&opts.Token, "t", false, "alias for -token")
+
 	fs.Usage = func() {
-		_, _ = fmt.Fprintf(fs.Output(), "Usage: %s doc [docId|match] [startSentence] [endSentence]\n", os.Args[0])
+		_, _ = fmt.Fprintf(fs.Output(), "Usage: %s doc [options] [docId|match] [startSentence] [endSentence]\n", os.Args[0])
 		_, _ = fmt.Fprintf(fs.Output(), "\nDescription:\n")
 		_, _ = fmt.Fprintf(fs.Output(), "  List documents or show contents of a document.\n")
+		_, _ = fmt.Fprintf(fs.Output(), "\nOptions:\n")
+		fs.PrintDefaults()
 	}
 
 	if err := fs.Parse(args); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
 			fs.SetOutput(ui.Out)
 			fs.Usage()
-			return "", 0, 0, err
+			return opts, "", nil, nil, err
 		}
 		fs.SetOutput(ui.Err)
 		fprintErr(ui.Err, err)
 		fs.Usage()
-		return "", 0, 0, err
+		return opts, "", nil, nil, err
 	}
 
 	first := ""
-	start := 0
-	end := 0
+	var start, end *int
 	docArgs := fs.Args()
+
 	if len(docArgs) > 0 {
 		first = docArgs[0]
 	}
+
 	if len(docArgs) > 1 {
 		v, vErr := strconv.Atoi(docArgs[1])
 		if vErr != nil {
-			return "", 0, 0, fmt.Errorf("invalid startSentence: %v", vErr)
+			return opts, "", nil, nil, fmt.Errorf("invalid startSentence: %v", vErr)
 		}
-		start = v
+		start = &v
 	}
 	if len(docArgs) > 2 {
 		v, vErr := strconv.Atoi(docArgs[2])
 		if vErr != nil {
-			return "", 0, 0, fmt.Errorf("invalid endSentence: %v", vErr)
+			return opts, "", nil, nil, fmt.Errorf("invalid endSentence: %v", vErr)
 		}
-		end = v
+		end = &v
 	}
 
-	return first, start, end, nil
+	return opts, first, start, end, nil
 }
 
-func parseSentenceArgs(args []string, ui UI) (int, int, int, error) {
+func parseSentenceArgs(args []string, ui UI) (int, int, *int, error) {
 	fs := flag.NewFlagSet("sentence", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
 	fs.Usage = func() {
@@ -179,132 +189,192 @@ func parseSentenceArgs(args []string, ui UI) (int, int, int, error) {
 		if errors.Is(err, flag.ErrHelp) {
 			fs.SetOutput(ui.Out)
 			fs.Usage()
-			return 0, 0, 0, err
+			return 0, 0, nil, err
 		}
 		fs.SetOutput(ui.Err)
 		fprintErr(ui.Err, err)
 		fs.Usage()
-		return 0, 0, 0, err
+		return 0, 0, nil, err
 	}
 
 	if fs.NArg() < 2 {
 		fs.SetOutput(ui.Err)
 		fs.Usage()
-		return 0, 0, 0, errors.New("sentence command needs at least two arguments: <docId> <sentenceId>")
+		return 0, 0, nil, errors.New("sentence command needs at least two arguments: <docId> <sentenceId>")
 	}
 
 	docArgs := fs.Args()
 	docId, docErr := strconv.Atoi(docArgs[0])
 	if docErr != nil {
-		return 0, 0, 0, fmt.Errorf("invalid docId: %v", docErr)
+		return 0, 0, nil, fmt.Errorf("invalid docId: %v", docErr)
 	}
 	sentId, sentErr := strconv.Atoi(docArgs[1])
 	if sentErr != nil {
-		return 0, 0, 0, fmt.Errorf("invalid sentenceId: %v", sentErr)
+		return 0, 0, nil, fmt.Errorf("invalid sentenceId: %v", sentErr)
 	}
-	offset := 0
+
+	var offset *int
 	if len(docArgs) > 2 {
 		v, vErr := strconv.Atoi(docArgs[2])
 		if vErr != nil {
-			return 0, 0, 0, fmt.Errorf("invalid offset: %v", vErr)
+			return 0, 0, nil, fmt.Errorf("invalid offset: %v", vErr)
 		}
-		offset = v
+		offset = &v
 	}
 
 	return docId, sentId, offset, nil
 }
 
-func parseTopicsArgs(args []string, ui UI) (int, int, error) {
+func parseTopicsArgs(args []string, ui UI) (TopicsOptions, int, int, error) {
 	fs := flag.NewFlagSet("topics", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
+
+	var opts TopicsOptions
+	opts.Format = render.Defaultformat
+	formatFlag := &enumFlag{allowed: render.SupportedFormats(), value: &opts.Format}
+	fs.Var(formatFlag, "format", "Show whole sentence (all), only surrounding of matched words (part) or only matches words (lemma)")
+	fs.Var(formatFlag, "f", "alias for -format")
+
 	fs.Usage = func() {
-		_, _ = fmt.Fprintf(fs.Output(), "Usage: %s topics <docId> <sentenceId>\n", os.Args[0])
+		_, _ = fmt.Fprintf(fs.Output(), "Usage: %s topics [options] <docId> <sentenceId>\n", os.Args[0])
 		_, _ = fmt.Fprintf(fs.Output(), "\nDescription:\n")
 		_, _ = fmt.Fprintf(fs.Output(), "  Show topics for a specific sentence.\n")
+		_, _ = fmt.Fprintf(fs.Output(), "\nOptions:\n")
+		fs.PrintDefaults()
 	}
 
 	if err := fs.Parse(args); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
 			fs.SetOutput(ui.Out)
 			fs.Usage()
-			return 0, 0, err
+			return opts, 0, 0, err
 		}
 		fs.SetOutput(ui.Err)
 		fprintErr(ui.Err, err)
 		fs.Usage()
-		return 0, 0, err
+		return opts, 0, 0, err
 	}
 
 	if fs.NArg() != 2 {
 		fs.SetOutput(ui.Err)
 		fs.Usage()
-		return 0, 0, errors.New("topics command needs two arguments: <docId> <sentenceId>")
+		return opts, 0, 0, errors.New("topics command needs two arguments: <docId> <sentenceId>")
 	}
 
 	docArgs := fs.Args()
 	docId, docErr := strconv.Atoi(docArgs[0])
 	if docErr != nil {
-		return 0, 0, fmt.Errorf("invalid docId: %v", docErr)
+		return opts, 0, 0, fmt.Errorf("invalid docId: %v", docErr)
 	}
 	sentId, sentErr := strconv.Atoi(docArgs[1])
 	if sentErr != nil {
-		return 0, 0, fmt.Errorf("invalid sentenceId: %v", sentErr)
+		return opts, 0, 0, fmt.Errorf("invalid sentenceId: %v", sentErr)
 	}
 
-	return docId, sentId, nil
+	return opts, docId, sentId, nil
 }
 
-func parseExprArgs(args []string, ui UI) ([]string, error) {
+func parseExprArgs(args []string, ui UI) (ExprOptions, []string, error) {
 	fs := flag.NewFlagSet("expr", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
+
+	var opts ExprOptions
+	labels := (*stringSliceFlag)(&opts.Labels)
+	fs.Var(labels, "label", "Only scan those token files that match the labels (contains)")
+	fs.Var(labels, "l", "alias for -label")
+
+	fs.BoolVar(&opts.NoColor, "no-color", false, "Show matched sentences without formatting (color)")
+	fs.BoolVar(&opts.NoColor, "c", false, "alias for -no-color")
+
+	fs.BoolVar(&opts.NoPrefix, "no-prefix", false, "Show matched sentences without prefixes with metadata")
+	fs.BoolVar(&opts.NoPrefix, "x", false, "alias for -no-prefix")
+
+	var docOpt, sentOpt optionalInt
+	fs.Var(&docOpt, "doc", "Limit searched to the doc specified by this number")
+	fs.Var(&docOpt, "d", "alias for -doc")
+
+	fs.Var(&sentOpt, "sent", "Limit searched to the sentence specified by this number. Needs --doc")
+	fs.Var(&sentOpt, "s", "alias for -sent")
+
+	fs.IntVar(&opts.NMatches, "nmatches", 0, "Only show matched sentences with score greater than this number")
+	fs.IntVar(&opts.NMatches, "n", 0, "alias for -nmatches")
+
+	opts.Format = render.Defaultformat
+	formatFlag := &enumFlag{allowed: render.SupportedFormats(), value: &opts.Format}
+	fs.Var(formatFlag, "format", "Show whole sentence (all), only surrounding of matched words (part) or only matches words (lemma)")
+	fs.Var(formatFlag, "f", "alias for -format")
+
 	fs.Usage = func() {
-		_, _ = fmt.Fprintf(fs.Output(), "Usage: %s expr <topic expr item> ...\n", os.Args[0])
+		_, _ = fmt.Fprintf(fs.Output(), "Usage: %s expr [options] <topic expr item> ...\n", os.Args[0])
 		_, _ = fmt.Fprintf(fs.Output(), "\nDescription:\n")
 		_, _ = fmt.Fprintf(fs.Output(), "  Evaluate a topic expression.\n")
+		_, _ = fmt.Fprintf(fs.Output(), "\nOptions:\n")
+		fs.PrintDefaults()
 	}
 
 	if err := fs.Parse(args); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
 			fs.SetOutput(ui.Out)
 			fs.Usage()
-			return nil, err
+			return opts, nil, err
 		}
 		fs.SetOutput(ui.Err)
 		fprintErr(ui.Err, err)
 		fs.Usage()
-		return nil, err
+		return opts, nil, err
 	}
+
+	opts.Doc = docOpt.value
+	opts.Sent = sentOpt.value
 
 	if fs.NArg() < 1 {
 		fs.SetOutput(ui.Err)
 		fs.Usage()
-		return nil, errors.New("expr command needs at least one argument")
+		return opts, nil, errors.New("expr command needs at least one argument")
 	}
 
-	return fs.Args(), nil
+	return opts, fs.Args(), nil
 }
 
-func parseQueryArgs(args []string, ui UI) error {
+func parseQueryArgs(args []string, ui UI) (QueryOptions, error) {
 	fs := flag.NewFlagSet("query", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
+
+	var opts QueryOptions
+	fs.BoolVar(&opts.NoColor, "no-color", false, "Show matched sentences without formatting (color)")
+	fs.BoolVar(&opts.NoColor, "c", false, "alias for -no-color")
+
+	fs.BoolVar(&opts.NoPrefix, "no-prefix", false, "Show matched sentences without prefixes with metadata")
+	fs.BoolVar(&opts.NoPrefix, "x", false, "alias for -no-prefix")
+
+	fs.IntVar(&opts.NMatches, "nmatches", 0, "Only show matched sentences with score greater than this number")
+	fs.IntVar(&opts.NMatches, "n", 0, "alias for -nmatches")
+
+	opts.Format = render.Defaultformat
+	formatFlag := &enumFlag{allowed: render.SupportedFormats(), value: &opts.Format}
+	fs.Var(formatFlag, "format", "Show whole sentence (all), only surrounding of matched words (part) or only matches words (lemma)")
+	fs.Var(formatFlag, "f", "alias for -format")
+
 	fs.Usage = func() {
-		_, _ = fmt.Fprintf(fs.Output(), "Usage: %s query\n", os.Args[0])
+		_, _ = fmt.Fprintf(fs.Output(), "Usage: %s query [options]\n", os.Args[0])
 		_, _ = fmt.Fprintf(fs.Output(), "\nDescription:\n")
 		_, _ = fmt.Fprintf(fs.Output(), "  Enter interactive query mode.\n")
+		_, _ = fmt.Fprintf(fs.Output(), "\nOptions:\n")
+		fs.PrintDefaults()
 	}
 
 	if err := fs.Parse(args); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
 			fs.SetOutput(ui.Out)
 			fs.Usage()
-			return err
+			return opts, err
 		}
 		fs.SetOutput(ui.Err)
 		fprintErr(ui.Err, err)
 		fs.Usage()
-		return err
+		return opts, err
 	}
-	return nil
+	return opts, nil
 }
 
 func parseEditArgs(args []string, ui UI) error {
@@ -357,7 +427,7 @@ func parseTopicArgs(args []string, ui UI) (string, error) {
 	return "", nil
 }
 
-func parseStatArgs(args []string, ui UI) (int, int, error) {
+func parseStatArgs(args []string, ui UI) (int, *int, error) {
 	fs := flag.NewFlagSet("stat", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
 	fs.Usage = func() {
@@ -370,32 +440,32 @@ func parseStatArgs(args []string, ui UI) (int, int, error) {
 		if errors.Is(err, flag.ErrHelp) {
 			fs.SetOutput(ui.Out)
 			fs.Usage()
-			return 0, 0, err
+			return 0, nil, err
 		}
 		fs.SetOutput(ui.Err)
 		fprintErr(ui.Err, err)
 		fs.Usage()
-		return 0, 0, err
+		return 0, nil, err
 	}
 
 	if fs.NArg() == 0 {
 		fs.SetOutput(ui.Err)
 		fs.Usage()
-		return 0, 0, errors.New("stat command needs at least one argument")
+		return 0, nil, errors.New("stat command needs at least one argument")
 	}
 
 	docArgs := fs.Args()
 	docId, docErr := strconv.Atoi(docArgs[0])
 	if docErr != nil {
-		return 0, 0, fmt.Errorf("invalid docId: %v", docErr)
+		return 0, nil, fmt.Errorf("invalid docId: %v", docErr)
 	}
-	sentId := -1
+	var sentId *int
 	if len(docArgs) > 1 {
 		v, vErr := strconv.Atoi(docArgs[1])
 		if vErr != nil {
-			return 0, 0, fmt.Errorf("invalid sentenceId: %v", vErr)
+			return 0, nil, fmt.Errorf("invalid sentenceId: %v", vErr)
 		}
-		sentId = v
+		sentId = &v
 	}
 
 	return docId, sentId, nil
@@ -404,7 +474,7 @@ func parseStatArgs(args []string, ui UI) (int, int, error) {
 func setupUsage(fs *flag.FlagSet) {
 	fs.Usage = func() {
 		output := fs.Output()
-		_, _ = fmt.Fprintf(output, "Usage: %s [global options] command [command options] [arguments...]\n", os.Args[0])
+		_, _ = fmt.Fprintf(output, "Usage: %s command [command options] [arguments...]\n", os.Args[0])
 		_, _ = fmt.Fprintf(output, "\nDescription:\n")
 		_, _ = fmt.Fprintf(output, "  Sentence dictionary based on NLP topics\n")
 		_, _ = fmt.Fprintf(output, "\nCommands:\n")
@@ -417,7 +487,5 @@ func setupUsage(fs *flag.FlagSet) {
 		_, _ = fmt.Fprintf(output, "  topic     List topics or show expressions of a topic.\n")
 		_, _ = fmt.Fprintf(output, "  stat      Show statistics for a document or sentence.\n")
 		_, _ = fmt.Fprintf(output, "  help      Show help for a command.\n")
-		_, _ = fmt.Fprintf(output, "\nGlobal Options:\n")
-		fs.PrintDefaults()
 	}
 }
