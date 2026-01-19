@@ -42,7 +42,7 @@ Each token is a JSON object with the following fields:
 | `pos`   | `string` | Part-of-speech tag (Universal Dependencies: `VERB`, `NOUN`, `ADJ`, etc.)    |
 | `tag`   | `string` | Detailed morphological features (see [Framework Differences](#framework-differences-spacy-vs-stanza)) |
 | `dep`   | `string` | Dependency relation (lowercase: `nsubj`, `det`, `root`, etc.)               |
-| `head`  | `int`    | Index of the syntactic head token (0-based within the document)             |
+| `head`  | `int`    | Index of the syntactic head token (0-based within the sentence)             |
 | `text`  | `string` | Original word as it appears in the source text                              |
 | `sent`  | `int`    | Sentence ID (deprecated, always `0`)                                        |
 | `idx`   | `int`    | Character offset from the start of the source document (UTF-8 rune-based)   |
@@ -124,28 +124,37 @@ Key points:
 
 ---
 
-## Framework Differences: spacy vs stanza
+The `tag` field format and default tokenization behavior differ between spacy and stanza. The segrob scripts normalize these differences to provide a consistent interface for the CLI.
 
-The `tag` field format differs between spacy and stanza. The segrob scripts normalize this difference:
+### POS and Tag Normalization
 
 | Framework | Tag Format                                        |
 |-----------|---------------------------------------------------|
 | **spacy** | POS prefix included: `VERB__Mood=Ind\|Number=Sing\|Person=3` |
 | **stanza** | No prefix (raw features): `Mood=Ind\|Number=Sing\|Person=3`  |
 
-The segrob tokenizer scripts add the POS prefix for stanza output to ensure compatibility:
+#### segrob Normalization
+The segrob tokenizer scripts (`spacy3_lemmatize.py` and `stanza_lemmatize.py`) add the POS prefix for all output. For example, in `stanza_lemmatize.py`:
 
 ```python
-# stanza_lemmatize.py normalization
 if word.feats is None:
     t['tag'] = word.upos 
 else:
     t['tag'] = word.upos + "__" + word.feats
 ```
 
-This allows segrob expressions to use tag values consistently regardless of the tokenizer used.
+This ensures that segrob expressions (e.g., matching `VERB__Mood=Ind`) work identically regardless of the underlying framework.
 
-### Other Framework Differences
+### Dependency Parsing (head)
+
+Both frameworks calculate dependencies relative to the sentence. 
+
+- **Stanza** provides 1-based indices within the sentence, which are converted to 0-based by the script.
+- **spaCy** provides document-level indices (`token.head.i`), which the script converts to sentence-relative indices by subtracting the absolute index of the first token in the sentence.
+
+The resulting `head` field in the JSON is always **0-based within the sentence**.
+
+### Comparison Table
 
 | Aspect                  | spacy                                    | stanza                                      |
 |-------------------------|------------------------------------------|---------------------------------------------|
@@ -153,6 +162,10 @@ This allows segrob expressions to use tag values consistently regardless of the 
 | Lemmatizer              | Statistical only                         | Rule-based + statistical                    |
 | Sentence segmentation   | Good                                     | Slightly better                             |
 | Speed                   | Fast (~1 min/book)                       | Slow (~15+ min/book)                        |
+| Source Alignment        | `token.idx` (direct offset)              | `misc["start_char"]` (extracted)             |
+| Head Indexing           | Document-level (converted by script)     | Sentence-level (direct)                     |
+| Tag Format              | Native `POS__Morph`                      | Raw `Morph` (prefixed by script)            |
+
 
 ---
 

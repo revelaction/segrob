@@ -72,13 +72,18 @@ def main():
     for sentence in doc.sents:
         sent_tokens = []
         sentence_index = 0
+        # Absolute index of the first token in the sentence
+        sent_start_idx = sentence[0].i
 
         for token in sentence:
             # Multi-word token handling:
             # spaCy signals MWT in the lemma with spaces: "combinar él"
             # We split and create separate tokens with identical idx to signal MWT.
             morph = str(token.morph)
-            tag = token.pos_ if not morph else f"{token.pos__}__{morph}"
+            tag = token.pos_ if not morph else f"{token.pos_}__{morph}"
+
+            # Sentence-relative head index
+            head_idx = token.head.i - sent_start_idx
 
             for word in token.lemma_.split(" "):
                 t = {
@@ -86,7 +91,7 @@ def main():
                     "pos": token.pos_,
                     "tag": tag,
                     "dep": token.dep_.lower(),  # segrob requires lowercase
-                    "head": token.head.i,
+                    "head": head_idx,
                     "text": token.text,
                     "idx": token.idx,  # Character offset in source document
                     "index": sentence_index,  # Token position in sentence
