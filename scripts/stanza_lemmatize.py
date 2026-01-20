@@ -61,46 +61,77 @@ token_index = 0
 for sentence in doc.sentences:
     sent_dict = []
     for token in sentence.tokens:
-        # some mwt multi word tokens will have many words
-        # we convert to segrob tokens, where the first segrob token 
-        # [
-        #   {
-        #     "id": "5-6",
-        #     "text": "envolverse",
-        #     "ner": "O",
-        #     "misc": "start_char=2431|end_char=2441"
-        #   },
-        #   {
-        #     "id": "5",
-        #     "text": "envolver",
-        #     "lemma": "envolver",
-        #     "upos": "VERB",
-        #     "xpos": "VERB",
-        #     "feats": "VerbForm=Inf",
-        #     "head": 4,
-        #     "deprel": "xcomp"
-        #   },
-        #   {
-        #     "id": "6",
-        #     "text": "se",
-        #     "lemma": "él",
-        #     "upos": "PRON",
-        #     "xpos": "PRON",
-        #     "feats": "Case=Acc,Dat|Person=3|PrepCase=Npr|PronType=Prs|Reflex=Yes",
-        #     "head": 5,
-        #     "deprel": "obj"
-        #   }
-        # ]
 
-        # todo document
-        # all words of multi token also recevive the same index, that of the token 
-        #     "misc": "start_char=2431|end_char=2441"
+        # Multi-Word Token (MWT) Logic:
+        # -----------------------------
+        # Stanza identifies MWTs (like "envolverse" or "del") as a single Token 
+        # that contains multiple syntactic Words (Word objects).
+        #
+        # Stanza's internal representation for an MWT (e.g. "envolverse" -> "envolver" + "se") looks like this:
+        # 1. Surface Token: { "id": "5-6", "text": "envolverse", "start_char": 2431, ... }
+        # 2. Words:
+        #    - Word 1: { "id": "5", "text": "envolver", "lemma": "envolver", "pos": "VERB", ... }
+        #    - Word 2: { "id": "6", "text": "se", "lemma": "él", "pos": "PRON", ... }
+        # 
+		# Full Token JSON (to_dict):
+		# 		[
+		# 		  {
+		# 		    "id": [
+		# 		      13,
+		# 		      14
+		# 		    ],
+		# 		    "text": "meterse",
+		# 		    "start_char": 62,
+		# 		    "end_char": 69,
+		# 		    "ner": "O",
+		# 		    "multi_ner": [
+		# 		      "O"
+		# 		    ]
+		# 		  },
+		# 		  {
+		# 		    "id": 13,
+		# 		    "text": "meter",
+		# 		    "lemma": "meter",
+		# 		    "upos": "VERB",
+		# 		    "xpos": "vmn0000",
+		# 		    "feats": "VerbForm=Inf",
+		# 		    "head": 5,
+		# 		    "deprel": "conj",
+		# 		    "start_char": 62,
+		# 		    "end_char": 67
+		# 		  },
+		# 		  {
+		# 		    "id": 14,
+		# 		    "text": "se",
+		# 		    "lemma": "él",
+		# 		    "upos": "PRON",
+		# 		    "feats": "Case=Acc|Person=3|PrepCase=Npr|PronType=Prs|Reflex=Yes",
+		# 		    "head": 13,
+		# 		    "deprel": "expl:pv",
+		# 		    "start_char": 67,
+		# 		    "end_char": 69
+		# 		  }
+		# 		]
+		# 		        #
+        # Segrob's Domain Logic Requirement:
+        # ----------------------------------
+        # Segrob expects a flat sequence of syntactic units. For MWTs, we create
+        # a separate entry for each syntactic Word, but we preserve the link to the 
+        # original surface text by:
+        # 1. Assigning the SAME 'text' (e.g. "envolverse") to all constituent words.
+        # 2. Assigning the SAME 'idx' (start character offset) to all constituent words.
+        #
+        # This allows Segrob to reconstruct the sentence with correct spacing while 
+        # maintaining the full syntactic analysis.
+
+        # Grab the physical start character index from the parent Token wrapper.
+        # This attribute is the modern way to get position data (replacing regex on token.misc).
         idx = token.start_char
         if idx is None:
             raise ValueError(f"Token '{token.text}' is missing start_char information")
             
-        # do not get the dict with the misc
-
+        # Process each syntactic Word within the Stanza Token.
+        # For regular tokens, this loop runs once. For MWTs, it runs multiple times.
         for word in token.words:
             t = {}
 
