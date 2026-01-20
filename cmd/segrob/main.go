@@ -8,6 +8,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"golang.org/x/term"
 
 	"github.com/revelaction/segrob/edit"
 	"github.com/revelaction/segrob/file"
@@ -46,6 +47,8 @@ func main() {
 		fprintErr(ui.Err, err)
 		os.Exit(1)
 	}
+
+	os.Exit(0)
 }
 
 func fprintErr(w io.Writer, err error) {
@@ -53,6 +56,29 @@ func fprintErr(w io.Writer, err error) {
 }
 
 func runCommand(cmd string, args []string, ui UI) error {
+
+
+	// Centralized Terminal Reset
+    //
+    // The issue occurs because go-prompt puts your terminal into Raw Mode (to
+    // handle custom keybinds and colors) but fails to restore it to Cooked
+    // Mode (canonical mode) upon exit. When the terminal is left in Raw Mode,
+    // it often disables local echo (typing is invisible) and carriage
+    // returns.The issue occurs because go-prompt puts your terminal into Raw
+    // Mode (to handle custom keybinds and colors) but fails to restore it to
+    // Cooked Mode (canonical mode) upon exit. When the terminal is left in Raw
+    // Mode, it often disables local echo (typing is invisible) and carriage
+    // returns.
+    //
+	// For interactive commands, we save the terminal state (Cooked Mode)
+	// and strictly restore it when the function returns.
+	if cmd == "query" || cmd == "edit" {
+		fd := int(os.Stdin.Fd())
+		if state, err := term.GetState(fd); err == nil {
+			defer term.Restore(fd, state)
+		}
+	}
+
 	switch cmd {
 	case "help":
 		if len(args) > 0 {
