@@ -95,12 +95,9 @@ for sentence in doc.sentences:
         # todo document
         # all words of multi token also recevive the same index, that of the token 
         #     "misc": "start_char=2431|end_char=2441"
-        idx = 0
-        m = re.search(r'start_char=(.+)\|', token.misc)
-        if m:
-            idx = int(m.group(1))
-        else:
-            raise ValueError('A very specific bad thing happened.')
+        idx = token.start_char
+        if idx is None:
+            raise ValueError(f"Token '{token.text}' is missing start_char information")
             
         # do not get the dict with the misc
 

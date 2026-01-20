@@ -76,15 +76,16 @@ def main():
         sent_start_idx = sentence[0].i
 
         for token in sentence:
-            # Multi-word token handling:
-            # spaCy signals MWT in the lemma with spaces: "combinar él"
-            # We split and create separate tokens with identical idx to signal MWT.
             morph = str(token.morph)
             tag = token.pos_ if not morph else f"{token.pos_}__{morph}"
 
             # Sentence-relative head index
             head_idx = token.head.i - sent_start_idx
 
+            # Multi-word token handling:
+            # spaCy signals MWT in the lemma with spaces: "combinar él"
+            # We split and create separate tokens with identical idx to signal MWT.
+            # it does not split "del"
             for word in token.lemma_.split(" "):
                 t = {
                     "id": token_index,
