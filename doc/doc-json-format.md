@@ -124,7 +124,9 @@ Key points:
 
 ---
 
-The `tag` field format and default tokenization behavior differ between spacy and stanza. The segrob scripts normalize these differences to provide a consistent interface for the CLI.
+The `tag` field format and default tokenization behavior differ between spacy and stanza. Segrob's integration scripts normalize these differences to provide a consistent interface for the CLI.
+
+For a detailed comparison of how these frameworks process Spanish text natively, see [NLP Framework Differences](nlp-differences.md).
 
 ### POS and Tag Normalization
 
@@ -134,7 +136,7 @@ The `tag` field format and default tokenization behavior differ between spacy an
 | **stanza** | No prefix (raw features): `Mood=Ind\|Number=Sing\|Person=3`  |
 
 #### segrob Normalization
-The segrob tokenizer scripts (`spacy3_lemmatize.py` and `stanza_lemmatize.py`) add the POS prefix for all output. For example, in `stanza_lemmatize.py`:
+The segrob tokenizer scripts (`nlp_spacy.py` and `nlp_stanza.py`) add the POS prefix for all output. For example:
 
 ```python
 if word.feats is None:
@@ -154,17 +156,6 @@ Both frameworks calculate dependencies relative to the sentence.
 
 The resulting `head` field in the JSON is always **0-based within the sentence**.
 
-### Comparison Table
-
-| Aspect                  | spacy                                    | stanza                                      |
-|-------------------------|------------------------------------------|---------------------------------------------|
-| Multi-word tokens       | Limited support (lemma: `"combinar él"`) | Full support (separate tokens per word)     |
-| Lemmatizer              | Statistical only                         | Rule-based + statistical                    |
-| Sentence segmentation   | Good                                     | Slightly better                             |
-| Speed                   | Fast (~1 min/book)                       | Slow (~15+ min/book)                        |
-| Source Alignment        | `token.idx` (direct offset)              | `misc["start_char"]` (extracted)             |
-| Head Indexing           | Document-level (converted by script)     | Sentence-level (direct)                     |
-| Tag Format              | Native `POS__Morph`                      | Raw `Morph` (prefixed by script)            |
 
 
 ---

@@ -1,73 +1,88 @@
-# NLP Framework Differences: Stanza vs spaCy in Segrob
+# NLP Framework Differences: Stanza vs spaCy
 
-This document details the technical differences between the outputs of the Stanza and spaCy pipelines as integrated into Segrob. These differences primarily concern Multi-Word Token (MWT) handling, Part-of-Speech (POS) tagging granularity, and morphological feature sets.
+This document details the native technical differences between the Stanza and spaCy NLP frameworks as they pertain to Spanish language processing. These differences are normalized by Segrob's integration layer to provide a consistent analysis format.
 
 ## Summary Table
 
-| Feature | Stanza (`nlp_stanza.py`) | spaCy (`nlp_spacy.py`) |
+| Feature | Stanza (Native) | spaCy (Native) |
 | :--- | :--- | :--- |
-| **Contractions (e.g., "al")** | Splits into syntactic units (`a` + `el`) | Keeps as single token (`al`) |
-| **Clitics (e.g., "dámelo")** | Splits into syntactic units | Splits based on `lemma_` string |
-| **MWT Metadata** | Unique `pos`, `tag`, `lemma` per part | Duplicates `pos` and `tag` from parent |
-| **Tag Format** | `POS__Morph` (Normalized) | `POS__Morph` (Normalized) |
-| **Speed** | Slow (~15+ min/book) | Fast (~1 min/book) |
-| **Precision** | High (Rule-based + Statistical) | Moderate (Statistical) |
+| **MWT Strategy** | Multi-Word Tokens (MWTs) as separate syntactic units | Single tokens with composite lemmas |
+| **Contractions** | Splits "al" into "a" + "el" | Keeps "al" as a single token |
+| **Clitics** | Decomposes "dámelo" into "dar" + "me" + "lo" | Single token with lemma "dar yo él" |
+| **Morphology** | Universal Dependencies (UD) compliant | Custom morphological attributes |
+| **Speed** | High latency (GPU recommended) | High throughput (CPU optimized) |
+| **Precision** | Higher (especially for MWTs and morphology) | Moderate |
 
 ---
 
 ## Multi-Word Token (MWT) Handling
 
-One of the most significant differences is how compound words and clitics are decomposed.
+The most significant architectural difference is how frameworks handle syntactic units that are fused in the surface text.
 
 ### Contractions (e.g., "al")
 
-*   **Stanza**: Correctly identifies "al" as a contraction and produces two distinct tokens sharing the same source text and offset (`idx`).
-    ```json
-    [
-      {"lemma": "a", "pos": "ADP", "text": "al", "idx": 4},
-      {"lemma": "el", "pos": "DET", "text": "al", "idx": 4}
-    ]
-    ```
-*   **spaCy**: Treats "al" as a single token.
-    ```json
-    [
-      {"lemma": "al", "pos": "ADP", "text": "al", "idx": 4}
-    ]
-    ```
+*   **Stanza**: Identifies "al" as a contraction and natively produces two syntactic words linked to the same surface text.
+    *   **Native Output (Simplified)**:
+        ```json
+        [
+          {"text": "al", "lemma": "a", "pos": "ADP"},
+          {"text": "al", "lemma": "el", "pos": "DET"}
+        ]
+        ```
+*   **spaCy**: Treats "al" as an atomic syntactic unit.
+    *   **Native Output (Simplified)**:
+        ```json
+        [
+          {"text": "al", "lemma": "al", "pos": "ADP"}
+        ]
+        ```
 
-### Clitics (e.g., "Envolverse")
+### Clitics (e.g., "envolverse")
 
-Both frameworks split clitics, but the metadata associated with the split parts differs.
-
-*   **Stanza**: Assigns the correct POS and morphological tags to each component.
-    *   `envolver` -> `pos: VERB`, `tag: VERB__VerbForm=Inf`
-    *   `se` (lemma `él`) -> `pos: PRON`, `tag: PRON__Case=Acc|Person=3...`
-*   **spaCy**: The integration script `nlp_spacy.py` splits the token based on the space-separated `lemma_` attribute (`envolver él`). However, it **duplicates** the parent token's `pos` and `tag` for all resulting parts.
-    *   `envolver` -> `pos: VERB`, `tag: VERB__VerbForm=Inf...`
-    *   `él` -> `pos: VERB`, `tag: VERB__VerbForm=Inf...` (Incorrect POS/Tag)
-
----
-
-## POS and Tag Normalization
-
-Segrob normalizes tags to the `POS__Morph` format to allow consistent querying.
-
-*   **Stanza**: Morphological features are provided by the `feats` attribute in Universal Dependencies format.
-*   **spaCy**: Uses the `token.morph` attribute. The morphological feature set may differ slightly from Stanza's UD-compliant features.
-
----
-
-## Indexing and Offsets
-
-Both scripts ensure compatibility with Segrob's core logic:
-
-1.  **`idx`**: Character offset from the start of the document. For MWTs, all constituent tokens share the same `idx` to prevent duplication during reconstruction/rendering.
-2.  **`index`**: Token position within the sentence (0-based). Both scripts increment this for each syntactic unit, even within an MWT.
-3.  **`head`**: Syntactic head index. Both scripts normalize this to a 0-based index relative to the start of the sentence.
+*   **Stanza**: Decomposes the token into its constituent grammatical parts, each with its own POS and morphological features.
+    *   **Native Output (Simplified)**:
+        ```json
+        [
+          {"text": "envolver", "lemma": "envolver", "pos": "VERB", "feats": "VerbForm=Inf"},
+          {"text": "se", "lemma": "él", "pos": "PRON", "feats": "Case=Acc|Person=3|Reflex=Yes"}
+        ]
+        ```
+*   **spaCy**: Maintains the surface token as a single unit but indicates the decomposition in the lemma attribute.
+    *   **Native Output (Simplified)**:
+        ```json
+        [
+          {"text": "envolverse", "lemma": "envolver él", "pos": "VERB", "morph": "VerbForm=Inf"}
+        ]
+        ```
 
 ---
 
-## Recommendation
+## POS and Morphological Tagging
 
-*   **Use Stanza** when grammatical precision is paramount, especially for complex linguistic analysis of clitics and contractions.
-*   **Use spaCy** for large-scale processing where speed is critical, and the slight loss of metadata granularity in multi-word tokens is acceptable.
+### Tag Granularity
+
+*   **Stanza**: Provides morphological features in a standardized string format (UD `feats`). POS and features are separate.
+    *   *Example*: `pos: VERB`, `feats: Mood=Ind|Number=Sing|Person=3`
+*   **spaCy**: Provides a `morph` object and a `tag_` (fine-grained POS) attribute. The `tag_` often contains framework-specific codes.
+    *   *Example*: `pos: VERB`, `morph: Mood=Ind|Number=Sing|Person=3`, `tag: VMIP3S0`
+
+### Normalization in Segrob
+
+To allow consistent querying across frameworks, Segrob's integration scripts (`nlp_spacy.py` and `nlp_stanza.py`) unify these outputs into a common `POS__Morph` format:
+
+*   **Unified Format**: `VERB__Mood=Ind|Number=Sing|Person=3`
+
+This allows a single Segrob query to find matches regardless of whether the document was processed by Stanza or spaCy.
+
+---
+
+## Performance and Use Cases
+
+| Framework | Best For... | Trade-off |
+| :--- | :--- | :--- |
+| **Stanza** | Academic-grade linguistic analysis, high-precision morphology, and complex clitic handling. | Very slow (~15+ min/book). |
+| **spaCy** | Large-scale corpus indexing, real-time processing, and general-purpose NLP. | Loses granularity in MWT decomposition (e.g., clitics share parent POS/Tag in unified output). |
+
+---
+
+*Note: The Segrob integration scripts are responsible for mapping these native behaviors to the [Doc JSON Format](doc-json-format.md).*
