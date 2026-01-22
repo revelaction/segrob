@@ -76,6 +76,20 @@ This allows a single Segrob query to find matches regardless of whether the docu
 
 ---
 
+## Indexing and Dependencies
+
+The frameworks differ significantly in how they reference other tokens (e.g., for dependency parsing).
+
+*   **Stanza**: Uses **1-based indexing** relative to the start of the sentence.
+    *   `head=1` refers to the first word in the sentence.
+    *   `head=0` refers to the root of the sentence.
+*   **spaCy**: Uses **document-level indexing** (absolute token offset).
+    *   `token.head.i` returns the index of the head token within the entire document, not just the sentence.
+
+*Segrob Normalization*: The integration scripts convert both systems to **0-based indexing relative to the sentence** (where `head=index` indicates root).
+
+---
+
 ## Performance and Use Cases
 
 | Framework | Best For... | Trade-off |
