@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"strconv"
 	"strings"
 	"golang.org/x/term"
 
@@ -86,14 +85,14 @@ func runCommand(cmd string, args []string, ui UI) error {
 		return nil
 
 	case "doc":
-		opts, first, start, end, err := parseDocArgs(args, ui)
+		opts, arg, err := parseDocArgs(args, ui)
 		if err != nil {
 			if errors.Is(err, flag.ErrHelp) {
 				return nil
 			}
 			return err
 		}
-		return docCommand(opts, first, start, end, ui)
+		return docCommand(opts, arg, ui)
 
 	case "sentence":
 		docId, sentId, offset, err := parseSentenceArgs(args, ui)
@@ -382,61 +381,6 @@ func exprCommand(opts ExprOptions, args []string, ui UI) error {
 	err := matchDocs(matcher, opts, ui)
 	if err != nil {
 		return err
-	}
-
-	return nil
-}
-
-func docCommand(opts DocOptions, first string, start, end *int, ui UI) error {
-
-	fhr, err := file.NewDocHandler()
-	if err != nil {
-		return err
-	}
-
-	if first == "" {
-		docNames, err := fhr.Names()
-		if err != nil {
-			return err
-		}
-
-		for docId, name := range docNames {
-			fmt.Fprintf(ui.Out, "📖 %d %s \n", docId, name)
-		}
-
-		return nil
-	}
-
-	// take the first and consider docId or doc name `match`, read file and
-	// iterate for sentence
-	docId, err := strconv.ParseInt(first, 10, 64)
-	var doc sent.Doc
-	if err != nil {
-		// could not parse as integer, try to match word
-		doc, err = fhr.DocForMatch(first)
-		if err != nil {
-			return err
-		}
-	} else {
-		doc, err = fhr.Doc(int(docId))
-		if err != nil {
-			return err
-		}
-	}
-
-	for i, sentence := range doc.Tokens {
-		if start != nil && i < *start {
-			continue
-		}
-
-		if end != nil && i > *end {
-			continue
-		}
-
-		r := render.NewRenderer()
-		r.HasColor = false
-		prefix := fmt.Sprintf("✍  %d-%d ", docId, i)
-		r.Sentence(sentence, prefix)
 	}
 
 	return nil

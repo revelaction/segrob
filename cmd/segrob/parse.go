@@ -35,6 +35,8 @@ type TopicsOptions struct {
 }
 
 type DocOptions struct {
+	Start int
+	Count int
 }
 
 // stringSliceFlag implements flag.Value for multi-value strings
@@ -121,16 +123,18 @@ func parseMainArgs(args []string, ui UI) (string, []string, error) {
 	return cmd, cmdArgs, nil
 }
 
-func parseDocArgs(args []string, ui UI) (DocOptions, string, *int, *int, error) {
+func parseDocArgs(args []string, ui UI) (DocOptions, string, error) {
 	fs := flag.NewFlagSet("doc", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
 
 	var opts DocOptions
+	fs.IntVar(&opts.Start, "start", 0, "Index of the first sentence to show")
+	fs.IntVar(&opts.Count, "n", -1, "Number of sentences to show (-1 for all)")
 
 	fs.Usage = func() {
-		_, _ = fmt.Fprintf(fs.Output(), "Usage: %s doc [options] [docId|match] [startSentence] [endSentence]\n", os.Args[0])
+		_, _ = fmt.Fprintf(fs.Output(), "Usage: %s doc [options] [file_path|db_id]\n", os.Args[0])
 		_, _ = fmt.Fprintf(fs.Output(), "\nDescription:\n")
-		_, _ = fmt.Fprintf(fs.Output(), "  List documents or show contents of a document.\n")
+		_, _ = fmt.Fprintf(fs.Output(), "  Show contents of a document file or DB entry.\n")
 		_, _ = fmt.Fprintf(fs.Output(), "\nOptions:\n")
 		fs.PrintDefaults()
 	}
@@ -139,38 +143,26 @@ func parseDocArgs(args []string, ui UI) (DocOptions, string, *int, *int, error) 
 		if errors.Is(err, flag.ErrHelp) {
 			fs.SetOutput(ui.Out)
 			fs.Usage()
-			return opts, "", nil, nil, err
+			return opts, "", err
 		}
 		fs.SetOutput(ui.Err)
 		fprintErr(ui.Err, err)
 		fs.Usage()
-		return opts, "", nil, nil, err
+		return opts, "", err
 	}
 
-	first := ""
-	var start, end *int
-	docArgs := fs.Args()
-
-	if len(docArgs) > 0 {
-		first = docArgs[0]
+	if fs.NArg() > 1 {
+		fs.SetOutput(ui.Err)
+		fs.Usage()
+		return opts, "", errors.New("doc command accepts at most one argument")
 	}
 
-	if len(docArgs) > 1 {
-		v, vErr := strconv.Atoi(docArgs[1])
-		if vErr != nil {
-			return opts, "", nil, nil, fmt.Errorf("invalid startSentence: %v", vErr)
-		}
-		start = &v
-	}
-	if len(docArgs) > 2 {
-		v, vErr := strconv.Atoi(docArgs[2])
-		if vErr != nil {
-			return opts, "", nil, nil, fmt.Errorf("invalid endSentence: %v", vErr)
-		}
-		end = &v
+	arg := ""
+	if fs.NArg() == 1 {
+		arg = fs.Arg(0)
 	}
 
-	return opts, first, start, end, nil
+	return opts, arg, nil
 }
 
 func parseSentenceArgs(args []string, ui UI) (int, int, *int, error) {
