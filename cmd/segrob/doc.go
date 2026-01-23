@@ -4,33 +4,23 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"os"
-	"regexp"
 	"strconv"
 
 	"github.com/revelaction/segrob/render"
 	sent "github.com/revelaction/segrob/sentence"
 )
 
-var digitRegex = regexp.MustCompile(`^\d+$`)
-
-func docCommand(opts DocOptions, arg string, ui UI) error {
-	if arg == "" {
-		return listDocsDB(ui)
-	}
-
-	// 1. Check if it is a file
-	if info, err := os.Stat(arg); err == nil && !info.IsDir() {
+func docCommand(opts DocOptions, arg string, isFile bool, ui UI) error {
+	if isFile {
 		return renderFile(arg, opts, ui)
 	}
 
-	// 2. Check if it is an integer (DB ID)
-	if digitRegex.MatchString(arg) {
+	if arg != "" {
 		id, _ := strconv.Atoi(arg)
 		return renderDocDB(id, opts, ui)
 	}
 
-	return fmt.Errorf("file not found and not a valid DB ID: %s", arg)
+	return listDocsDB(ui)
 }
 
 func renderFile(path string, opts DocOptions, ui UI) error {

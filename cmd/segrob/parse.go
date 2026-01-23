@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -123,7 +124,7 @@ func parseMainArgs(args []string, ui UI) (string, []string, error) {
 	return cmd, cmdArgs, nil
 }
 
-func parseDocArgs(args []string, ui UI) (DocOptions, string, error) {
+func parseDocArgs(args []string, ui UI) (DocOptions, string, bool, error) {
 	fs := flag.NewFlagSet("doc", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
 
@@ -143,26 +144,39 @@ func parseDocArgs(args []string, ui UI) (DocOptions, string, error) {
 		if errors.Is(err, flag.ErrHelp) {
 			fs.SetOutput(ui.Out)
 			fs.Usage()
-			return opts, "", err
+			return opts, "", false, err
 		}
 		fs.SetOutput(ui.Err)
 		fprintErr(ui.Err, err)
 		fs.Usage()
-		return opts, "", err
+		return opts, "", false, err
 	}
 
 	if fs.NArg() > 1 {
 		fs.SetOutput(ui.Err)
 		fs.Usage()
-		return opts, "", errors.New("doc command accepts at most one argument")
+		return opts, "", false, errors.New("doc command accepts at most one argument")
 	}
 
-	arg := ""
-	if fs.NArg() == 1 {
-		arg = fs.Arg(0)
+	if fs.NArg() == 0 {
+		return opts, "", false, nil
 	}
 
-	return opts, arg, nil
+	arg := fs.Arg(0)
+	isFile := false
+
+	// Validation
+	if info, err := os.Stat(arg); err == nil && !info.IsDir() {
+		isFile = true
+	} else {
+		// regex check for digits if not a file
+		digitRegex := regexp.MustCompile(`^\d+$`)
+		if !digitRegex.MatchString(arg) {
+			return opts, "", false, fmt.Errorf("file not found and not a valid DB ID: %s", arg)
+		}
+	}
+
+	return opts, arg, isFile, nil
 }
 
 func parseSentenceArgs(args []string, ui UI) (int, int, *int, error) {

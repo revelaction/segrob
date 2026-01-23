@@ -85,14 +85,14 @@ func runCommand(cmd string, args []string, ui UI) error {
 		return nil
 
 	case "doc":
-		opts, arg, err := parseDocArgs(args, ui)
+		opts, arg, isFile, err := parseDocArgs(args, ui)
 		if err != nil {
 			if errors.Is(err, flag.ErrHelp) {
 				return nil
 			}
 			return err
 		}
-		return docCommand(opts, arg, ui)
+		return docCommand(opts, arg, isFile, ui)
 
 	case "sentence":
 		docId, sentId, offset, err := parseSentenceArgs(args, ui)
