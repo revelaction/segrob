@@ -95,14 +95,14 @@ func runCommand(cmd string, args []string, ui UI) error {
 		return docCommand(opts, arg, isFile, ui)
 
 	case "sentence":
-		docId, sentId, offset, err := parseSentenceArgs(args, ui)
+		source, sentId, isFile, err := parseSentenceArgs(args, ui)
 		if err != nil {
 			if errors.Is(err, flag.ErrHelp) {
 				return nil
 			}
 			return err
 		}
-		return sentenceCommand(docId, sentId, offset, ui)
+		return sentenceCommand(source, sentId, isFile, ui)
 
 	case "topics":
 		opts, docId, sentId, err := parseTopicsArgs(args, ui)
@@ -381,43 +381,6 @@ func exprCommand(opts ExprOptions, args []string, ui UI) error {
 	err := matchDocs(matcher, opts, ui)
 	if err != nil {
 		return err
-	}
-
-	return nil
-}
-
-func sentenceCommand(docId, sentId int, offset *int, ui UI) error {
-
-	fhr, err := file.NewDocHandler()
-	if err != nil {
-		return err
-	}
-
-	doc, err := fhr.Doc(docId)
-	if err != nil {
-		return err
-	}
-
-	s := doc.Tokens[sentId]
-	r := render.NewRenderer()
-	r.HasColor = false
-	prefix := fmt.Sprintf("✍  %d-%d ", docId, sentId)
-	r.Sentence(s, prefix)
-	fmt.Fprintln(ui.Out)
-
-	offVal := 0
-	if offset != nil {
-		offVal = *offset
-	}
-
-	// check len
-	if offVal > len(s) {
-		return errors.New("offset is greater than length of sentence. Usage <docId> <sentenceId> [offset]")
-	}
-
-	for _, token := range s[offVal:] {
-		// print
-		fmt.Fprintf(ui.Out, "%20q %15q %8s %6d %6d %8s %s\n", token.Text, token.Lemma, token.Pos, token.Id, token.Head, token.Dep, token.Tag)
 	}
 
 	return nil

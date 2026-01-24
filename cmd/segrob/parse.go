@@ -179,53 +179,51 @@ func parseDocArgs(args []string, ui UI) (DocOptions, string, bool, error) {
 	return opts, arg, isFile, nil
 }
 
-func parseSentenceArgs(args []string, ui UI) (int, int, *int, error) {
+func parseSentenceArgs(args []string, ui UI) (string, int, bool, error) {
 	fs := flag.NewFlagSet("sentence", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
 	fs.Usage = func() {
-		_, _ = fmt.Fprintf(fs.Output(), "Usage: %s sentence <docId> <sentenceId> [offset]\n", os.Args[0])
+		_, _ = fmt.Fprintf(fs.Output(), "Usage: %s sentence <source> <sentenceId>\n", os.Args[0])
 		_, _ = fmt.Fprintf(fs.Output(), "\nDescription:\n")
-		_, _ = fmt.Fprintf(fs.Output(), "  Show a specific sentence details.\n")
+		_, _ = fmt.Fprintf(fs.Output(), "  Show a specific sentence details. <source> can be a file path or a DB ID.\n")
 	}
 
 	if err := fs.Parse(args); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
 			fs.SetOutput(ui.Out)
 			fs.Usage()
-			return 0, 0, nil, err
+			return "", 0, false, err
 		}
 		fs.SetOutput(ui.Err)
 		fprintErr(ui.Err, err)
 		fs.Usage()
-		return 0, 0, nil, err
+		return "", 0, false, err
 	}
 
-	if fs.NArg() < 2 {
+	if fs.NArg() != 2 {
 		fs.SetOutput(ui.Err)
 		fs.Usage()
-		return 0, 0, nil, errors.New("sentence command needs at least two arguments: <docId> <sentenceId>")
+		return "", 0, false, errors.New("sentence command needs exactly two arguments: <source> <sentenceId>")
 	}
 
-	docArgs := fs.Args()
-	docId, docErr := strconv.Atoi(docArgs[0])
-	if docErr != nil {
-		return 0, 0, nil, fmt.Errorf("invalid docId: %v", docErr)
-	}
-	sentId, sentErr := strconv.Atoi(docArgs[1])
+	source := fs.Arg(0)
+	sentId, sentErr := strconv.Atoi(fs.Arg(1))
 	if sentErr != nil {
-		return 0, 0, nil, fmt.Errorf("invalid sentenceId: %v", sentErr)
+		return "", 0, false, fmt.Errorf("invalid sentenceId: %v", sentErr)
 	}
 
-	var offset *int
-	if len(docArgs) > 2 {
-		v, vErr := strconv.Atoi(docArgs[2])
-		if vErr != nil {
-			return 0, 0, nil, fmt.Errorf("invalid offset: %v", vErr)
+	isFile := false
+	if info, err := os.Stat(source); err == nil && !info.IsDir() {
+		isFile = true
+	} else {
+		// regex check for digits if not a file
+		digitRegex := regexp.MustCompile(`^\d+$`)
+		if !digitRegex.MatchString(source) {
+			return "", 0, false, fmt.Errorf("source not found and not a valid DB ID: %s", source)
 		}
-		offset = &v
 	}
 
-	return docId, sentId, offset, nil
+	return source, sentId, isFile, nil
 }
 
 func parseTopicsArgs(args []string, ui UI) (TopicsOptions, int, int, error) {
