@@ -32,7 +32,8 @@ type QueryOptions struct {
 }
 
 type TopicsOptions struct {
-	Format string
+	Format    string
+	TopicsDir string
 }
 
 type DocOptions struct {
@@ -226,20 +227,23 @@ func parseSentenceArgs(args []string, ui UI) (string, int, bool, error) {
 	return source, sentId, isFile, nil
 }
 
-func parseTopicsArgs(args []string, ui UI) (TopicsOptions, int, int, error) {
+func parseTopicsArgs(args []string, ui UI) (TopicsOptions, string, int, bool, error) {
 	fs := flag.NewFlagSet("topics", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
 
 	var opts TopicsOptions
+	fs.StringVar(&opts.TopicsDir, "topics-dir", os.Getenv("SEGROB_TOPICS_DIR"), "Path to topics directory")
+	fs.StringVar(&opts.TopicsDir, "t", os.Getenv("SEGROB_TOPICS_DIR"), "alias for -topics-dir")
+
 	opts.Format = render.Defaultformat
 	formatFlag := &enumFlag{allowed: render.SupportedFormats(), value: &opts.Format}
 	fs.Var(formatFlag, "format", "Show whole sentence (all), only surrounding of matched words (part) or only matches words (lemma)")
 	fs.Var(formatFlag, "f", "alias for -format")
 
 	fs.Usage = func() {
-		_, _ = fmt.Fprintf(fs.Output(), "Usage: %s topics [options] <docId> <sentenceId>\n", os.Args[0])
+		_, _ = fmt.Fprintf(fs.Output(), "Usage: %s topics [options] <source> <sentenceId>\n", os.Args[0])
 		_, _ = fmt.Fprintf(fs.Output(), "\nDescription:\n")
-		_, _ = fmt.Fprintf(fs.Output(), "  Show topics for a specific sentence.\n")
+		_, _ = fmt.Fprintf(fs.Output(), "  Show topics for a specific sentence. <source> can be a file path or a DB ID.\n")
 		_, _ = fmt.Fprintf(fs.Output(), "\nOptions:\n")
 		fs.PrintDefaults()
 	}
@@ -248,31 +252,46 @@ func parseTopicsArgs(args []string, ui UI) (TopicsOptions, int, int, error) {
 		if errors.Is(err, flag.ErrHelp) {
 			fs.SetOutput(ui.Out)
 			fs.Usage()
-			return opts, 0, 0, err
+			return opts, "", 0, false, err
 		}
 		fs.SetOutput(ui.Err)
 		fprintErr(ui.Err, err)
 		fs.Usage()
-		return opts, 0, 0, err
+		return opts, "", 0, false, err
+	}
+
+	if opts.TopicsDir == "" {
+		return opts, "", 0, false, errors.New("Topics directory must be specified via --topics-dir or SEGROB_TOPICS_DIR")
+	}
+
+	if info, err := os.Stat(opts.TopicsDir); err != nil || !info.IsDir() {
+		return opts, "", 0, false, fmt.Errorf("Topics directory not found or not a directory: %s", opts.TopicsDir)
 	}
 
 	if fs.NArg() != 2 {
 		fs.SetOutput(ui.Err)
 		fs.Usage()
-		return opts, 0, 0, errors.New("topics command needs two arguments: <docId> <sentenceId>")
+		return opts, "", 0, false, errors.New("topics command needs two arguments: <source> <sentenceId>")
 	}
 
-	docArgs := fs.Args()
-	docId, docErr := strconv.Atoi(docArgs[0])
-	if docErr != nil {
-		return opts, 0, 0, fmt.Errorf("invalid docId: %v", docErr)
-	}
-	sentId, sentErr := strconv.Atoi(docArgs[1])
+	source := fs.Arg(0)
+	sentId, sentErr := strconv.Atoi(fs.Arg(1))
 	if sentErr != nil {
-		return opts, 0, 0, fmt.Errorf("invalid sentenceId: %v", sentErr)
+		return opts, "", 0, false, fmt.Errorf("invalid sentenceId: %v", sentErr)
 	}
 
-	return opts, docId, sentId, nil
+	isFile := false
+	if info, err := os.Stat(source); err == nil && !info.IsDir() {
+		isFile = true
+	} else {
+		// regex check for digits if not a file
+		digitRegex := regexp.MustCompile(`^\d+$`)
+		if !digitRegex.MatchString(source) {
+			return opts, "", 0, false, fmt.Errorf("source not found and not a valid DB ID: %s", source)
+		}
+	}
+
+	return opts, source, sentId, isFile, nil
 }
 
 func parseExprArgs(args []string, ui UI) (ExprOptions, []string, error) {

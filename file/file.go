@@ -116,10 +116,11 @@ func files(dir string) ([]string, error) {
 }
 
 type TopicHandler struct {
+	root string
 }
 
-func NewTopicHandler() *TopicHandler {
-	return &TopicHandler{}
+func NewTopicHandler(root string) *TopicHandler {
+	return &TopicHandler{root: root}
 }
 
 func (th *TopicHandler) All() ([]tpc.Topic, error) {
@@ -142,7 +143,7 @@ func (th *TopicHandler) All() ([]tpc.Topic, error) {
 }
 
 func (th *TopicHandler) Names() ([]string, error) {
-	files, err := ioutil.ReadDir(TopicDir)
+	files, err := ioutil.ReadDir(th.root)
 	if err != nil {
 		return nil, err
 	}
@@ -171,7 +172,7 @@ func (th *TopicHandler) Random() (tpc.Topic, error) {
 }
 
 func (th *TopicHandler) Topic(name string) (tpc.Topic, error) {
-	tf, err := ioutil.ReadFile(TopicDir + name + ".json")
+	tf, err := ioutil.ReadFile(filepath.Join(th.root, name+".json"))
 	if err != nil {
 		return tpc.Topic{}, err
 	}
@@ -214,7 +215,7 @@ func (th *TopicHandler) Write(tp tpc.Topic) error {
 	jsonFmt = append([]byte("[\n\t"), jsonFmt...)
 	jsonFmt = append(jsonFmt, []byte("\n]")...)
 
-	err = ioutil.WriteFile(TopicDir+tp.Name+".json", jsonFmt, 0644)
+	err = ioutil.WriteFile(filepath.Join(th.root, tp.Name+".json"), jsonFmt, 0644)
 	if err != nil {
 		return err
 	}

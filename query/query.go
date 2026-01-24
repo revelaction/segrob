@@ -38,7 +38,7 @@ func (h *Handler) Run() error {
 
 	fmt.Println("🔑 Ctrl+X: Toggle prefix, Ctrl+F: next Format, 🔧 quit")
 	// Get all topics
-	th := file.NewTopicHandler()
+	th := file.NewTopicHandler(file.TopicDir)
 
 	topicNames, err := th.Names()
 	if err != nil {

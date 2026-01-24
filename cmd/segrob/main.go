@@ -104,14 +104,14 @@ func runCommand(cmd string, args []string, ui UI) error {
 		return sentenceCommand(source, sentId, isFile, ui)
 
 	case "topics":
-		opts, docId, sentId, err := parseTopicsArgs(args, ui)
+		opts, source, sentId, isFile, err := parseTopicsArgs(args, ui)
 		if err != nil {
 			if errors.Is(err, flag.ErrHelp) {
 				return nil
 			}
 			return err
 		}
-		return topicsCommand(opts, docId, sentId, ui)
+		return topicsCommand(opts, source, sentId, isFile, ui)
 
 	case "expr":
 		opts, cmdArgs, err := parseExprArgs(args, ui)
@@ -195,7 +195,7 @@ func queryCommand(opts QueryOptions, ui UI) error {
 		return err
 	}
 
-	th := file.NewTopicHandler()
+	th := file.NewTopicHandler(file.TopicDir)
 	topicLib, err := topicLibrary(th, ui)
 	if err != nil {
 		return err
@@ -361,7 +361,7 @@ func exprCommand(opts ExprOptions, args []string, ui UI) error {
 
 func editCommand(ui UI) error {
 
-	th := file.NewTopicHandler()
+	th := file.NewTopicHandler(file.TopicDir)
 
 	topicLib, err := topicLibrary(th, ui)
 	if err != nil {
@@ -370,56 +370,6 @@ func editCommand(ui UI) error {
 
 	hdl := edit.NewHandler(topicLib, th)
 	return hdl.Run()
-}
-
-func topicsCommand(opts TopicsOptions, docId, sentId int, ui UI) error {
-
-	fhr, err := file.NewDocHandler()
-	if err != nil {
-		return err
-	}
-
-	doc, err := fhr.Doc(docId)
-	if err != nil {
-		return err
-	}
-
-	s := doc.Tokens[sentId]
-	doc = sent.Doc{Tokens: [][]sent.Token{s}}
-
-	r := render.NewRenderer()
-	r.HasColor = false
-
-	prefix := fmt.Sprintf("%54s", render.Yellow256+render.Off) + "✍  "
-	r.Sentence(s, prefix)
-	fmt.Fprintln(ui.Out)
-
-	th := file.NewTopicHandler()
-
-	allTopics, err := th.All()
-	if err != nil {
-		return err
-	}
-
-	r.HasColor = true
-	r.HasPrefix = true
-	r.PrefixDocFunc = render.PrefixFuncEmpty
-	r.Format = opts.Format
-
-	for _, tp := range allTopics {
-
-		matcher := match.NewMatcher(tp)
-		matcher.Match(doc)
-		res := matcher.Sentences()
-
-		if len(res) == 0 {
-			continue
-		}
-
-		r.Match(res)
-	}
-
-	return nil
 }
 
 func hasLabels(fileLabels, cmdLabels []string) bool {
@@ -448,7 +398,7 @@ func hasLabels(fileLabels, cmdLabels []string) bool {
 // topicCommand prints the expressions of a topic
 func topicCommand(name string, ui UI) error {
 
-	fhr := file.NewTopicHandler()
+	fhr := file.NewTopicHandler(file.TopicDir)
 
 	// No name provided (list all)
 	if name == "" {
