@@ -428,48 +428,55 @@ func parseTopicArgs(args []string, ui UI) (string, error) {
 	return "", nil
 }
 
-func parseStatArgs(args []string, ui UI) (int, *int, error) {
+func parseStatArgs(args []string, ui UI) (string, *int, bool, error) {
 	fs := flag.NewFlagSet("stat", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
 	fs.Usage = func() {
-		_, _ = fmt.Fprintf(fs.Output(), "Usage: %s stat <docId> [sentenceId]\n", os.Args[0])
+		_, _ = fmt.Fprintf(fs.Output(), "Usage: %s stat <source> [sentenceId]\n", os.Args[0])
 		_, _ = fmt.Fprintf(fs.Output(), "\nDescription:\n")
-		_, _ = fmt.Fprintf(fs.Output(), "  Show statistics for a document or sentence.\n")
+		_, _ = fmt.Fprintf(fs.Output(), "  Show statistics for a document or sentence. <source> can be a file path or a DB ID.\n")
 	}
 
 	if err := fs.Parse(args); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
 			fs.SetOutput(ui.Out)
 			fs.Usage()
-			return 0, nil, err
+			return "", nil, false, err
 		}
 		fs.SetOutput(ui.Err)
 		fprintErr(ui.Err, err)
 		fs.Usage()
-		return 0, nil, err
+		return "", nil, false, err
 	}
 
 	if fs.NArg() == 0 {
 		fs.SetOutput(ui.Err)
 		fs.Usage()
-		return 0, nil, errors.New("stat command needs at least one argument")
+		return "", nil, false, errors.New("stat command needs at least one argument")
 	}
 
-	docArgs := fs.Args()
-	docId, docErr := strconv.Atoi(docArgs[0])
-	if docErr != nil {
-		return 0, nil, fmt.Errorf("invalid docId: %v", docErr)
-	}
+	source := fs.Arg(0)
 	var sentId *int
-	if len(docArgs) > 1 {
-		v, vErr := strconv.Atoi(docArgs[1])
-		if vErr != nil {
-			return 0, nil, fmt.Errorf("invalid sentenceId: %v", vErr)
+	if fs.NArg() > 1 {
+		v, err := strconv.Atoi(fs.Arg(1))
+		if err != nil {
+			return "", nil, false, fmt.Errorf("invalid sentenceId: %v", err)
 		}
 		sentId = &v
 	}
 
-	return docId, sentId, nil
+	isFile := false
+	if info, err := os.Stat(source); err == nil && !info.IsDir() {
+		isFile = true
+	} else {
+		// regex check for digits if not a file
+		digitRegex := regexp.MustCompile(`^\d+$`)
+		if !digitRegex.MatchString(source) {
+			return "", nil, false, fmt.Errorf("source not found and not a valid DB ID: %s", source)
+		}
+	}
+
+	return source, sentId, isFile, nil
 }
 
 func parseBashArgs(args []string, ui UI) error {

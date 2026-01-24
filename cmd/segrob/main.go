@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"strings"
+
 	"golang.org/x/term"
 
 	"github.com/revelaction/segrob/edit"
@@ -15,7 +16,6 @@ import (
 	"github.com/revelaction/segrob/query"
 	"github.com/revelaction/segrob/render"
 	sent "github.com/revelaction/segrob/sentence"
-	"github.com/revelaction/segrob/stat"
 	"github.com/revelaction/segrob/topic"
 
 	"github.com/gosuri/uiprogress"
@@ -56,14 +56,13 @@ func fprintErr(w io.Writer, err error) {
 
 func runCommand(cmd string, args []string, ui UI) error {
 
-
 	// Centralized Terminal Reset
-    //
-    // The issue occurs because go-prompt puts your terminal into Raw Mode (to
-    // handle custom keybinds and colors) but fails to restore it to Cooked
-    // Mode (canonical mode) upon exit. When the terminal is left in Raw Mode,
-    // it often disables local echo (typing is invisible) and carriage
-    // returns.    
+	//
+	// The issue occurs because go-prompt puts your terminal into Raw Mode (to
+	// handle custom keybinds and colors) but fails to restore it to Cooked
+	// Mode (canonical mode) upon exit. When the terminal is left in Raw Mode,
+	// it often disables local echo (typing is invisible) and carriage
+	// returns.
 	// For interactive commands, we save the terminal state (Cooked Mode)
 	// and strictly restore it when the function returns.
 	if cmd == "query" || cmd == "edit" {
@@ -154,14 +153,14 @@ func runCommand(cmd string, args []string, ui UI) error {
 		return topicCommand(name, ui)
 
 	case "stat":
-		docId, sentId, err := parseStatArgs(args, ui)
+		source, sentId, isFile, err := parseStatArgs(args, ui)
 		if err != nil {
 			if errors.Is(err, flag.ErrHelp) {
 				return nil
 			}
 			return err
 		}
-		return statCommand(docId, sentId, ui)
+		return statCommand(source, sentId, isFile, ui)
 
 	case "bash":
 		if err := parseBashArgs(args, ui); err != nil {
@@ -338,32 +337,6 @@ func matchDocs(matcher *match.Matcher, opts ExprOptions, ui UI) error {
 	result := matcher.Sentences()
 
 	r.Match(result)
-	return nil
-}
-
-func statCommand(docId int, sentId *int, ui UI) error {
-
-	fhr, err := file.NewDocHandler()
-	if err != nil {
-		return err
-	}
-
-	doc, err := fhr.Doc(docId)
-	if err != nil {
-		return err
-	}
-
-	if sentId != nil {
-		// rewrite
-		doc = sent.Doc{Tokens: [][]sent.Token{doc.Tokens[*sentId]}}
-	}
-
-	hdl := stat.NewHandler()
-	hdl.Aggregate(doc)
-
-	stats := hdl.Get()
-	fmt.Fprintf(ui.Out, "Num sentences %d, num tokens per sentence %d\n", stats.NumSentences, stats.TokensPerSentenceMean)
-
 	return nil
 }
 
