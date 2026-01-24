@@ -1,11 +1,10 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"strconv"
 
+	"github.com/revelaction/segrob/file"
 	"github.com/revelaction/segrob/render"
 	sent "github.com/revelaction/segrob/sentence"
 )
@@ -24,13 +23,8 @@ func docCommand(opts DocOptions, arg string, isFile bool, ui UI) error {
 }
 
 func renderFile(path string, opts DocOptions, ui UI) error {
-	content, err := ioutil.ReadFile(path)
+	doc, err := file.ReadDoc(path)
 	if err != nil {
-		return err
-	}
-
-	var doc sent.Doc
-	if err := json.Unmarshal(content, &doc); err != nil {
 		return err
 	}
 
