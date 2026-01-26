@@ -33,12 +33,16 @@ type QueryOptions struct {
 
 type TopicsOptions struct {
 	Format    string
-	TopicsDir string
+	TopicPath string
 }
 
 type DocOptions struct {
 	Start int
 	Count int
+}
+
+type EditOptions struct {
+	TopicPath string
 }
 
 // stringSliceFlag implements flag.Value for multi-value strings
@@ -232,8 +236,8 @@ func parseTopicsArgs(args []string, ui UI) (TopicsOptions, string, int, bool, er
 	fs.SetOutput(io.Discard)
 
 	var opts TopicsOptions
-	fs.StringVar(&opts.TopicsDir, "topics-dir", os.Getenv("SEGROB_TOPICS_DIR"), "Path to topics directory")
-	fs.StringVar(&opts.TopicsDir, "t", os.Getenv("SEGROB_TOPICS_DIR"), "alias for -topics-dir")
+	fs.StringVar(&opts.TopicPath, "topics-dir", os.Getenv("SEGROB_TOPIC_PATH"), "Path to topics directory")
+	fs.StringVar(&opts.TopicPath, "t", os.Getenv("SEGROB_TOPIC_PATH"), "alias for -topics-dir")
 
 	opts.Format = render.Defaultformat
 	formatFlag := &enumFlag{allowed: render.SupportedFormats(), value: &opts.Format}
@@ -260,12 +264,12 @@ func parseTopicsArgs(args []string, ui UI) (TopicsOptions, string, int, bool, er
 		return opts, "", 0, false, err
 	}
 
-	if opts.TopicsDir == "" {
-		return opts, "", 0, false, errors.New("Topics directory must be specified via --topics-dir or SEGROB_TOPICS_DIR")
+	if opts.TopicPath == "" {
+		return opts, "", 0, false, errors.New("Topics path must be specified via --topics-dir or SEGROB_TOPIC_PATH")
 	}
 
-	if info, err := os.Stat(opts.TopicsDir); err != nil || !info.IsDir() {
-		return opts, "", 0, false, fmt.Errorf("Topics directory not found or not a directory: %s", opts.TopicsDir)
+	if info, err := os.Stat(opts.TopicPath); err != nil || !info.IsDir() {
+		return opts, "", 0, false, fmt.Errorf("Topics directory not found or not a directory: %s", opts.TopicPath)
 	}
 
 	if fs.NArg() != 2 {
@@ -397,27 +401,43 @@ func parseQueryArgs(args []string, ui UI) (QueryOptions, error) {
 	return opts, nil
 }
 
-func parseEditArgs(args []string, ui UI) error {
+func parseEditArgs(args []string, ui UI) (EditOptions, error) {
 	fs := flag.NewFlagSet("edit", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
+
+	var opts EditOptions
+	fs.StringVar(&opts.TopicPath, "topic-path", os.Getenv("SEGROB_TOPIC_PATH"), "Path to topics directory or SQLite file")
+	fs.StringVar(&opts.TopicPath, "t", os.Getenv("SEGROB_TOPIC_PATH"), "alias for -topic-path")
+
 	fs.Usage = func() {
-		_, _ = fmt.Fprintf(fs.Output(), "Usage: %s edit\n", os.Args[0])
+		_, _ = fmt.Fprintf(fs.Output(), "Usage: %s edit [options]\n", os.Args[0])
 		_, _ = fmt.Fprintf(fs.Output(), "\nDescription:\n")
 		_, _ = fmt.Fprintf(fs.Output(), "  Enter interactive edit mode.\n")
+		_, _ = fmt.Fprintf(fs.Output(), "\nOptions:\n")
+		_, _ = fmt.Fprintf(fs.Output(), "  -t, --topic-path    Path to topics directory or SQLite file (required, or set SEGROB_TOPIC_PATH)\n")
 	}
 
 	if err := fs.Parse(args); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
 			fs.SetOutput(ui.Out)
 			fs.Usage()
-			return err
+			return opts, err
 		}
 		fs.SetOutput(ui.Err)
 		fprintErr(ui.Err, err)
 		fs.Usage()
-		return err
+		return opts, err
 	}
-	return nil
+
+	if opts.TopicPath == "" {
+		return opts, errors.New("Topic path must be specified via -t or SEGROB_TOPIC_PATH")
+	}
+
+	if _, err := os.Stat(opts.TopicPath); err != nil {
+		return opts, fmt.Errorf("Topic path not found: %s", opts.TopicPath)
+	}
+
+	return opts, nil
 }
 
 func parseTopicArgs(args []string, ui UI) (string, error) {

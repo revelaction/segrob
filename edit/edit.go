@@ -3,7 +3,6 @@ package edit
 import (
 	"errors"
 	"fmt"
-	"github.com/revelaction/segrob/file"
 	"github.com/revelaction/segrob/topic"
 	"strings"
 
@@ -18,14 +17,15 @@ const (
 type Handler struct {
 	Library topic.Library
 
-	//
-	FileHandler *file.TopicHandler
+	TopicReader topic.TopicReader
+	TopicWriter topic.TopicWriter
 }
 
-func NewHandler(l topic.Library, f *file.TopicHandler) *Handler {
+func NewHandler(l topic.Library, r topic.TopicReader, w topic.TopicWriter) *Handler {
 	return &Handler{
 		Library:     l,
-		FileHandler: f,
+		TopicReader: r,
+		TopicWriter: w,
 	}
 }
 
@@ -78,7 +78,7 @@ func (h *Handler) Run() error {
 			tp = removeExprFromTopic(tp, expr)
 		}
 
-		werr := h.FileHandler.Write(tp)
+		werr := h.TopicWriter.Write(tp)
 		if werr != nil {
 			return werr
 		}
@@ -86,7 +86,7 @@ func (h *Handler) Run() error {
 		// reload the topic after write
 		for i, t := range h.Library {
 			if t.Name == tp.Name {
-				newTp, err := h.FileHandler.Topic(t.Name)
+				newTp, err := h.TopicReader.Topic(t.Name)
 				if err != nil {
 					return nil
 				}

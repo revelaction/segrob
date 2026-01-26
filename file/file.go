@@ -119,6 +119,9 @@ type TopicHandler struct {
 	root string
 }
 
+var _ tpc.TopicReader = (*TopicHandler)(nil)
+var _ tpc.TopicWriter = (*TopicHandler)(nil)
+
 func NewTopicHandler(root string) *TopicHandler {
 	return &TopicHandler{root: root}
 }

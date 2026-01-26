@@ -134,13 +134,14 @@ func runCommand(cmd string, args []string, ui UI) error {
 		return queryCommand(opts, ui)
 
 	case "edit":
-		if err := parseEditArgs(args, ui); err != nil {
+		opts, err := parseEditArgs(args, ui)
+		if err != nil {
 			if errors.Is(err, flag.ErrHelp) {
 				return nil
 			}
 			return err
 		}
-		return editCommand(ui)
+		return editCommand(opts, ui)
 
 	case "topic":
 		name, err := parseTopicArgs(args, ui)
@@ -253,7 +254,7 @@ func docLibrary(fhr *file.DocHandler, ui UI) (sent.Library, error) {
 }
 
 // topicLibrary retrieves all expressions of all topic files
-func topicLibrary(th *file.TopicHandler, ui UI) (topic.Library, error) {
+func topicLibrary(th topic.TopicReader, ui UI) (topic.Library, error) {
 
 	topicNames, err := th.Names()
 	if err != nil {
@@ -359,16 +360,25 @@ func exprCommand(opts ExprOptions, args []string, ui UI) error {
 	return nil
 }
 
-func editCommand(ui UI) error {
+func editCommand(opts EditOptions, ui UI) error {
 
-	th := file.NewTopicHandler(file.TopicDir)
+	info, err := os.Stat(opts.TopicPath)
+	if err != nil {
+		return err
+	}
+
+	if !info.IsDir() {
+		return errors.New("SQLite backend not yet implemented")
+	}
+
+	th := file.NewTopicHandler(opts.TopicPath)
 
 	topicLib, err := topicLibrary(th, ui)
 	if err != nil {
 		return err
 	}
 
-	hdl := edit.NewHandler(topicLib, th)
+	hdl := edit.NewHandler(topicLib, th, th)
 	return hdl.Run()
 }
 
