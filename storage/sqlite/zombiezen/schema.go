@@ -1,7 +1,9 @@
 package zombiezen
 
 import (
-	"zombiezen.com/go/sqlite"
+	"context"
+	"fmt"
+
 	"zombiezen.com/go/sqlite/sqlitex"
 )
 
@@ -18,9 +20,18 @@ CREATE TABLE IF NOT EXISTS topics (
 
 const schemaIndex = `CREATE INDEX IF NOT EXISTS idx_topics_user_id ON topics(user_id);`
 
-func InitSchema(conn *sqlite.Conn) error {
-	if err := sqlitex.ExecuteTransient(conn, schemaTopics, nil); err != nil {
+func Setup(pool *sqlitex.Pool) error {
+	conn, err := pool.Take(context.TODO())
+	if err != nil {
 		return err
 	}
-	return sqlitex.ExecuteTransient(conn, schemaIndex, nil)
+	defer pool.Put(conn)
+
+	if err := sqlitex.ExecuteTransient(conn, schemaTopics, nil); err != nil {
+		return fmt.Errorf("failed to create topics table: %w", err)
+	}
+	if err := sqlitex.ExecuteTransient(conn, schemaIndex, nil); err != nil {
+		return fmt.Errorf("failed to create user_id index: %w", err)
+	}
+	return nil
 }

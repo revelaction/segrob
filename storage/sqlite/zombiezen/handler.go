@@ -19,22 +19,26 @@ type TopicHandler struct {
 var _ storage.TopicReader = (*TopicHandler)(nil)
 var _ storage.TopicWriter = (*TopicHandler)(nil)
 
-func NewTopicHandler(dbPath string) (*TopicHandler, error) {
-	// Follow NewZombiezenPool conventions from dev/sqlite_zombiezen.go
-	poolSize := runtime.NumCPU()
-	initString := fmt.Sprintf("file:%s?_journal_mode=WAL&_synchronous=NORMAL&_busy_timeout=5000", dbPath)
+func NewTopicHandler(pool *sqlitex.Pool) *TopicHandler {
+	return &TopicHandler{pool: pool}
+}
 
-	pool, err := sqlitex.NewPool(initString, sqlitex.PoolOptions{
+// NewPool creates a new Zombiezen SQLite connection pool with performance optimizations
+// and automatic schema initialization.
+func NewPool(dbPath string) (*sqlitex.Pool, error) {
+	poolSize := runtime.NumCPU()
+
+	// WAL mode, normal synchronous, and busy timeout for reliability/performance
+	dsn := fmt.Sprintf("file:%s?_journal_mode=WAL&_synchronous=NORMAL&_busy_timeout=5000", dbPath)
+
+	pool, err := sqlitex.NewPool(dsn, sqlitex.PoolOptions{
 		PoolSize: poolSize,
-		PrepareConn: func(conn *sqlite.Conn) error {
-			return InitSchema(conn)
-		},
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create zombiezen pool at %s: %w", dbPath, err)
 	}
 
-	return &TopicHandler{pool: pool}, nil
+	return pool, nil
 }
 
 func (h *TopicHandler) Close() error {

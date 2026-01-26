@@ -471,11 +471,17 @@ func topicCommand(opts TopicOptions, name string, isFile bool, ui UI) error {
 
 func importCommand(opts ImportOptions, ui UI) error {
 	src := filesystem.NewTopicHandler(opts.From)
-	dst, err := zombiezen.NewTopicHandler(opts.To)
+	pool, err := zombiezen.NewPool(opts.To)
 	if err != nil {
 		return err
 	}
-	defer dst.Close()
+	defer pool.Close()
+
+	if err := zombiezen.Setup(pool); err != nil {
+		return fmt.Errorf("failed to setup sqlite database: %w", err)
+	}
+
+	dst := zombiezen.NewTopicHandler(pool)
 
 	topics, err := src.All()
 	if err != nil {
@@ -493,11 +499,12 @@ func importCommand(opts ImportOptions, ui UI) error {
 }
 
 func exportCommand(opts ExportOptions, ui UI) error {
-	src, err := zombiezen.NewTopicHandler(opts.From)
+	pool, err := zombiezen.NewPool(opts.From)
 	if err != nil {
 		return err
 	}
-	defer src.Close()
+	defer pool.Close()
+	src := zombiezen.NewTopicHandler(pool)
 
 	dst := filesystem.NewTopicHandler(opts.To)
 
@@ -520,7 +527,11 @@ func getTopicHandler(path string) (storage.TopicRepository, error) {
 	info, err := os.Stat(path)
 	if err != nil {
 		// Path doesn't exist, assume new SQLite DB if it looks like a file path
-		return zombiezen.NewTopicHandler(path)
+		pool, err := zombiezen.NewPool(path)
+		if err != nil {
+			return nil, err
+		}
+		return zombiezen.NewTopicHandler(pool), nil
 	}
 
 	if info.IsDir() {
@@ -528,5 +539,9 @@ func getTopicHandler(path string) (storage.TopicRepository, error) {
 	}
 
 	// Non-directory = SQLite file
-	return zombiezen.NewTopicHandler(path)
+	pool, err := zombiezen.NewPool(path)
+	if err != nil {
+		return nil, err
+	}
+	return zombiezen.NewTopicHandler(pool), nil
 }
