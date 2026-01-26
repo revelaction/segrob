@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"runtime"
 
+	"github.com/revelaction/segrob/storage"
 	"github.com/revelaction/segrob/topic"
 	"zombiezen.com/go/sqlite"
 	"zombiezen.com/go/sqlite/sqlitex"
@@ -14,6 +15,9 @@ import (
 type TopicHandler struct {
 	pool *sqlitex.Pool
 }
+
+var _ storage.TopicReader = (*TopicHandler)(nil)
+var _ storage.TopicWriter = (*TopicHandler)(nil)
 
 func NewTopicHandler(dbPath string) (*TopicHandler, error) {
 	// Follow NewZombiezenPool conventions from dev/sqlite_zombiezen.go

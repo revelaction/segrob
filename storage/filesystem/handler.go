@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/revelaction/segrob/storage"
 	tpc "github.com/revelaction/segrob/topic"
 )
 
@@ -16,8 +17,8 @@ type TopicHandler struct {
 	root string
 }
 
-var _ tpc.TopicReader = (*TopicHandler)(nil)
-var _ tpc.TopicWriter = (*TopicHandler)(nil)
+var _ storage.TopicReader = (*TopicHandler)(nil)
+var _ storage.TopicWriter = (*TopicHandler)(nil)
 
 func NewTopicHandler(root string) *TopicHandler {
 	return &TopicHandler{root: root}

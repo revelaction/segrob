@@ -3,8 +3,10 @@ package edit
 import (
 	"errors"
 	"fmt"
-	"github.com/revelaction/segrob/topic"
 	"strings"
+
+	"github.com/revelaction/segrob/storage"
+	"github.com/revelaction/segrob/topic"
 
 	prompt "github.com/c-bata/go-prompt"
 )
@@ -17,11 +19,11 @@ const (
 type Handler struct {
 	Library topic.Library
 
-	TopicReader topic.TopicReader
-	TopicWriter topic.TopicWriter
+	TopicReader storage.TopicReader
+	TopicWriter storage.TopicWriter
 }
 
-func NewHandler(l topic.Library, r topic.TopicReader, w topic.TopicWriter) *Handler {
+func NewHandler(l topic.Library, r storage.TopicReader, w storage.TopicWriter) *Handler {
 	return &Handler{
 		Library:     l,
 		TopicReader: r,

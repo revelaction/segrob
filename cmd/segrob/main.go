@@ -16,6 +16,7 @@ import (
 	"github.com/revelaction/segrob/query"
 	"github.com/revelaction/segrob/render"
 	sent "github.com/revelaction/segrob/sentence"
+	"github.com/revelaction/segrob/storage"
 	"github.com/revelaction/segrob/storage/filesystem"
 	"github.com/revelaction/segrob/storage/sqlite/zombiezen"
 	"github.com/revelaction/segrob/topic"
@@ -283,7 +284,7 @@ func docLibrary(fhr *file.DocHandler, ui UI) (sent.Library, error) {
 }
 
 // topicLibrary retrieves all expressions of all topic files
-func topicLibrary(th topic.TopicReader, ui UI) (topic.Library, error) {
+func topicLibrary(th storage.TopicReader, ui UI) (topic.Library, error) {
 
 	topicNames, err := th.Names()
 	if err != nil {
@@ -515,7 +516,7 @@ func exportCommand(opts ExportOptions, ui UI) error {
 	return nil
 }
 
-func getTopicHandler(path string) (topic.TopicRepository, error) {
+func getTopicHandler(path string) (storage.TopicRepository, error) {
 	info, err := os.Stat(path)
 	if err != nil {
 		// Path doesn't exist, assume new SQLite DB if it looks like a file path
