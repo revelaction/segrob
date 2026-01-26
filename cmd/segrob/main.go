@@ -134,14 +134,14 @@ func runCommand(cmd string, args []string, ui UI) error {
 		return queryCommand(opts, ui)
 
 	case "edit":
-		opts, err := parseEditArgs(args, ui)
+		opts, isFile, err := parseEditArgs(args, ui)
 		if err != nil {
 			if errors.Is(err, flag.ErrHelp) {
 				return nil
 			}
 			return err
 		}
-		return editCommand(opts, ui)
+		return editCommand(opts, isFile, ui)
 
 	case "topic":
 		name, err := parseTopicArgs(args, ui)
@@ -360,14 +360,9 @@ func exprCommand(opts ExprOptions, args []string, ui UI) error {
 	return nil
 }
 
-func editCommand(opts EditOptions, ui UI) error {
+func editCommand(opts EditOptions, isFile bool, ui UI) error {
 
-	info, err := os.Stat(opts.TopicPath)
-	if err != nil {
-		return err
-	}
-
-	if !info.IsDir() {
+	if isFile {
 		return errors.New("SQLite backend not yet implemented")
 	}
 

@@ -401,7 +401,7 @@ func parseQueryArgs(args []string, ui UI) (QueryOptions, error) {
 	return opts, nil
 }
 
-func parseEditArgs(args []string, ui UI) (EditOptions, error) {
+func parseEditArgs(args []string, ui UI) (EditOptions, bool, error) {
 	fs := flag.NewFlagSet("edit", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
 
@@ -421,23 +421,24 @@ func parseEditArgs(args []string, ui UI) (EditOptions, error) {
 		if errors.Is(err, flag.ErrHelp) {
 			fs.SetOutput(ui.Out)
 			fs.Usage()
-			return opts, err
+			return opts, false, err
 		}
 		fs.SetOutput(ui.Err)
 		fprintErr(ui.Err, err)
 		fs.Usage()
-		return opts, err
+		return opts, false, err
 	}
 
 	if opts.TopicPath == "" {
-		return opts, errors.New("Topic path must be specified via -t or SEGROB_TOPIC_PATH")
+		return opts, false, errors.New("Topic path must be specified via -t or SEGROB_TOPIC_PATH")
 	}
 
-	if _, err := os.Stat(opts.TopicPath); err != nil {
-		return opts, fmt.Errorf("Topic path not found: %s", opts.TopicPath)
+	info, err := os.Stat(opts.TopicPath)
+	if err != nil {
+		return opts, false, fmt.Errorf("Topic path not found: %s", opts.TopicPath)
 	}
 
-	return opts, nil
+	return opts, !info.IsDir(), nil
 }
 
 func parseTopicArgs(args []string, ui UI) (string, error) {
