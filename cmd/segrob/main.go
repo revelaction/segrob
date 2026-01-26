@@ -144,14 +144,14 @@ func runCommand(cmd string, args []string, ui UI) error {
 		return editCommand(opts, isFile, ui)
 
 	case "topic":
-		name, err := parseTopicArgs(args, ui)
+		opts, name, isFile, err := parseTopicArgs(args, ui)
 		if err != nil {
 			if errors.Is(err, flag.ErrHelp) {
 				return nil
 			}
 			return err
 		}
-		return topicCommand(name, ui)
+		return topicCommand(opts, name, isFile, ui)
 
 	case "stat":
 		source, sentId, isFile, err := parseStatArgs(args, ui)
@@ -401,9 +401,13 @@ func hasLabels(fileLabels, cmdLabels []string) bool {
 }
 
 // topicCommand prints the expressions of a topic
-func topicCommand(name string, ui UI) error {
+func topicCommand(opts TopicOptions, name string, isFile bool, ui UI) error {
 
-	fhr := file.NewTopicHandler(file.TopicDir)
+	if isFile {
+		return errors.New("SQLite backend not yet implemented")
+	}
+
+	var fhr topic.TopicReader = file.NewTopicHandler(opts.TopicPath)
 
 	// No name provided (list all)
 	if name == "" {

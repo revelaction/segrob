@@ -36,6 +36,10 @@ type TopicsOptions struct {
 	TopicPath string
 }
 
+type TopicOptions struct {
+	TopicPath string
+}
+
 type DocOptions struct {
 	Start int
 	Count int
@@ -441,31 +445,49 @@ func parseEditArgs(args []string, ui UI) (EditOptions, bool, error) {
 	return opts, !info.IsDir(), nil
 }
 
-func parseTopicArgs(args []string, ui UI) (string, error) {
+func parseTopicArgs(args []string, ui UI) (TopicOptions, string, bool, error) {
 	fs := flag.NewFlagSet("topic", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
+
+	var opts TopicOptions
+	fs.StringVar(&opts.TopicPath, "topic-path", os.Getenv("SEGROB_TOPIC_PATH"), "Path to topics directory or SQLite file")
+	fs.StringVar(&opts.TopicPath, "t", os.Getenv("SEGROB_TOPIC_PATH"), "alias for -topic-path")
+
 	fs.Usage = func() {
-		_, _ = fmt.Fprintf(fs.Output(), "Usage: %s topic [name]\n", os.Args[0])
+		_, _ = fmt.Fprintf(fs.Output(), "Usage: %s topic [options] [name]\n", os.Args[0])
 		_, _ = fmt.Fprintf(fs.Output(), "\nDescription:\n")
 		_, _ = fmt.Fprintf(fs.Output(), "  List topics or show expressions of a topic.\n")
+		_, _ = fmt.Fprintf(fs.Output(), "\nOptions:\n")
+		_, _ = fmt.Fprintf(fs.Output(), "  -t, --topic-path    Path to topics directory or SQLite file (required, or set SEGROB_TOPIC_PATH)\n")
 	}
 
 	if err := fs.Parse(args); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
 			fs.SetOutput(ui.Out)
 			fs.Usage()
-			return "", err
+			return opts, "", false, err
 		}
 		fs.SetOutput(ui.Err)
 		fprintErr(ui.Err, err)
 		fs.Usage()
-		return "", err
+		return opts, "", false, err
 	}
 
-	if fs.NArg() > 0 {
-		return fs.Arg(0), nil
+	if opts.TopicPath == "" {
+		return opts, "", false, errors.New("Topic path must be specified via -t or SEGROB_TOPIC_PATH")
 	}
-	return "", nil
+
+	info, err := os.Stat(opts.TopicPath)
+	if err != nil {
+		return opts, "", false, fmt.Errorf("Topic path not found: %s", opts.TopicPath)
+	}
+
+	name := ""
+	if fs.NArg() > 0 {
+		name = fs.Arg(0)
+	}
+
+	return opts, name, !info.IsDir(), nil
 }
 
 func parseStatArgs(args []string, ui UI) (string, *int, bool, error) {
