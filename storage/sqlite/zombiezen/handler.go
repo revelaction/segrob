@@ -23,23 +23,26 @@ func NewTopicHandler(pool *sqlitex.Pool) *TopicHandler {
 	return &TopicHandler{pool: pool}
 }
 
-// NewPool creates a new Zombiezen SQLite connection pool with performance optimizations
-// and automatic schema initialization.
+
+// NewPool creates a new Zombiezen SQLite connection pool with reasonable defaults
+// (e.g., WAL mode enabled, busy_timeout set).
 func NewPool(dbPath string) (*sqlitex.Pool, error) {
 	poolSize := runtime.NumCPU()
+	// Re-add busy_timeout pragma as part of reasonable defaults for Zombiezen.
+	//initString := fmt.Sprintf("file:%s?_pragma=busy_timeout(5000)", dbPath)
+	initString := fmt.Sprintf("file:%s", dbPath)
 
-	// WAL mode, normal synchronous, and busy timeout for reliability/performance
-	dsn := fmt.Sprintf("file:%s?_journal_mode=WAL&_synchronous=NORMAL&_busy_timeout=5000", dbPath)
-
-	pool, err := sqlitex.NewPool(dsn, sqlitex.PoolOptions{
+	// zombiezen/sqlitex.NewPool with default options uses flags:
+	// sqlite.OpenReadWrite | sqlite.OpenCreate | sqlite.OpenWAL | sqlite.OpenURI
+	pool, err := sqlitex.NewPool(initString, sqlitex.PoolOptions{
 		PoolSize: poolSize,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to create zombiezen pool at %s: %w", dbPath, err)
+		return nil, fmt.Errorf("failed to create default zombiezen pool at %s: %w", dbPath, err)
 	}
-
 	return pool, nil
 }
+
 
 func (h *TopicHandler) Close() error {
 	return h.pool.Close()
