@@ -25,10 +25,11 @@ type ExprOptions struct {
 }
 
 type QueryOptions struct {
-	NoColor  bool
-	NoPrefix bool
-	NMatches int
-	Format   string
+	NoColor   bool
+	NoPrefix  bool
+	NMatches  int
+	Format    string
+	TopicPath string
 }
 
 type TopicsOptions struct {
@@ -364,7 +365,7 @@ func parseExprArgs(args []string, ui UI) (ExprOptions, []string, error) {
 	return opts, fs.Args(), nil
 }
 
-func parseQueryArgs(args []string, ui UI) (QueryOptions, error) {
+func parseQueryArgs(args []string, ui UI) (QueryOptions, bool, error) {
 	fs := flag.NewFlagSet("query", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
 
@@ -383,26 +384,40 @@ func parseQueryArgs(args []string, ui UI) (QueryOptions, error) {
 	fs.Var(formatFlag, "format", "Show whole sentence (all), only surrounding of matched words (part) or only matches words (lemma)")
 	fs.Var(formatFlag, "f", "alias for -format")
 
+	fs.StringVar(&opts.TopicPath, "topic-path", os.Getenv("SEGROB_TOPIC_PATH"), "Path to topics directory or SQLite file")
+	fs.StringVar(&opts.TopicPath, "t", os.Getenv("SEGROB_TOPIC_PATH"), "alias for -topic-path")
+
 	fs.Usage = func() {
 		_, _ = fmt.Fprintf(fs.Output(), "Usage: %s query [options]\n", os.Args[0])
 		_, _ = fmt.Fprintf(fs.Output(), "\nDescription:\n")
 		_, _ = fmt.Fprintf(fs.Output(), "  Enter interactive query mode.\n")
 		_, _ = fmt.Fprintf(fs.Output(), "\nOptions:\n")
 		fs.PrintDefaults()
+		_, _ = fmt.Fprintf(fs.Output(), "  -t, --topic-path    Path to topics directory or SQLite file (required, or set SEGROB_TOPIC_PATH)\n")
 	}
 
 	if err := fs.Parse(args); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
 			fs.SetOutput(ui.Out)
 			fs.Usage()
-			return opts, err
+			return opts, false, err
 		}
 		fs.SetOutput(ui.Err)
 		fprintErr(ui.Err, err)
 		fs.Usage()
-		return opts, err
+		return opts, false, err
 	}
-	return opts, nil
+
+	if opts.TopicPath == "" {
+		return opts, false, errors.New("Topic path must be specified via -t or SEGROB_TOPIC_PATH")
+	}
+
+	info, err := os.Stat(opts.TopicPath)
+	if err != nil {
+		return opts, false, fmt.Errorf("Topic path not found: %s", opts.TopicPath)
+	}
+
+	return opts, !info.IsDir(), nil
 }
 
 func parseEditArgs(args []string, ui UI) (EditOptions, bool, error) {

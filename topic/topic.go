@@ -66,6 +66,15 @@ type TopicExprItem struct {
 // Library is a collection of topics
 type Library []Topic
 
+// Names returns a list of all topic names in the library
+func (l Library) Names() []string {
+	var names []string
+	for _, t := range l {
+		names = append(names, t.Name)
+	}
+	return names
+}
+
 func (m TopicExprItem) Requirement() int {
 	if m.Near > 0 {
 		return RequiresSome

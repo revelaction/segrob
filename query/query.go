@@ -3,12 +3,12 @@ package query
 import (
 	"errors"
 	"fmt"
-	"github.com/revelaction/segrob/file"
+	"strings"
+
 	"github.com/revelaction/segrob/match"
 	"github.com/revelaction/segrob/render"
 	sent "github.com/revelaction/segrob/sentence"
 	"github.com/revelaction/segrob/topic"
-	"strings"
 
 	prompt "github.com/c-bata/go-prompt"
 )
@@ -37,13 +37,8 @@ func NewHandler(l sent.Library, tl topic.Library, r *render.Renderer) *Handler {
 func (h *Handler) Run() error {
 
 	fmt.Println("🔑 Ctrl+X: Toggle prefix, Ctrl+F: next Format, 🔧 quit")
-	// Get all topics
-	th := file.NewTopicHandler(file.TopicDir)
-
-	topicNames, err := th.Names()
-	if err != nil {
-		return err
-	}
+	// Get all topics from the library directly
+	topicNames := h.TopicLibrary.Names()
 
 	// initialize prompt history
 	history := []string{}

@@ -124,14 +124,14 @@ func runCommand(cmd string, args []string, ui UI) error {
 		return exprCommand(opts, cmdArgs, ui)
 
 	case "query":
-		opts, err := parseQueryArgs(args, ui)
+		opts, isFile, err := parseQueryArgs(args, ui)
 		if err != nil {
 			if errors.Is(err, flag.ErrHelp) {
 				return nil
 			}
 			return err
 		}
-		return queryCommand(opts, ui)
+		return queryCommand(opts, isFile, ui)
 
 	case "edit":
 		opts, isFile, err := parseEditArgs(args, ui)
@@ -184,7 +184,11 @@ func runCommand(cmd string, args []string, ui UI) error {
 }
 
 // Query command
-func queryCommand(opts QueryOptions, ui UI) error {
+func queryCommand(opts QueryOptions, isFile bool, ui UI) error {
+
+	if isFile {
+		return errors.New("SQLite backend not yet implemented")
+	}
 
 	// Load docs
 	fhr, err := file.NewDocHandler()
@@ -196,7 +200,7 @@ func queryCommand(opts QueryOptions, ui UI) error {
 		return err
 	}
 
-	th := file.NewTopicHandler(file.TopicDir)
+	th := file.NewTopicHandler(opts.TopicPath)
 	topicLib, err := topicLibrary(th, ui)
 	if err != nil {
 		return err
