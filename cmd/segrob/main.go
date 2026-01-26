@@ -16,6 +16,8 @@ import (
 	"github.com/revelaction/segrob/query"
 	"github.com/revelaction/segrob/render"
 	sent "github.com/revelaction/segrob/sentence"
+	"github.com/revelaction/segrob/storage/filesystem"
+	"github.com/revelaction/segrob/storage/sqlite/zombiezen"
 	"github.com/revelaction/segrob/topic"
 
 	"github.com/gosuri/uiprogress"
@@ -178,6 +180,26 @@ func runCommand(cmd string, args []string, ui UI) error {
 			return err
 		}
 		return completeCommand(completeArgs, ui)
+
+	case "import":
+		opts, err := parseImportArgs(args, ui)
+		if err != nil {
+			if errors.Is(err, flag.ErrHelp) {
+				return nil
+			}
+			return err
+		}
+		return importCommand(opts, ui)
+
+	case "export":
+		opts, err := parseExportArgs(args, ui)
+		if err != nil {
+			if errors.Is(err, flag.ErrHelp) {
+				return nil
+			}
+			return err
+		}
+		return exportCommand(opts, ui)
 	}
 
 	return fmt.Errorf("unknown command: %s", cmd)
@@ -187,7 +209,7 @@ func runCommand(cmd string, args []string, ui UI) error {
 func queryCommand(opts QueryOptions, isFile bool, ui UI) error {
 
 	if isFile {
-		return errors.New("SQLite backend not yet implemented")
+		// This flag might be obsolete now with auto-detection
 	}
 
 	// Load docs
@@ -200,7 +222,10 @@ func queryCommand(opts QueryOptions, isFile bool, ui UI) error {
 		return err
 	}
 
-	th := file.NewTopicHandler(opts.TopicPath)
+	th, err := getTopicHandler(opts.TopicPath)
+	if err != nil {
+		return err
+	}
 	topicLib, err := topicLibrary(th, ui)
 	if err != nil {
 		return err
@@ -367,10 +392,13 @@ func exprCommand(opts ExprOptions, args []string, ui UI) error {
 func editCommand(opts EditOptions, isFile bool, ui UI) error {
 
 	if isFile {
-		return errors.New("SQLite backend not yet implemented")
+		// This flag might be obsolete now with auto-detection
 	}
 
-	th := file.NewTopicHandler(opts.TopicPath)
+	th, err := getTopicHandler(opts.TopicPath)
+	if err != nil {
+		return err
+	}
 
 	topicLib, err := topicLibrary(th, ui)
 	if err != nil {
@@ -408,10 +436,13 @@ func hasLabels(fileLabels, cmdLabels []string) bool {
 func topicCommand(opts TopicOptions, name string, isFile bool, ui UI) error {
 
 	if isFile {
-		return errors.New("SQLite backend not yet implemented")
+		// This flag might be obsolete now with auto-detection
 	}
 
-	var fhr topic.TopicReader = file.NewTopicHandler(opts.TopicPath)
+	fhr, err := getTopicHandler(opts.TopicPath)
+	if err != nil {
+		return err
+	}
 
 	// No name provided (list all)
 	if name == "" {
@@ -435,4 +466,66 @@ func topicCommand(opts TopicOptions, name string, isFile bool, ui UI) error {
 	r := render.NewRenderer()
 	r.Topic(tp.Exprs)
 	return nil
+}
+
+func importCommand(opts ImportOptions, ui UI) error {
+	src := filesystem.NewTopicHandler(opts.From)
+	dst, err := zombiezen.NewTopicHandler(opts.To)
+	if err != nil {
+		return err
+	}
+	defer dst.Close()
+
+	topics, err := src.All()
+	if err != nil {
+		return err
+	}
+
+	for _, tp := range topics {
+		if err := dst.Write(tp); err != nil {
+			return fmt.Errorf("failed to import topic %s: %w", tp.Name, err)
+		}
+	}
+
+	fmt.Fprintf(ui.Out, "Successfully imported %d topics from %s to %s\n", len(topics), opts.From, opts.To)
+	return nil
+}
+
+func exportCommand(opts ExportOptions, ui UI) error {
+	src, err := zombiezen.NewTopicHandler(opts.From)
+	if err != nil {
+		return err
+	}
+	defer src.Close()
+
+	dst := filesystem.NewTopicHandler(opts.To)
+
+	topics, err := src.All()
+	if err != nil {
+		return err
+	}
+
+	for _, tp := range topics {
+		if err := dst.Write(tp); err != nil {
+			return fmt.Errorf("failed to export topic %s: %w", tp.Name, err)
+		}
+	}
+
+	fmt.Fprintf(ui.Out, "Successfully exported %d topics from %s to %s\n", len(topics), opts.From, opts.To)
+	return nil
+}
+
+func getTopicHandler(path string) (topic.TopicRepository, error) {
+	info, err := os.Stat(path)
+	if err != nil {
+		// Path doesn't exist, assume new SQLite DB if it looks like a file path
+		return zombiezen.NewTopicHandler(path)
+	}
+
+	if info.IsDir() {
+		return filesystem.NewTopicHandler(path), nil
+	}
+
+	// Non-directory = SQLite file
+	return zombiezen.NewTopicHandler(path)
 }

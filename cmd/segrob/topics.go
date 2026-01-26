@@ -54,7 +54,10 @@ func renderTopics(doc sent.Doc, sentId int, opts TopicsOptions, ui UI) error {
 	r.Sentence(s, prefix)
 	fmt.Fprintln(ui.Out)
 
-	th := file.NewTopicHandler(opts.TopicPath)
+	th, err := getTopicHandler(opts.TopicPath)
+	if err != nil {
+		return err
+	}
 
 	allTopics, err := th.All()
 	if err != nil {

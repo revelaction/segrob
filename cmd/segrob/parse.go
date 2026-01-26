@@ -50,6 +50,16 @@ type EditOptions struct {
 	TopicPath string
 }
 
+type ImportOptions struct {
+	From string
+	To   string
+}
+
+type ExportOptions struct {
+	From string
+	To   string
+}
+
 // stringSliceFlag implements flag.Value for multi-value strings
 type stringSliceFlag []string
 
@@ -241,8 +251,8 @@ func parseTopicsArgs(args []string, ui UI) (TopicsOptions, string, int, bool, er
 	fs.SetOutput(io.Discard)
 
 	var opts TopicsOptions
-	fs.StringVar(&opts.TopicPath, "topics-dir", os.Getenv("SEGROB_TOPIC_PATH"), "Path to topics directory")
-	fs.StringVar(&opts.TopicPath, "t", os.Getenv("SEGROB_TOPIC_PATH"), "alias for -topics-dir")
+	fs.StringVar(&opts.TopicPath, "topic-path", os.Getenv("SEGROB_TOPIC_PATH"), "Path to topics directory or SQLite file")
+	fs.StringVar(&opts.TopicPath, "t", os.Getenv("SEGROB_TOPIC_PATH"), "alias for -topic-path")
 
 	opts.Format = render.Defaultformat
 	formatFlag := &enumFlag{allowed: render.SupportedFormats(), value: &opts.Format}
@@ -270,11 +280,12 @@ func parseTopicsArgs(args []string, ui UI) (TopicsOptions, string, int, bool, er
 	}
 
 	if opts.TopicPath == "" {
-		return opts, "", 0, false, errors.New("Topics path must be specified via --topics-dir or SEGROB_TOPIC_PATH")
+		return opts, "", 0, false, errors.New("Topic path must be specified via -t or SEGROB_TOPIC_PATH")
 	}
 
-	if info, err := os.Stat(opts.TopicPath); err != nil || !info.IsDir() {
-		return opts, "", 0, false, fmt.Errorf("Topics directory not found or not a directory: %s", opts.TopicPath)
+	_, err := os.Stat(opts.TopicPath)
+	if err != nil {
+		return opts, "", 0, false, fmt.Errorf("Topic path not found: %s", opts.TopicPath)
 	}
 
 	if fs.NArg() != 2 {
@@ -578,7 +589,6 @@ func parseBashArgs(args []string, ui UI) error {
 	}
 	return nil
 }
-
 func parseCompleteArgs(args []string, ui UI) ([]string, error) {
 	fs := flag.NewFlagSet("complete", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
@@ -588,6 +598,52 @@ func parseCompleteArgs(args []string, ui UI) ([]string, error) {
 	}
 
 	return fs.Args(), nil
+}
+
+func parseImportArgs(args []string, ui UI) (ImportOptions, error) {
+	fs := flag.NewFlagSet("import", flag.ContinueOnError)
+	fs.SetOutput(io.Discard)
+
+	var opts ImportOptions
+	fs.StringVar(&opts.From, "from", "", "Source directory with JSON topics")
+	fs.StringVar(&opts.To, "to", "", "Target SQLite database file")
+
+	fs.Usage = func() {
+		_, _ = fmt.Fprintf(fs.Output(), "Usage: %s import --from <dir> --to <sqlite_file>\n", os.Args[0])
+	}
+
+	if err := fs.Parse(args); err != nil {
+		return opts, err
+	}
+
+	if opts.From == "" || opts.To == "" {
+		return opts, errors.New("--from and --to are required")
+	}
+
+	return opts, nil
+}
+
+func parseExportArgs(args []string, ui UI) (ExportOptions, error) {
+	fs := flag.NewFlagSet("export", flag.ContinueOnError)
+	fs.SetOutput(io.Discard)
+
+	var opts ExportOptions
+	fs.StringVar(&opts.From, "from", "", "Source SQLite database file")
+	fs.StringVar(&opts.To, "to", "", "Target directory for JSON topics")
+
+	fs.Usage = func() {
+		_, _ = fmt.Fprintf(fs.Output(), "Usage: %s export --from <sqlite_file> --to <dir>\n", os.Args[0])
+	}
+
+	if err := fs.Parse(args); err != nil {
+		return opts, err
+	}
+
+	if opts.From == "" || opts.To == "" {
+		return opts, errors.New("--from and --to are required")
+	}
+
+	return opts, nil
 }
 
 func setupUsage(fs *flag.FlagSet) {
@@ -605,6 +661,8 @@ func setupUsage(fs *flag.FlagSet) {
 		_, _ = fmt.Fprintf(output, "  edit      Enter interactive edit mode.\n")
 		_, _ = fmt.Fprintf(output, "  topic     List topics or show expressions of a topic.\n")
 		_, _ = fmt.Fprintf(output, "  stat      Show statistics for a document or sentence.\n")
+		_, _ = fmt.Fprintf(output, "  import    Import topics from filesystem to SQLite.\n")
+		_, _ = fmt.Fprintf(output, "  export    Export topics from SQLite to filesystem.\n")
 		_, _ = fmt.Fprintf(output, "  bash      Output bash completion script.\n")
 		_, _ = fmt.Fprintf(output, "  help      Show help for a command.\n")
 	}
