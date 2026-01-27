@@ -77,21 +77,15 @@ func (h *DocHandler) Doc(id int) (sent.Doc, error) {
 	}
 
 	// Fetch Sentences
-	err = sqlitex.Execute(conn, "SELECT sentence_idx, data FROM sentences WHERE doc_id = ? ORDER BY sentence_idx", &sqlitex.ExecOptions{
+	err = sqlitex.Execute(conn, "SELECT data FROM sentences WHERE doc_id = ? ORDER BY rowid", &sqlitex.ExecOptions{
 		Args: []interface{}{id},
 		ResultFunc: func(stmt *sqlite.Stmt) error {
-			idx := stmt.ColumnInt(0)
-			data := stmt.ColumnText(1)
+			data := stmt.ColumnText(0)
 			var tokens []sent.Token
 			if err := json.Unmarshal([]byte(data), &tokens); err != nil {
 				return err
 			}
-
-			// Ensure doc.Tokens is large enough
-			for len(doc.Tokens) <= idx {
-				doc.Tokens = append(doc.Tokens, nil)
-			}
-			doc.Tokens[idx] = tokens
+			doc.Tokens = append(doc.Tokens, tokens)
 			return nil
 		},
 	})
@@ -150,7 +144,7 @@ func (h *DocHandler) FindCandidates(lemmas []string, after storage.Cursor, limit
 		if i > 0 {
 			queryBuilder.WriteString(" INTERSECT ")
 		}
-		queryBuilder.WriteString("SELECT DISTINCT sentence_rowid FROM sentence_lemmas WHERE lemma = ? AND sentence_rowid > ?")
+		queryBuilder.WriteString("SELECT sentence_rowid FROM sentence_lemmas WHERE lemma = ? AND sentence_rowid > ?")
 		args = append(args, lemma, after)
 	}
 	queryBuilder.WriteString(" LIMIT ?")
@@ -177,23 +171,20 @@ func (h *DocHandler) FindCandidates(lemmas []string, after storage.Cursor, limit
 	newCursor := after
 
 	for _, rowID := range rowIDs {
-		// Update cursor to the last processed rowID (assuming rowIDs roughly increase, but INTERSECT might scramble order?
-		// Actually INTERSECT usually preserves order of left table if hinted, but we want to be safe.
-		// If we want monotonic cursor, we should ideally track the max.
-		// The caller will use `after` for the next query.
+		// Update cursor to the last processed rowID
 		if storage.Cursor(rowID) > newCursor {
 			newCursor = storage.Cursor(rowID)
 		}
 
+		var res storage.SentenceResult
 		res.RowID = rowID
 
-		err = sqlitex.Execute(conn, "SELECT s.doc_id, s.sentence_idx, s.data, d.title FROM sentences s JOIN docs d ON s.doc_id = d.id WHERE s.rowid = ?", &sqlitex.ExecOptions{
+		err = sqlitex.Execute(conn, "SELECT s.doc_id, s.data, d.title FROM sentences s JOIN docs d ON s.doc_id = d.id WHERE s.rowid = ?", &sqlitex.ExecOptions{
 			Args: []interface{}{rowID},
 			ResultFunc: func(stmt *sqlite.Stmt) error {
 				res.DocID = stmt.ColumnInt(0)
-				res.SentenceIdx = stmt.ColumnInt(1)
-				data := stmt.ColumnText(2)
-				res.DocTitle = stmt.ColumnText(3)
+				data := stmt.ColumnText(1)
+				res.DocTitle = stmt.ColumnText(2)
 
 				if err := json.Unmarshal([]byte(data), &res.Tokens); err != nil {
 					return err
@@ -265,15 +256,15 @@ func (h *DocHandler) WriteDoc(doc sent.Doc) error {
 	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
 	perm := rng.Perm(len(doc.Tokens))
 
-	for _, originalIdx := range perm {
-		sentence := doc.Tokens[originalIdx]
+	for _, idx := range perm {
+		sentence := doc.Tokens[idx]
 		data, marshalErr := json.Marshal(sentence)
 		if marshalErr != nil {
 			return marshalErr
 		}
 
-		err = sqlitex.Execute(conn, "INSERT INTO sentences (doc_id, sentence_idx, data) VALUES (?, ?, ?)", &sqlitex.ExecOptions{
-			Args: []interface{}{docID, originalIdx, string(data)},
+		err = sqlitex.Execute(conn, "INSERT INTO sentences (doc_id, data) VALUES (?, ?)", &sqlitex.ExecOptions{
+			Args: []interface{}{docID, string(data)},
 		})
 		if err != nil {
 			return fmt.Errorf("failed to insert sentence: %w", err)

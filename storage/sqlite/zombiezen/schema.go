@@ -30,9 +30,8 @@ CREATE TABLE IF NOT EXISTS docs (
 const schemaSentences = `
 CREATE TABLE IF NOT EXISTS sentences (
     rowid   INTEGER PRIMARY KEY,  -- Implicit, used for fast pagination
-    doc_id       INTEGER NOT NULL,
-    sentence_idx INTEGER NOT NULL,
-    data         TEXT NOT NULL,        -- Full JSON []sent.Token
+    doc_id  INTEGER NOT NULL,
+    data    TEXT NOT NULL,        -- Full JSON []sent.Token
     FOREIGN KEY (doc_id) REFERENCES docs(id)
 );`
 

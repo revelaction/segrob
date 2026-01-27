@@ -29,11 +29,11 @@ func NewDocHandler(docDir string) *DocHandler {
 
 // ensureLoaded reads all files if not already loaded
 func (h *DocHandler) ensureLoaded() error {
-	return h.LoadWithProgress(nil)
+	return h.LoadWithCallback(nil)
 }
 
-// LoadWithProgress loads all docs with a callback for progress reporting
-func (h *DocHandler) LoadWithProgress(cb func(total int, name string)) error {
+// LoadWithCallback loads all docs with a callback function
+func (h *DocHandler) LoadWithCallback(cb func(total int, name string)) error {
 	if h.loaded {
 		return nil
 	}
@@ -123,13 +123,12 @@ func (h *DocHandler) FindCandidates(lemmas []string, after storage.Cursor, limit
 
 	var results []storage.SentenceResult
 	for i, doc := range h.docs {
-		for j, tokens := range doc.Tokens {
+		for _, tokens := range doc.Tokens {
 			results = append(results, storage.SentenceResult{
-				RowID:       0,
-				DocID:       i,
-				SentenceIdx: j,
-				DocTitle:    doc.Title,
-				Tokens:      tokens,
+				RowID:    0,
+				DocID:    i,
+				DocTitle: doc.Title,
+				Tokens:   tokens,
 			})
 		}
 	}
