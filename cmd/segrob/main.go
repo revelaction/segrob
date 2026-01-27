@@ -236,36 +236,28 @@ func queryCommand(opts QueryOptions, isFile bool, ui UI) error {
 	}
 
 	// Load docs
-	dr, err := getDocHandler(opts.DocPath)
+	uiprogress.Start()
+	bar := uiprogress.AddBar(1) // Placeholder, updated in callback
+	bar.AppendCompleted()
+	bar.PrependElapsed()
+
+	var currentName string
+	bar.AppendFunc(func(b *uiprogress.Bar) string {
+		return currentName
+	})
+
+	dr, err := getDocHandler(opts.DocPath, func(total int, name string) {
+		if bar.Total <= 1 {
+			bar.Total = total
+			bar.Set(0)
+		}
+		currentName = name
+		bar.Incr()
+	})
+	uiprogress.Stop()
+
 	if err != nil {
 		return err
-	}
-
-	// Restore progress bar behavior for filesystem (legacy parity)
-	if fsHandler, ok := dr.(*filesystem.DocHandler); ok {
-		uiprogress.Start()
-		bar := uiprogress.AddBar(1) // Placeholder, updated in callback
-		bar.AppendCompleted()
-		bar.PrependElapsed()
-
-		var currentName string
-		bar.AppendFunc(func(b *uiprogress.Bar) string {
-			return currentName
-		})
-
-		err = fsHandler.LoadWithCallback(func(total int, name string) {
-			if bar.Total <= 1 {
-				bar.Total = total
-				bar.Set(0)
-			}
-			currentName = name
-			bar.Incr()
-		})
-		uiprogress.Stop()
-
-		if err != nil {
-			return err
-		}
 	}
 
 	th, err := getTopicHandler(opts.TopicPath)
@@ -328,15 +320,9 @@ func matchDocs(matcher *match.Matcher, opts ExprOptions, ui UI) error {
 	r.Format = opts.Format
 	r.NumMatches = opts.NMatches
 
-	dr, err := getDocHandler("")
+	dr, err := getDocHandler("", nil)
 	if err != nil {
 		return err
-	}
-
-	if fsHandler, ok := dr.(*filesystem.DocHandler); ok {
-		if err := fsHandler.LoadWithCallback(nil); err != nil {
-			return err
-		}
 	}
 
 	if opts.Doc != nil {
@@ -558,7 +544,7 @@ func getTopicHandler(path string) (storage.TopicRepository, error) {
 	return zombiezen.NewTopicHandler(pool), nil
 }
 
-func getDocHandler(path string) (storage.DocRepository, error) {
+func getDocHandler(path string, cb func(int, string)) (storage.DocRepository, error) {
 	if path == "" {
 		path = file.TokenDir
 	}
@@ -574,7 +560,7 @@ func getDocHandler(path string) (storage.DocRepository, error) {
 	}
 
 	if info.IsDir() {
-		return filesystem.NewDocHandler(path), nil
+		return filesystem.NewDocHandler(path, cb)
 	}
 
 	// Non-directory = SQLite file
@@ -586,7 +572,10 @@ func getDocHandler(path string) (storage.DocRepository, error) {
 }
 
 func importDocCommand(opts ImportDocOptions, ui UI) error {
-	src := filesystem.NewDocHandler(opts.From)
+	src, err := filesystem.NewDocHandler(opts.From, nil)
+	if err != nil {
+		return err
+	}
 	pool, err := zombiezen.NewPool(opts.To)
 	if err != nil {
 		return err

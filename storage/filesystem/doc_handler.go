@@ -20,17 +20,16 @@ type DocHandler struct {
 
 var _ storage.DocRepository = (*DocHandler)(nil)
 
-func NewDocHandler(docDir string) *DocHandler {
-	return &DocHandler{
+// NewDocHandler creates and LOADS a filesystem document handler.
+// The callback is called for each file loaded (total, current_name).
+func NewDocHandler(docDir string, cb func(total int, name string)) (*DocHandler, error) {
+	h := &DocHandler{
 		docDir: docDir,
 	}
-}
 
-// LoadWithCallback loads all docs with a callback function
-func (h *DocHandler) LoadWithCallback(cb func(total int, name string)) error {
 	files, err := os.ReadDir(h.docDir)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	var names []string
@@ -41,7 +40,7 @@ func (h *DocHandler) LoadWithCallback(cb func(total int, name string)) error {
 	}
 	h.docNames = names
 
-	// Preload all docs to match legacy behavior and support efficient querying
+	// Preload all docs to match legacy behavior
 	h.docs = make([]sent.Doc, 0, len(names))
 
 	total := len(names)
@@ -52,12 +51,12 @@ func (h *DocHandler) LoadWithCallback(cb func(total int, name string)) error {
 
 		content, err := os.ReadFile(filepath.Join(h.docDir, name))
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 		var doc sent.Doc
 		if err := json.Unmarshal(content, &doc); err != nil {
-			return err
+			return nil, err
 		}
 		doc.Title = name
 		doc.Id = i
@@ -65,7 +64,7 @@ func (h *DocHandler) LoadWithCallback(cb func(total int, name string)) error {
 		h.docs = append(h.docs, doc)
 	}
 
-	return nil
+	return h, nil
 }
 
 func (h *DocHandler) Names() ([]string, error) {
