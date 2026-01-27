@@ -14,7 +14,6 @@ type DocHandler struct {
 	docDir string
 
 	// In-memory cache
-	loaded   bool
 	docs     []sent.Doc
 	docNames []string
 }
@@ -27,28 +26,7 @@ func NewDocHandler(docDir string) *DocHandler {
 	}
 }
 
-// ensureLoaded reads all files if not already loaded
-func (h *DocHandler) ensureLoaded() error {
-	return h.LoadWithCallback(nil)
-}
-
 // LoadWithCallback loads all docs with a callback function
-func (h *DocHandler) LoadWithCallback(cb func(total int, name string)) error {
-	if h.loaded {
-		return nil
-	}
-
-	files, err := ioutil.ReadDir(h.docDir)
-	if err != nil {
-		return err
-	}
-
-	var names []string
-	for _, file := range files {
-		if filepath.Ext(file.Name()) == ".json" {
-			names = append(names, file.Name())
-		}
-	}
 	h.docNames = names
 
 	// Preload all docs to match legacy behavior and support efficient querying
@@ -75,22 +53,14 @@ func (h *DocHandler) LoadWithCallback(cb func(total int, name string)) error {
 		h.docs = append(h.docs, doc)
 	}
 
-	h.loaded = true
 	return nil
 }
 
 func (h *DocHandler) Names() ([]string, error) {
-	if err := h.ensureLoaded(); err != nil {
-		return nil, err
-	}
 	return h.docNames, nil
 }
 
 func (h *DocHandler) Doc(id int) (sent.Doc, error) {
-	if err := h.ensureLoaded(); err != nil {
-		return sent.Doc{}, err
-	}
-
 	if id < 0 || id >= len(h.docs) {
 		return sent.Doc{}, fmt.Errorf("doc id out of range: %d", id)
 	}
@@ -98,10 +68,6 @@ func (h *DocHandler) Doc(id int) (sent.Doc, error) {
 }
 
 func (h *DocHandler) DocForName(name string) (sent.Doc, error) {
-	if err := h.ensureLoaded(); err != nil {
-		return sent.Doc{}, err
-	}
-
 	for _, doc := range h.docs {
 		if doc.Title == name {
 			return doc, nil
@@ -112,11 +78,7 @@ func (h *DocHandler) DocForName(name string) (sent.Doc, error) {
 
 // FindCandidates returns ALL sentences from memory.
 func (h *DocHandler) FindCandidates(lemmas []string, after storage.Cursor, limit int) ([]storage.SentenceResult, storage.Cursor, error) {
-	if err := h.ensureLoaded(); err != nil {
-		return nil, 0, err
-	}
-
-	// Resuming logic: if cursor > 0, we already returned everything (EOF).
+	// If cursor > 0, we already returned everything (EOF).
 	if after > 0 {
 		return nil, after, nil
 	}

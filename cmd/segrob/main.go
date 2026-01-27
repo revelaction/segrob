@@ -334,6 +334,12 @@ func matchDocs(matcher *match.Matcher, opts ExprOptions, ui UI) error {
 		return err
 	}
 
+	if fsHandler, ok := dr.(*filesystem.DocHandler); ok {
+		if err := fsHandler.LoadWithCallback(nil); err != nil {
+			return err
+		}
+	}
+
 	if opts.Doc != nil {
 		docId := *opts.Doc
 		doc, err := dr.Doc(docId)
