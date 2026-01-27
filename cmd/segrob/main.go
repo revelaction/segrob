@@ -6,7 +6,6 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -671,7 +670,7 @@ func exportDocCommand(opts ExportDocOptions, ui UI) error {
 		}
 
 		targetPath := filepath.Join(opts.To, name)
-		if err := ioutil.WriteFile(targetPath, data, 0644); err != nil {
+		if err := os.WriteFile(targetPath, data, 0644); err != nil {
 			uiprogress.Stop()
 			return fmt.Errorf("failed to write file %s: %w", targetPath, err)
 		}

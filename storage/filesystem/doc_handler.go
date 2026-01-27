@@ -3,7 +3,7 @@ package filesystem
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"path/filepath"
 
 	sent "github.com/revelaction/segrob/sentence"
@@ -27,6 +27,18 @@ func NewDocHandler(docDir string) *DocHandler {
 }
 
 // LoadWithCallback loads all docs with a callback function
+func (h *DocHandler) LoadWithCallback(cb func(total int, name string)) error {
+	files, err := os.ReadDir(h.docDir)
+	if err != nil {
+		return err
+	}
+
+	var names []string
+	for _, file := range files {
+		if filepath.Ext(file.Name()) == ".json" {
+			names = append(names, file.Name())
+		}
+	}
 	h.docNames = names
 
 	// Preload all docs to match legacy behavior and support efficient querying
@@ -38,7 +50,7 @@ func NewDocHandler(docDir string) *DocHandler {
 			cb(total, name)
 		}
 
-		content, err := ioutil.ReadFile(filepath.Join(h.docDir, name))
+		content, err := os.ReadFile(filepath.Join(h.docDir, name))
 		if err != nil {
 			return err
 		}

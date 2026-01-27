@@ -2,7 +2,7 @@ package file
 
 import (
 	"encoding/json"
-	"io/ioutil"
+	"os"
 
 	sent "github.com/revelaction/segrob/sentence"
 )
@@ -14,7 +14,7 @@ const (
 
 // ReadDoc reads a Doc JSON from the given path and unmarshals it.
 func ReadDoc(path string) (sent.Doc, error) {
-	f, err := ioutil.ReadFile(path)
+	f, err := os.ReadFile(path)
 	if err != nil {
 		return sent.Doc{}, err
 	}
