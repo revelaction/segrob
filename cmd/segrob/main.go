@@ -1,11 +1,14 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"golang.org/x/term"
@@ -182,25 +185,45 @@ func runCommand(cmd string, args []string, ui UI) error {
 		}
 		return completeCommand(completeArgs, ui)
 
-	case "import":
-		opts, err := parseImportArgs(args, ui)
+	case "import-topic":
+		opts, err := parseImportTopicArgs(args, ui)
 		if err != nil {
 			if errors.Is(err, flag.ErrHelp) {
 				return nil
 			}
 			return err
 		}
-		return importCommand(opts, ui)
+		return importTopicCommand(opts, ui)
 
-	case "export":
-		opts, err := parseExportArgs(args, ui)
+	case "export-topic":
+		opts, err := parseExportTopicArgs(args, ui)
 		if err != nil {
 			if errors.Is(err, flag.ErrHelp) {
 				return nil
 			}
 			return err
 		}
-		return exportCommand(opts, ui)
+		return exportTopicCommand(opts, ui)
+
+	case "import-doc":
+		opts, err := parseImportDocArgs(args, ui)
+		if err != nil {
+			if errors.Is(err, flag.ErrHelp) {
+				return nil
+			}
+			return err
+		}
+		return importDocCommand(opts, ui)
+
+	case "export-doc":
+		opts, err := parseExportDocArgs(args, ui)
+		if err != nil {
+			if errors.Is(err, flag.ErrHelp) {
+				return nil
+			}
+			return err
+		}
+		return exportDocCommand(opts, ui)
 	}
 
 	return fmt.Errorf("unknown command: %s", cmd)
@@ -214,13 +237,36 @@ func queryCommand(opts QueryOptions, isFile bool, ui UI) error {
 	}
 
 	// Load docs
-	fhr, err := file.NewDocHandler()
+	dr, err := getDocHandler(opts.DocPath)
 	if err != nil {
 		return err
 	}
-	docLib, err := docLibrary(fhr, ui)
-	if err != nil {
-		return err
+
+	// Restore progress bar behavior for filesystem (legacy parity)
+	if fsHandler, ok := dr.(*filesystem.DocHandler); ok {
+		uiprogress.Start()
+		bar := uiprogress.AddBar(1) // Placeholder, updated in callback
+		bar.AppendCompleted()
+		bar.PrependElapsed()
+
+		var currentName string
+		bar.AppendFunc(func(b *uiprogress.Bar) string {
+			return currentName
+		})
+
+		err = fsHandler.LoadWithProgress(func(total int, name string) {
+			if bar.Total <= 1 {
+				bar.Total = total
+				bar.Set(0)
+			}
+			currentName = name
+			bar.Incr()
+		})
+		uiprogress.Stop()
+
+		if err != nil {
+			return err
+		}
 	}
 
 	th, err := getTopicHandler(opts.TopicPath)
@@ -240,47 +286,8 @@ func queryCommand(opts QueryOptions, isFile bool, ui UI) error {
 	r.NumMatches = opts.NMatches
 
 	// now present the REPL and prepare for topic in the REPL
-	t := query.NewHandler(docLib, topicLib, r)
+	t := query.NewHandler(dr, topicLib, r)
 	return t.Run()
-}
-
-func docLibrary(fhr *file.DocHandler, ui UI) (sent.Library, error) {
-	docNames, err := fhr.Names()
-	if err != nil {
-		return nil, err
-	}
-
-	var library sent.Library
-
-	// Start progress indicator
-	uiprogress.Start()                      // start rendering
-	bar := uiprogress.AddBar(len(docNames)) // Add a new bar
-	bar.AppendCompleted()
-	bar.PrependElapsed()
-	bar.Set(1)
-	// Append Doc name to the progress bar
-	bar.AppendFunc(func(b *uiprogress.Bar) string {
-		return docNames[b.Current()-1]
-	})
-
-	for docId, name := range docNames {
-
-		doc, err := fhr.DocForName(name)
-		if err != nil {
-			return nil, err
-		}
-
-		// Add Here the Id.
-		doc.Id = docId
-		library = append(library, doc)
-
-		bar.Incr()
-	}
-
-	// stop rendering
-	uiprogress.Stop()
-
-	return library, nil
 }
 
 // topicLibrary retrieves all expressions of all topic files
@@ -322,14 +329,14 @@ func matchDocs(matcher *match.Matcher, opts ExprOptions, ui UI) error {
 	r.Format = opts.Format
 	r.NumMatches = opts.NMatches
 
-	fhr, err := file.NewDocHandler()
+	dr, err := getDocHandler("")
 	if err != nil {
 		return err
 	}
 
 	if opts.Doc != nil {
 		docId := *opts.Doc
-		doc, err := fhr.Doc(docId)
+		doc, err := dr.Doc(docId)
 		if err != nil {
 			return err
 		}
@@ -343,14 +350,14 @@ func matchDocs(matcher *match.Matcher, opts ExprOptions, ui UI) error {
 		matcher.Match(doc)
 
 	} else {
-		docNames, err := fhr.Names()
+		docNames, err := dr.Names()
 		if err != nil {
 			return err
 		}
 
 		for docId, name := range docNames {
 
-			doc, err := fhr.DocForName(name)
+			doc, err := dr.DocForName(name)
 			if err != nil {
 				return err
 			}
@@ -469,7 +476,7 @@ func topicCommand(opts TopicOptions, name string, isFile bool, ui UI) error {
 	return nil
 }
 
-func importCommand(opts ImportOptions, ui UI) error {
+func importTopicCommand(opts ImportTopicOptions, ui UI) error {
 	src := filesystem.NewTopicHandler(opts.From)
 	pool, err := zombiezen.NewPool(opts.To)
 	if err != nil {
@@ -498,7 +505,7 @@ func importCommand(opts ImportOptions, ui UI) error {
 	return nil
 }
 
-func exportCommand(opts ExportOptions, ui UI) error {
+func exportTopicCommand(opts ExportTopicOptions, ui UI) error {
 	pool, err := zombiezen.NewPool(opts.From)
 	if err != nil {
 		return err
@@ -544,4 +551,129 @@ func getTopicHandler(path string) (storage.TopicRepository, error) {
 		return nil, err
 	}
 	return zombiezen.NewTopicHandler(pool), nil
+}
+
+func getDocHandler(path string) (storage.DocRepository, error) {
+	if path == "" {
+		path = file.TokenDir
+	}
+
+	info, err := os.Stat(path)
+	if err != nil {
+		// Path doesn't exist, assume new SQLite DB
+		pool, err := zombiezen.NewPool(path)
+		if err != nil {
+			return nil, err
+		}
+		return zombiezen.NewDocHandler(pool), nil
+	}
+
+	if info.IsDir() {
+		return filesystem.NewDocHandler(path), nil
+	}
+
+	// Non-directory = SQLite file
+	pool, err := zombiezen.NewPool(path)
+	if err != nil {
+		return nil, err
+	}
+	return zombiezen.NewDocHandler(pool), nil
+}
+
+func importDocCommand(opts ImportDocOptions, ui UI) error {
+	src := filesystem.NewDocHandler(opts.From)
+	pool, err := zombiezen.NewPool(opts.To)
+	if err != nil {
+		return err
+	}
+	defer pool.Close()
+
+	if err := zombiezen.SetupDocs(pool); err != nil {
+		return fmt.Errorf("failed to setup sqlite docs database: %w", err)
+	}
+
+	dst := zombiezen.NewDocHandler(pool)
+
+	fmt.Fprintf(ui.Out, "Reading docs from %s...\n", opts.From)
+	names, err := src.Names()
+	if err != nil {
+		return err
+	}
+
+	uiprogress.Start()
+	bar := uiprogress.AddBar(len(names))
+	bar.AppendCompleted()
+	bar.PrependElapsed()
+
+	count := 0
+	for _, name := range names {
+		doc, err := src.DocForName(name)
+		if err != nil {
+			uiprogress.Stop()
+			return fmt.Errorf("failed to read doc %s: %w", name, err)
+		}
+
+		if err := dst.WriteDoc(doc); err != nil {
+			uiprogress.Stop()
+			return fmt.Errorf("failed to write doc %s: %w", name, err)
+		}
+		count++
+		bar.Incr()
+	}
+	uiprogress.Stop()
+
+	fmt.Fprintf(ui.Out, "Successfully imported %d docs from %s to %s\n", count, opts.From, opts.To)
+	return nil
+}
+
+func exportDocCommand(opts ExportDocOptions, ui UI) error {
+	pool, err := zombiezen.NewPool(opts.From)
+	if err != nil {
+		return err
+	}
+	defer pool.Close()
+	src := zombiezen.NewDocHandler(pool)
+
+	// Ensure target directory exists
+	if err := os.MkdirAll(opts.To, 0755); err != nil {
+		return fmt.Errorf("failed to create target directory: %w", err)
+	}
+
+	names, err := src.Names()
+	if err != nil {
+		return err
+	}
+
+	uiprogress.Start()
+	bar := uiprogress.AddBar(len(names))
+	bar.AppendCompleted()
+	bar.PrependElapsed()
+
+	count := 0
+	for _, name := range names {
+		doc, err := src.DocForName(name)
+		if err != nil {
+			uiprogress.Stop()
+			return fmt.Errorf("failed to read doc %s: %w", name, err)
+		}
+
+		// Write to JSON
+		data, err := json.MarshalIndent(doc, "", "  ")
+		if err != nil {
+			uiprogress.Stop()
+			return err
+		}
+
+		targetPath := filepath.Join(opts.To, name)
+		if err := ioutil.WriteFile(targetPath, data, 0644); err != nil {
+			uiprogress.Stop()
+			return fmt.Errorf("failed to write file %s: %w", targetPath, err)
+		}
+		count++
+		bar.Incr()
+	}
+	uiprogress.Stop()
+
+	fmt.Fprintf(ui.Out, "Successfully exported %d docs from %s to %s\n", count, opts.From, opts.To)
+	return nil
 }

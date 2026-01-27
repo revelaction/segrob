@@ -30,6 +30,7 @@ type QueryOptions struct {
 	NMatches  int
 	Format    string
 	TopicPath string
+	DocPath   string
 }
 
 type TopicsOptions struct {
@@ -50,12 +51,22 @@ type EditOptions struct {
 	TopicPath string
 }
 
-type ImportOptions struct {
+type ImportTopicOptions struct {
 	From string
 	To   string
 }
 
-type ExportOptions struct {
+type ExportTopicOptions struct {
+	From string
+	To   string
+}
+
+type ImportDocOptions struct {
+	From string
+	To   string
+}
+
+type ExportDocOptions struct {
 	From string
 	To   string
 }
@@ -398,6 +409,9 @@ func parseQueryArgs(args []string, ui UI) (QueryOptions, bool, error) {
 	fs.StringVar(&opts.TopicPath, "topic-path", os.Getenv("SEGROB_TOPIC_PATH"), "Path to topics directory or SQLite file")
 	fs.StringVar(&opts.TopicPath, "t", os.Getenv("SEGROB_TOPIC_PATH"), "alias for -topic-path")
 
+	fs.StringVar(&opts.DocPath, "doc-path", os.Getenv("SEGROB_DOC_PATH"), "Path to docs directory or SQLite file")
+	fs.StringVar(&opts.DocPath, "d", os.Getenv("SEGROB_DOC_PATH"), "alias for -doc-path")
+
 	fs.Usage = func() {
 		_, _ = fmt.Fprintf(fs.Output(), "Usage: %s query [options]\n", os.Args[0])
 		_, _ = fmt.Fprintf(fs.Output(), "\nDescription:\n")
@@ -405,6 +419,7 @@ func parseQueryArgs(args []string, ui UI) (QueryOptions, bool, error) {
 		_, _ = fmt.Fprintf(fs.Output(), "\nOptions:\n")
 		fs.PrintDefaults()
 		_, _ = fmt.Fprintf(fs.Output(), "  -t, --topic-path    Path to topics directory or SQLite file (required, or set SEGROB_TOPIC_PATH)\n")
+		_, _ = fmt.Fprintf(fs.Output(), "  -d, --doc-path      Path to docs directory or SQLite file (optional, defaults to filesystem corpus/token/)\n")
 	}
 
 	if err := fs.Parse(args); err != nil {
@@ -600,16 +615,16 @@ func parseCompleteArgs(args []string, ui UI) ([]string, error) {
 	return fs.Args(), nil
 }
 
-func parseImportArgs(args []string, ui UI) (ImportOptions, error) {
-	fs := flag.NewFlagSet("import", flag.ContinueOnError)
+func parseImportTopicArgs(args []string, ui UI) (ImportTopicOptions, error) {
+	fs := flag.NewFlagSet("import-topic", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
 
-	var opts ImportOptions
+	var opts ImportTopicOptions
 	fs.StringVar(&opts.From, "from", "", "Source directory with JSON topics")
 	fs.StringVar(&opts.To, "to", "", "Target SQLite database file")
 
 	fs.Usage = func() {
-		_, _ = fmt.Fprintf(fs.Output(), "Usage: %s import --from <dir> --to <sqlite_file>\n", os.Args[0])
+		_, _ = fmt.Fprintf(fs.Output(), "Usage: %s import-topic --from <dir> --to <sqlite_file>\n", os.Args[0])
 	}
 
 	if err := fs.Parse(args); err != nil {
@@ -623,16 +638,62 @@ func parseImportArgs(args []string, ui UI) (ImportOptions, error) {
 	return opts, nil
 }
 
-func parseExportArgs(args []string, ui UI) (ExportOptions, error) {
-	fs := flag.NewFlagSet("export", flag.ContinueOnError)
+func parseExportTopicArgs(args []string, ui UI) (ExportTopicOptions, error) {
+	fs := flag.NewFlagSet("export-topic", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
 
-	var opts ExportOptions
+	var opts ExportTopicOptions
 	fs.StringVar(&opts.From, "from", "", "Source SQLite database file")
 	fs.StringVar(&opts.To, "to", "", "Target directory for JSON topics")
 
 	fs.Usage = func() {
-		_, _ = fmt.Fprintf(fs.Output(), "Usage: %s export --from <sqlite_file> --to <dir>\n", os.Args[0])
+		_, _ = fmt.Fprintf(fs.Output(), "Usage: %s export-topic --from <sqlite_file> --to <dir>\n", os.Args[0])
+	}
+
+	if err := fs.Parse(args); err != nil {
+		return opts, err
+	}
+
+	if opts.From == "" || opts.To == "" {
+		return opts, errors.New("--from and --to are required")
+	}
+
+	return opts, nil
+}
+
+func parseImportDocArgs(args []string, ui UI) (ImportDocOptions, error) {
+	fs := flag.NewFlagSet("import-doc", flag.ContinueOnError)
+	fs.SetOutput(io.Discard)
+
+	var opts ImportDocOptions
+	fs.StringVar(&opts.From, "from", "", "Source directory with JSON docs")
+	fs.StringVar(&opts.To, "to", "", "Target SQLite database file")
+
+	fs.Usage = func() {
+		_, _ = fmt.Fprintf(fs.Output(), "Usage: %s import-doc --from <dir> --to <sqlite_file>\n", os.Args[0])
+	}
+
+	if err := fs.Parse(args); err != nil {
+		return opts, err
+	}
+
+	if opts.From == "" || opts.To == "" {
+		return opts, errors.New("--from and --to are required")
+	}
+
+	return opts, nil
+}
+
+func parseExportDocArgs(args []string, ui UI) (ExportDocOptions, error) {
+	fs := flag.NewFlagSet("export-doc", flag.ContinueOnError)
+	fs.SetOutput(io.Discard)
+
+	var opts ExportDocOptions
+	fs.StringVar(&opts.From, "from", "", "Source SQLite database file")
+	fs.StringVar(&opts.To, "to", "", "Target directory for JSON docs")
+
+	fs.Usage = func() {
+		_, _ = fmt.Fprintf(fs.Output(), "Usage: %s export-doc --from <sqlite_file> --to <dir>\n", os.Args[0])
 	}
 
 	if err := fs.Parse(args); err != nil {
@@ -661,8 +722,10 @@ func setupUsage(fs *flag.FlagSet) {
 		_, _ = fmt.Fprintf(output, "  edit      Enter interactive edit mode.\n")
 		_, _ = fmt.Fprintf(output, "  topic     List topics or show expressions of a topic.\n")
 		_, _ = fmt.Fprintf(output, "  stat      Show statistics for a document or sentence.\n")
-		_, _ = fmt.Fprintf(output, "  import    Import topics from filesystem to SQLite.\n")
-		_, _ = fmt.Fprintf(output, "  export    Export topics from SQLite to filesystem.\n")
+		_, _ = fmt.Fprintf(output, "  import-topic  Import topics from filesystem to SQLite.\n")
+		_, _ = fmt.Fprintf(output, "  export-topic  Export topics from SQLite to filesystem.\n")
+		_, _ = fmt.Fprintf(output, "  import-doc    Import docs from filesystem to SQLite.\n")
+		_, _ = fmt.Fprintf(output, "  export-doc    Export docs from SQLite to filesystem.\n")
 		_, _ = fmt.Fprintf(output, "  bash      Output bash completion script.\n")
 		_, _ = fmt.Fprintf(output, "  help      Show help for a command.\n")
 	}

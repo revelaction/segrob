@@ -1,0 +1,146 @@
+package filesystem
+
+import (
+	"encoding/json"
+	"fmt"
+	"io/ioutil"
+	"path/filepath"
+
+	sent "github.com/revelaction/segrob/sentence"
+	"github.com/revelaction/segrob/storage"
+)
+
+type DocHandler struct {
+	docDir string
+
+	// In-memory cache
+	loaded   bool
+	docs     []sent.Doc
+	docNames []string
+}
+
+var _ storage.DocRepository = (*DocHandler)(nil)
+
+func NewDocHandler(docDir string) *DocHandler {
+	return &DocHandler{
+		docDir: docDir,
+	}
+}
+
+// ensureLoaded reads all files if not already loaded
+func (h *DocHandler) ensureLoaded() error {
+	return h.LoadWithProgress(nil)
+}
+
+// LoadWithProgress loads all docs with a callback for progress reporting
+func (h *DocHandler) LoadWithProgress(cb func(total int, name string)) error {
+	if h.loaded {
+		return nil
+	}
+
+	files, err := ioutil.ReadDir(h.docDir)
+	if err != nil {
+		return err
+	}
+
+	var names []string
+	for _, file := range files {
+		if filepath.Ext(file.Name()) == ".json" {
+			names = append(names, file.Name())
+		}
+	}
+	h.docNames = names
+
+	// Preload all docs to match legacy behavior and support efficient querying
+	h.docs = make([]sent.Doc, 0, len(names))
+
+	total := len(names)
+	for i, name := range names {
+		if cb != nil {
+			cb(total, name)
+		}
+
+		content, err := ioutil.ReadFile(filepath.Join(h.docDir, name))
+		if err != nil {
+			return err
+		}
+
+		var doc sent.Doc
+		if err := json.Unmarshal(content, &doc); err != nil {
+			return err
+		}
+		doc.Title = name
+		doc.Id = i
+
+		h.docs = append(h.docs, doc)
+	}
+
+	h.loaded = true
+	return nil
+}
+
+func (h *DocHandler) Names() ([]string, error) {
+	if err := h.ensureLoaded(); err != nil {
+		return nil, err
+	}
+	return h.docNames, nil
+}
+
+func (h *DocHandler) Doc(id int) (sent.Doc, error) {
+	if err := h.ensureLoaded(); err != nil {
+		return sent.Doc{}, err
+	}
+
+	if id < 0 || id >= len(h.docs) {
+		return sent.Doc{}, fmt.Errorf("doc id out of range: %d", id)
+	}
+	return h.docs[id], nil
+}
+
+func (h *DocHandler) DocForName(name string) (sent.Doc, error) {
+	if err := h.ensureLoaded(); err != nil {
+		return sent.Doc{}, err
+	}
+
+	for _, doc := range h.docs {
+		if doc.Title == name {
+			return doc, nil
+		}
+	}
+	return sent.Doc{}, fmt.Errorf("doc not found: %s", name)
+}
+
+// FindCandidates returns ALL sentences from memory.
+func (h *DocHandler) FindCandidates(lemmas []string, after storage.Cursor, limit int) ([]storage.SentenceResult, storage.Cursor, error) {
+	if err := h.ensureLoaded(); err != nil {
+		return nil, 0, err
+	}
+
+	// Resuming logic: if cursor > 0, we already returned everything (EOF).
+	if after > 0 {
+		return nil, after, nil
+	}
+
+	var results []storage.SentenceResult
+	for i, doc := range h.docs {
+		for j, tokens := range doc.Tokens {
+			results = append(results, storage.SentenceResult{
+				RowID:       0,
+				DocID:       i,
+				SentenceIdx: j,
+				DocTitle:    doc.Title,
+				Tokens:      tokens,
+			})
+		}
+	}
+
+	return results, 1, nil
+}
+
+func (h *DocHandler) Sentence(rowid int64) ([]sent.Token, error) {
+	return nil, fmt.Errorf("Sentence(rowid) not implemented for filesystem")
+}
+
+func (h *DocHandler) WriteDoc(doc sent.Doc) error {
+	return fmt.Errorf("read-only storage")
+}

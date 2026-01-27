@@ -10,7 +10,8 @@ import (
 	sent "github.com/revelaction/segrob/sentence"
 	"github.com/revelaction/segrob/topic"
 
-	prompt "github.com/c-bata/go-prompt"
+	"github.com/c-bata/go-prompt"
+	"github.com/revelaction/segrob/storage"
 )
 
 const (
@@ -21,14 +22,14 @@ const (
 )
 
 type Handler struct {
-	Library      sent.Library
+	DocRepo      storage.DocReader
 	TopicLibrary topic.Library
 	Renderer     *render.Renderer
 }
 
-func NewHandler(l sent.Library, tl topic.Library, r *render.Renderer) *Handler {
+func NewHandler(dr storage.DocReader, tl topic.Library, r *render.Renderer) *Handler {
 	return &Handler{
-		Library:      l,
+		DocRepo:      dr,
 		TopicLibrary: tl,
 		Renderer:     r,
 	}
@@ -81,8 +82,49 @@ func (h *Handler) Run() error {
 		matcher := match.NewMatcher(tp)
 		matcher.AddTopicExpr(expr)
 
-		for _, doc := range h.Library {
-			h.Renderer.AddDocName(doc.Id, doc.Title)
+		// Extract lemmas from all relevant expressions (OR logic)
+		queries := extractLemmas(tp, expr)
+
+		// Collect candidates (deduplicated by RowID)
+		candidates := make(map[int64]storage.SentenceResult)
+		limit := 2000 // Limit candidates per expression to avoid hang
+
+		for _, lemmas := range queries {
+			cursor := storage.Cursor(0)
+			fetched := 0
+			for {
+				// Fetch batch
+				res, newCursor, err := h.DocRepo.FindCandidates(lemmas, cursor, 500)
+				if err != nil {
+					fmt.Printf("Error fetching candidates: %v\n", err)
+					break
+				}
+				if len(res) == 0 {
+					break
+				}
+
+				for _, r := range res {
+					if _, exists := candidates[r.RowID]; !exists {
+						candidates[r.RowID] = r
+					}
+				}
+
+				fetched += len(res)
+				if fetched >= limit {
+					break
+				}
+				cursor = newCursor
+			}
+		}
+
+		for _, res := range candidates {
+			h.Renderer.AddDocName(res.DocID, res.DocTitle)
+			// Construct a valid doc with single sentence for matching
+			doc := sent.Doc{
+				Id:     res.DocID,
+				Title:  res.DocTitle,
+				Tokens: [][]sent.Token{res.Tokens},
+			}
 			matcher.Match(doc)
 		}
 
@@ -229,4 +271,36 @@ func (h *Handler) parse(in string) (topic.Topic, topic.TopicExpr, error) {
 	}
 
 	return tp, exp, nil
+}
+
+func extractLemmas(tp topic.Topic, expr topic.TopicExpr) [][]string {
+	var sets [][]string
+
+	// From topic expressions
+	for _, e := range tp.Exprs {
+		var lemmas []string
+		for _, item := range e {
+			if item.Lemma != "" {
+				lemmas = append(lemmas, item.Lemma)
+			}
+		}
+		if len(lemmas) > 0 {
+			sets = append(sets, lemmas)
+		}
+	}
+
+	// From manual refined expression
+	if len(expr) > 0 {
+		var lemmas []string
+		for _, item := range expr {
+			if item.Lemma != "" {
+				lemmas = append(lemmas, item.Lemma)
+			}
+		}
+		if len(lemmas) > 0 {
+			sets = append(sets, lemmas)
+		}
+	}
+
+	return sets
 }

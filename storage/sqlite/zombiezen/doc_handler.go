@@ -1,0 +1,302 @@
+package zombiezen
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"math/rand"
+	"strings"
+	"time"
+
+	sent "github.com/revelaction/segrob/sentence"
+	"github.com/revelaction/segrob/storage"
+	"zombiezen.com/go/sqlite"
+	"zombiezen.com/go/sqlite/sqlitex"
+)
+
+type DocHandler struct {
+	pool *sqlitex.Pool
+}
+
+var _ storage.DocRepository = (*DocHandler)(nil)
+
+func NewDocHandler(pool *sqlitex.Pool) *DocHandler {
+	return &DocHandler{pool: pool}
+}
+
+func (h *DocHandler) Names() ([]string, error) {
+	conn, err := h.pool.Take(context.TODO())
+	if err != nil {
+		return nil, err
+	}
+	defer h.pool.Put(conn)
+
+	var names []string
+	err = sqlitex.Execute(conn, "SELECT title FROM docs ORDER BY title", &sqlitex.ExecOptions{
+		ResultFunc: func(stmt *sqlite.Stmt) error {
+			names = append(names, stmt.ColumnText(0))
+			return nil
+		},
+	})
+	if err != nil {
+		return nil, err
+	}
+	return names, nil
+}
+
+func (h *DocHandler) Doc(id int) (sent.Doc, error) {
+	conn, err := h.pool.Take(context.TODO())
+	if err != nil {
+		return sent.Doc{}, err
+	}
+	defer h.pool.Put(conn)
+
+	var doc sent.Doc
+	found := false
+
+	// Fetch Metadata
+	// Note: id here is expected to be the storage ID (rowid alias for integer primary key)
+	err = sqlitex.Execute(conn, "SELECT id, title, labels FROM docs WHERE id = ?", &sqlitex.ExecOptions{
+		Args: []interface{}{id},
+		ResultFunc: func(stmt *sqlite.Stmt) error {
+			doc.Id = stmt.ColumnInt(0)
+			doc.Title = stmt.ColumnText(1)
+			labelsStr := stmt.ColumnText(2)
+			if labelsStr != "" {
+				doc.Labels = strings.Split(labelsStr, ",")
+			}
+			found = true
+			return nil
+		},
+	})
+	if err != nil {
+		return sent.Doc{}, err
+	}
+	if !found {
+		return sent.Doc{}, fmt.Errorf("doc not found: %d", id)
+	}
+
+	// Fetch Sentences
+	err = sqlitex.Execute(conn, "SELECT sentence_idx, data FROM sentences WHERE doc_id = ? ORDER BY sentence_idx", &sqlitex.ExecOptions{
+		Args: []interface{}{id},
+		ResultFunc: func(stmt *sqlite.Stmt) error {
+			idx := stmt.ColumnInt(0)
+			data := stmt.ColumnText(1)
+			var tokens []sent.Token
+			if err := json.Unmarshal([]byte(data), &tokens); err != nil {
+				return err
+			}
+
+			// Ensure doc.Tokens is large enough
+			for len(doc.Tokens) <= idx {
+				doc.Tokens = append(doc.Tokens, nil)
+			}
+			doc.Tokens[idx] = tokens
+			return nil
+		},
+	})
+	if err != nil {
+		return sent.Doc{}, err
+	}
+
+	return doc, nil
+}
+
+func (h *DocHandler) DocForName(name string) (sent.Doc, error) {
+	conn, err := h.pool.Take(context.TODO())
+	if err != nil {
+		return sent.Doc{}, err
+	}
+	// No defer Put(conn) here because we release manually before calling h.Doc(id)
+
+	var id int
+	found := false
+	err = sqlitex.Execute(conn, "SELECT id FROM docs WHERE title = ?", &sqlitex.ExecOptions{
+		Args: []interface{}{name},
+		ResultFunc: func(stmt *sqlite.Stmt) error {
+			id = stmt.ColumnInt(0)
+			found = true
+			return nil
+		},
+	})
+	h.pool.Put(conn) // Release connection early
+
+	if err != nil {
+		return sent.Doc{}, err
+	}
+	if !found {
+		return sent.Doc{}, fmt.Errorf("doc not found: %s", name)
+	}
+
+	return h.Doc(id)
+}
+
+func (h *DocHandler) FindCandidates(lemmas []string, after storage.Cursor, limit int) ([]storage.SentenceResult, storage.Cursor, error) {
+	if len(lemmas) == 0 {
+		return nil, after, nil
+	}
+
+	conn, err := h.pool.Take(context.TODO())
+	if err != nil {
+		return nil, after, err
+	}
+	defer h.pool.Put(conn)
+
+	// Build query dynamically based on number of lemmas
+	var queryBuilder strings.Builder
+	var args []interface{}
+
+	for i, lemma := range lemmas {
+		if i > 0 {
+			queryBuilder.WriteString(" INTERSECT ")
+		}
+		queryBuilder.WriteString("SELECT DISTINCT sentence_rowid FROM sentence_lemmas WHERE lemma = ? AND sentence_rowid > ?")
+		args = append(args, lemma, after)
+	}
+	queryBuilder.WriteString(" LIMIT ?")
+	args = append(args, limit)
+
+	// We need to fetch the rowIDs first
+	var rowIDs []int64
+	err = sqlitex.Execute(conn, queryBuilder.String(), &sqlitex.ExecOptions{
+		Args: args,
+		ResultFunc: func(stmt *sqlite.Stmt) error {
+			rowIDs = append(rowIDs, stmt.ColumnInt64(0))
+			return nil
+		},
+	})
+	if err != nil {
+		return nil, after, err
+	}
+
+	if len(rowIDs) == 0 {
+		return nil, after, nil
+	}
+
+	results := make([]storage.SentenceResult, 0, len(rowIDs))
+	newCursor := after
+
+	for _, rowID := range rowIDs {
+		// Update cursor to the last processed rowID (assuming rowIDs roughly increase, but INTERSECT might scramble order?
+		// Actually INTERSECT usually preserves order of left table if hinted, but we want to be safe.
+		// If we want monotonic cursor, we should ideally track the max.
+		// The caller will use `after` for the next query.
+		if storage.Cursor(rowID) > newCursor {
+			newCursor = storage.Cursor(rowID)
+		}
+
+		res.RowID = rowID
+
+		err = sqlitex.Execute(conn, "SELECT s.doc_id, s.sentence_idx, s.data, d.title FROM sentences s JOIN docs d ON s.doc_id = d.id WHERE s.rowid = ?", &sqlitex.ExecOptions{
+			Args: []interface{}{rowID},
+			ResultFunc: func(stmt *sqlite.Stmt) error {
+				res.DocID = stmt.ColumnInt(0)
+				res.SentenceIdx = stmt.ColumnInt(1)
+				data := stmt.ColumnText(2)
+				res.DocTitle = stmt.ColumnText(3)
+
+				if err := json.Unmarshal([]byte(data), &res.Tokens); err != nil {
+					return err
+				}
+				return nil
+			},
+		})
+		if err != nil {
+			return nil, after, err
+		}
+		results = append(results, res)
+	}
+
+	return results, newCursor, nil
+}
+
+func (h *DocHandler) Sentence(rowid int64) ([]sent.Token, error) {
+	conn, err := h.pool.Take(context.TODO())
+	if err != nil {
+		return nil, err
+	}
+	defer h.pool.Put(conn)
+
+	var tokens []sent.Token
+	found := false
+
+	err = sqlitex.Execute(conn, "SELECT data FROM sentences WHERE rowid = ?", &sqlitex.ExecOptions{
+		Args: []interface{}{rowid},
+		ResultFunc: func(stmt *sqlite.Stmt) error {
+			data := stmt.ColumnText(0)
+			if err := json.Unmarshal([]byte(data), &tokens); err != nil {
+				return err
+			}
+			found = true
+			return nil
+		},
+	})
+	if err != nil {
+		return nil, err
+	}
+	if !found {
+		return nil, fmt.Errorf("sentence not found: %d", rowid)
+	}
+
+	return tokens, nil
+}
+
+func (h *DocHandler) WriteDoc(doc sent.Doc) error {
+	conn, err := h.pool.Take(context.TODO())
+	if err != nil {
+		return err
+	}
+	defer h.pool.Put(conn)
+
+	// Start Transaction
+	defer sqlitex.Save(conn)(&err)
+
+	// Insert Doc
+	labels := strings.Join(doc.Labels, ",")
+	err = sqlitex.Execute(conn, "INSERT INTO docs (title, labels) VALUES (?, ?)", &sqlitex.ExecOptions{
+		Args: []interface{}{doc.Title, labels},
+	})
+	if err != nil {
+		return fmt.Errorf("failed to insert doc: %w", err)
+	}
+	docID := conn.LastInsertRowID()
+
+	// Shuffle sentences indices
+	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
+	perm := rng.Perm(len(doc.Tokens))
+
+	for _, originalIdx := range perm {
+		sentence := doc.Tokens[originalIdx]
+		data, marshalErr := json.Marshal(sentence)
+		if marshalErr != nil {
+			return marshalErr
+		}
+
+		err = sqlitex.Execute(conn, "INSERT INTO sentences (doc_id, sentence_idx, data) VALUES (?, ?, ?)", &sqlitex.ExecOptions{
+			Args: []interface{}{docID, originalIdx, string(data)},
+		})
+		if err != nil {
+			return fmt.Errorf("failed to insert sentence: %w", err)
+		}
+		sentRowID := conn.LastInsertRowID()
+
+		// Extract unique lemmas
+		uniqueLemmas := make(map[string]bool)
+		for _, token := range sentence {
+			if token.Lemma != "" {
+				uniqueLemmas[token.Lemma] = true
+			}
+		}
+
+		for lemma := range uniqueLemmas {
+			err = sqlitex.Execute(conn, "INSERT INTO sentence_lemmas (lemma, sentence_rowid) VALUES (?, ?)", &sqlitex.ExecOptions{
+				Args: []interface{}{lemma, sentRowID},
+			})
+			if err != nil {
+				return fmt.Errorf("failed to insert lemma: %w", err)
+			}
+		}
+	}
+
+	return nil
+}

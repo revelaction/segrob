@@ -1,6 +1,9 @@
 package storage
 
-import "github.com/revelaction/segrob/topic"
+import (
+	sent "github.com/revelaction/segrob/sentence"
+	"github.com/revelaction/segrob/topic"
+)
 
 // TopicReader defines read operations for topic storage
 type TopicReader interface {
@@ -24,4 +27,46 @@ type TopicWriter interface {
 type TopicRepository interface {
 	TopicReader
 	TopicWriter
+}
+
+// Cursor for paginated lemma-based queries
+type Cursor int64
+
+// SentenceResult represents a sentence candidate with metadata
+type SentenceResult struct {
+	RowID    int64
+	DocID    int
+	DocTitle string
+	Tokens   []sent.Token
+}
+
+// DocReader defines read operations for document storage
+type DocReader interface {
+	// Names returns the titles of all documents
+	Names() ([]string, error)
+
+	// Doc returns a document by ID
+	Doc(id int) (sent.Doc, error)
+
+	// DocForName returns a document by title
+	DocForName(name string) (sent.Doc, error)
+
+	// FindCandidates returns sentence ROWIDs matching ALL given lemmas,
+	// resuming after the given cursor. Returns hydrated sentences and new cursor.
+	FindCandidates(lemmas []string, after Cursor, limit int) ([]SentenceResult, Cursor, error)
+
+	// Sentence returns a single sentence by its ROWID
+	Sentence(rowid int64) ([]sent.Token, error)
+}
+
+// DocWriter defines write operations for document storage
+type DocWriter interface {
+	// WriteDoc persists a document and its sentences/lemmas to storage
+	WriteDoc(doc sent.Doc) error
+}
+
+// DocRepository combines read and write operations
+type DocRepository interface {
+	DocReader
+	DocWriter
 }

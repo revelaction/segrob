@@ -1,11 +1,13 @@
 module github.com/revelaction/segrob
 
-go 1.24.0
+go 1.24.2
 
 require (
 	github.com/c-bata/go-prompt v0.2.6
+	github.com/caasmo/restinpieces v0.9.0
 	github.com/gosuri/uiprogress v0.0.1
 	golang.org/x/term v0.39.0
+	zombiezen.com/go/sqlite v1.4.2
 )
 
 require (
@@ -25,5 +27,4 @@ require (
 	modernc.org/mathutil v1.7.1 // indirect
 	modernc.org/memory v1.11.0 // indirect
 	modernc.org/sqlite v1.37.1 // indirect
-	zombiezen.com/go/sqlite v1.4.2 // indirect
 )
