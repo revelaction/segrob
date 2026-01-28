@@ -44,8 +44,9 @@ type TopicOptions struct {
 }
 
 type DocOptions struct {
-	Start int
-	Count int
+	Start   int
+	Count   int
+	DocPath string
 }
 
 type EditOptions struct {
@@ -163,6 +164,8 @@ func parseDocArgs(args []string, ui UI) (DocOptions, string, bool, error) {
 	var opts DocOptions
 	fs.IntVar(&opts.Start, "start", 0, "Index of the first sentence to show")
 	fs.IntVar(&opts.Count, "n", -1, "Number of sentences to show (-1 for all)")
+	fs.StringVar(&opts.DocPath, "doc-path", os.Getenv("SEGROB_DOC_PATH"), "Path to docs directory or SQLite file")
+	fs.StringVar(&opts.DocPath, "d", os.Getenv("SEGROB_DOC_PATH"), "alias for -doc-path")
 
 	fs.Usage = func() {
 		_, _ = fmt.Fprintf(fs.Output(), "Usage: %s doc [options] [file_path|db_id]\n", os.Args[0])
@@ -190,22 +193,24 @@ func parseDocArgs(args []string, ui UI) (DocOptions, string, bool, error) {
 		return opts, "", false, errors.New("doc command accepts at most one argument")
 	}
 
-	if fs.NArg() == 0 {
-		return opts, "", false, nil
-	}
-
 	arg := fs.Arg(0)
 	isFile := false
 
 	// Validation
-	if info, err := os.Stat(arg); err == nil && !info.IsDir() {
-		isFile = true
-	} else {
-		// regex check for digits if not a file
-		digitRegex := regexp.MustCompile(`^\d+$`)
-		if !digitRegex.MatchString(arg) {
-			return opts, "", false, fmt.Errorf("file not found and not a valid DB ID: %s", arg)
+	if arg != "" {
+		if info, err := os.Stat(arg); err == nil && !info.IsDir() {
+			isFile = true
+		} else {
+			// regex check for digits if not a file
+			digitRegex := regexp.MustCompile(`^\d+$`)
+			if !digitRegex.MatchString(arg) {
+				return opts, "", false, fmt.Errorf("file not found and not a valid DB ID: %s", arg)
+			}
 		}
+	}
+
+	if !isFile && opts.DocPath == "" {
+		return opts, "", false, errors.New("Doc path must be specified via -d or SEGROB_DOC_PATH when not reading from a file")
 	}
 
 	return opts, arg, isFile, nil

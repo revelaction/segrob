@@ -7,6 +7,7 @@ import (
 	"github.com/revelaction/segrob/render"
 	sent "github.com/revelaction/segrob/sentence"
 	"github.com/revelaction/segrob/storage/filesystem"
+	"github.com/revelaction/segrob/storage/sqlite/zombiezen"
 )
 
 func docCommand(opts DocOptions, arg string, isFile bool, ui UI) error {
@@ -19,7 +20,7 @@ func docCommand(opts DocOptions, arg string, isFile bool, ui UI) error {
 		return renderDocDB(id, opts, ui)
 	}
 
-	return listDocsDB(ui)
+	return listDocsDB(opts, ui)
 }
 
 func renderFile(path string, opts DocOptions, ui UI) error {
@@ -54,10 +55,38 @@ func renderDoc(doc sent.Doc, opts DocOptions, ui UI) {
 	}
 }
 
-func listDocsDB(ui UI) error {
-	return fmt.Errorf("database mode not implemented")
+func listDocsDB(opts DocOptions, ui UI) error {
+	pool, err := zombiezen.NewPool(opts.DocPath)
+	if err != nil {
+		return err
+	}
+	defer pool.Close()
+	repo := zombiezen.NewDocHandler(pool)
+
+	names, err := repo.Names()
+	if err != nil {
+		return err
+	}
+
+	for _, name := range names {
+		fmt.Fprintln(ui.Out, name)
+	}
+	return nil
 }
 
 func renderDocDB(id int, opts DocOptions, ui UI) error {
-	return fmt.Errorf("database mode not implemented")
+	pool, err := zombiezen.NewPool(opts.DocPath)
+	if err != nil {
+		return err
+	}
+	defer pool.Close()
+	repo := zombiezen.NewDocHandler(pool)
+
+	doc, err := repo.Doc(id)
+	if err != nil {
+		return err
+	}
+
+	renderDoc(doc, opts, ui)
+	return nil
 }
