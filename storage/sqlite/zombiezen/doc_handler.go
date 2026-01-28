@@ -199,37 +199,6 @@ func (h *DocHandler) FindCandidates(lemmas []string, after storage.Cursor, limit
 	return results, newCursor, nil
 }
 
-func (h *DocHandler) Sentence(rowid int64) ([]sent.Token, error) {
-	conn, err := h.pool.Take(context.TODO())
-	if err != nil {
-		return nil, err
-	}
-	defer h.pool.Put(conn)
-
-	var tokens []sent.Token
-	found := false
-
-	err = sqlitex.Execute(conn, "SELECT data FROM sentences WHERE rowid = ?", &sqlitex.ExecOptions{
-		Args: []interface{}{rowid},
-		ResultFunc: func(stmt *sqlite.Stmt) error {
-			data := stmt.ColumnText(0)
-			if err := json.Unmarshal([]byte(data), &tokens); err != nil {
-				return err
-			}
-			found = true
-			return nil
-		},
-	})
-	if err != nil {
-		return nil, err
-	}
-	if !found {
-		return nil, fmt.Errorf("sentence not found: %d", rowid)
-	}
-
-	return tokens, nil
-}
-
 func (h *DocHandler) WriteDoc(doc sent.Doc) error {
 	conn, err := h.pool.Take(context.TODO())
 	if err != nil {

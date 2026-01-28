@@ -54,9 +54,6 @@ type DocReader interface {
 	// FindCandidates returns sentence ROWIDs matching ALL given lemmas,
 	// resuming after the given cursor. Returns hydrated sentences and new cursor.
 	FindCandidates(lemmas []string, after Cursor, limit int) ([]SentenceResult, Cursor, error)
-
-	// Sentence returns a single sentence by its ROWID
-	Sentence(rowid int64) ([]sent.Token, error)
 }
 
 // DocWriter defines write operations for document storage

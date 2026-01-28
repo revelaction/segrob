@@ -113,10 +113,6 @@ func (h *DocHandler) FindCandidates(lemmas []string, after storage.Cursor, limit
 	return results, 1, nil
 }
 
-func (h *DocHandler) Sentence(rowid int64) ([]sent.Token, error) {
-	return nil, fmt.Errorf("Sentence(rowid) not implemented for filesystem")
-}
-
 func (h *DocHandler) WriteDoc(doc sent.Doc) error {
 	return fmt.Errorf("read-only storage")
 }
