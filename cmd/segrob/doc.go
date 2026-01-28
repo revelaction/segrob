@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/revelaction/segrob/file"
 	"github.com/revelaction/segrob/render"
 	sent "github.com/revelaction/segrob/sentence"
+	"github.com/revelaction/segrob/storage/filesystem"
 )
 
 func docCommand(opts DocOptions, arg string, isFile bool, ui UI) error {
@@ -23,7 +23,7 @@ func docCommand(opts DocOptions, arg string, isFile bool, ui UI) error {
 }
 
 func renderFile(path string, opts DocOptions, ui UI) error {
-	doc, err := file.ReadDoc(path)
+	doc, err := filesystem.ReadDoc(path)
 	if err != nil {
 		return err
 	}

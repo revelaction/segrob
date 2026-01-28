@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/revelaction/segrob/file"
 	"github.com/revelaction/segrob/match"
 	"github.com/revelaction/segrob/render"
 	sent "github.com/revelaction/segrob/sentence"
+	"github.com/revelaction/segrob/storage/filesystem"
 )
 
 func topicsCommand(opts TopicsOptions, source string, sentId int, isTopicFile, isSourceFile bool, ui UI) error {
@@ -23,7 +23,7 @@ func topicsCommand(opts TopicsOptions, source string, sentId int, isTopicFile, i
 }
 
 func topicsFile(path string, sentId int, isTopicFile bool, opts TopicsOptions, ui UI) error {
-	doc, err := file.ReadDoc(path)
+	doc, err := filesystem.ReadDoc(path)
 	if err != nil {
 		return err
 	}

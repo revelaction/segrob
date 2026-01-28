@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/revelaction/segrob/file"
 	"github.com/revelaction/segrob/render"
+	"github.com/revelaction/segrob/storage/filesystem"
 )
 
 func sentenceCommand(source string, sentId int, isFile bool, ui UI) error {
@@ -18,7 +18,7 @@ func sentenceCommand(source string, sentId int, isFile bool, ui UI) error {
 }
 
 func renderSentenceFile(path string, sentId int, ui UI) error {
-	doc, err := file.ReadDoc(path)
+	doc, err := filesystem.ReadDoc(path)
 	if err != nil {
 		return err
 	}
@@ -44,4 +44,3 @@ func renderSentenceFile(path string, sentId int, ui UI) error {
 func renderSentenceDB(docId int, sentId int, ui UI) error {
 	return fmt.Errorf("database mode not implemented")
 }
-

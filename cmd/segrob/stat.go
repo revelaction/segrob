@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/revelaction/segrob/file"
 	sent "github.com/revelaction/segrob/sentence"
 	"github.com/revelaction/segrob/stat"
+	"github.com/revelaction/segrob/storage/filesystem"
 )
 
 func statCommand(source string, sentId *int, isFile bool, ui UI) error {
@@ -22,7 +22,7 @@ func statCommand(source string, sentId *int, isFile bool, ui UI) error {
 }
 
 func statFile(path string, sentId *int, ui UI) error {
-	doc, err := file.ReadDoc(path)
+	doc, err := filesystem.ReadDoc(path)
 	if err != nil {
 		return err
 	}
