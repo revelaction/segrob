@@ -275,7 +275,7 @@ func queryCommand(opts QueryOptions, isTopicFile, isDocFile bool, ui UI) error {
 	if err != nil {
 		return err
 	}
-	topicLib, err := topicLibrary(th, ui)
+	topicLib, err := th.All()
 	if err != nil {
 		return err
 	}
@@ -290,30 +290,6 @@ func queryCommand(opts QueryOptions, isTopicFile, isDocFile bool, ui UI) error {
 	// now present the REPL and prepare for topic in the REPL
 	t := query.NewHandler(dr, topicLib, r)
 	return t.Run()
-}
-
-// topicLibrary retrieves all expressions of all topic files
-func topicLibrary(th storage.TopicReader, ui UI) (topic.Library, error) {
-
-	topicNames, err := th.Names()
-	if err != nil {
-		return nil, err
-	}
-
-	var library topic.Library
-
-	for _, name := range topicNames {
-
-		tp, err := th.Topic(name)
-		if err != nil {
-			fmt.Fprintf(ui.Out, "✍  %s %s \n", err, name)
-			return nil, err
-		}
-
-		library = append(library, tp)
-	}
-
-	return library, nil
 }
 
 func matchDocs(matcher *match.Matcher, opts ExprOptions, isDocFile bool, ui UI) error {
@@ -421,7 +397,7 @@ func editCommand(opts EditOptions, isFile bool, ui UI) error {
 		return err
 	}
 
-	topicLib, err := topicLibrary(th, ui)
+	topicLib, err := th.All()
 	if err != nil {
 		return err
 	}

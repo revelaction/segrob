@@ -24,13 +24,13 @@ func NewTopicHandler(root string) *TopicHandler {
 	return &TopicHandler{root: root}
 }
 
-func (th *TopicHandler) All() ([]tpc.Topic, error) {
+func (th *TopicHandler) All() (tpc.Library, error) {
 	names, err := th.Names()
 	if err != nil {
 		return nil, err
 	}
 
-	topics := []tpc.Topic{}
+	topics := tpc.Library{}
 	for _, n := range names {
 		t, err := th.Topic(n)
 		if err != nil {

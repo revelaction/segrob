@@ -8,7 +8,7 @@ import (
 // TopicReader defines read operations for topic storage
 type TopicReader interface {
 	// All returns all topics from storage
-	All() ([]topic.Topic, error)
+	All() (topic.Library, error)
 
 	// Topic returns a single topic by name
 	Topic(name string) (topic.Topic, error)

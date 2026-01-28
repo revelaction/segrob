@@ -23,7 +23,6 @@ func NewTopicHandler(pool *sqlitex.Pool) *TopicHandler {
 	return &TopicHandler{pool: pool}
 }
 
-
 // NewPool creates a new Zombiezen SQLite connection pool with reasonable defaults
 // (e.g., WAL mode enabled, busy_timeout set).
 func NewPool(dbPath string) (*sqlitex.Pool, error) {
@@ -43,19 +42,18 @@ func NewPool(dbPath string) (*sqlitex.Pool, error) {
 	return pool, nil
 }
 
-
 func (h *TopicHandler) Close() error {
 	return h.pool.Close()
 }
 
-func (h *TopicHandler) All() ([]topic.Topic, error) {
+func (h *TopicHandler) All() (topic.Library, error) {
 	conn, err := h.pool.Take(context.TODO())
 	if err != nil {
 		return nil, err
 	}
 	defer h.pool.Put(conn)
 
-	var topics []topic.Topic
+	var topics topic.Library
 	err = sqlitex.Execute(conn, "SELECT name, exprs FROM topics WHERE user_id IS NULL", &sqlitex.ExecOptions{
 		ResultFunc: func(stmt *sqlite.Stmt) error {
 			name := stmt.ColumnText(0)
