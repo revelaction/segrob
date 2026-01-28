@@ -57,16 +57,15 @@ func matchDocs(matcher *match.Matcher, opts ExprOptions, isDocFile bool, ui UI) 
 		}
 		dr = zombiezen.NewDocHandler(pool)
 	} else {
-		h, err := filesystem.NewDocHandler(path)
+		h, err := filesystem.NewDocHandler(opts.DocPath)
 		if err != nil {
 			return err
 		}
-		if err := h.Load(nil); err != nil {
+		if err := h.LoadContents(nil); err != nil {
 			return err
 		}
 		dr = h
 	}
-
 	if opts.Doc != nil {
 		docId := *opts.Doc
 		doc, err := dr.Doc(docId)

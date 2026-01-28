@@ -13,7 +13,7 @@ func importDocCommand(opts ImportDocOptions, ui UI) error {
 	if err != nil {
 		return err
 	}
-	if err := src.Load(nil); err != nil {
+	if err := src.LoadContents(nil); err != nil {
 		return err
 	}
 	pool, err := zombiezen.NewPool(opts.To)

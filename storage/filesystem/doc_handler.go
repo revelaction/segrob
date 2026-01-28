@@ -27,12 +27,10 @@ func NewDocHandler(docDir string) (*DocHandler, error) {
 	}, nil
 }
 
-// Load preloads all docs into memory.
-// It is deterministic: os.ReadDir returns entries sorted by filename,
-// ensuring the document order is stable and alphabetical.
-// The callback is called for each file loaded (total, current_name).
-func (h *DocHandler) Load(cb func(total int, name string)) error {
-	if h.docs != nil {
+// LoadNames populates the list of document names from the directory.
+// It is deterministic: os.ReadDir returns entries sorted by filename.
+func (h *DocHandler) LoadNames() error {
+	if h.docNames != nil {
 		return nil
 	}
 
@@ -45,6 +43,19 @@ func (h *DocHandler) Load(cb func(total int, name string)) error {
 		if filepath.Ext(file.Name()) == ".json" {
 			h.docNames = append(h.docNames, file.Name())
 		}
+	}
+	return nil
+}
+
+// LoadContents preloads all docs into memory.
+// The callback is called for each file loaded (total, current_name).
+func (h *DocHandler) LoadContents(cb func(total int, name string)) error {
+	if h.docs != nil {
+		return nil
+	}
+
+	if err := h.LoadNames(); err != nil {
+		return err
 	}
 
 	h.docs = make([]sent.Doc, 0, len(h.docNames))
