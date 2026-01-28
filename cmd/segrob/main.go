@@ -1,23 +1,17 @@
 package main
 
 import (
-	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
 	"io"
 	"os"
-	"path/filepath"
 
 	"golang.org/x/term"
 
-	"github.com/revelaction/segrob/edit"
-	"github.com/revelaction/segrob/render"
 	"github.com/revelaction/segrob/storage"
 	"github.com/revelaction/segrob/storage/filesystem"
 	"github.com/revelaction/segrob/storage/sqlite/zombiezen"
-
-	"github.com/gosuri/uiprogress"
 )
 
 // UI contains the output streams for the application.
@@ -222,108 +216,6 @@ func runCommand(cmd string, args []string, ui UI) error {
 	return fmt.Errorf("unknown command: %s", cmd)
 }
 
-func editCommand(opts EditOptions, isFile bool, ui UI) error {
-
-	th, err := getTopicHandler(opts.TopicPath, isFile)
-	if err != nil {
-		return err
-	}
-
-	topicLib, err := th.All()
-	if err != nil {
-		return err
-	}
-
-	hdl := edit.NewHandler(topicLib, th, th)
-	return hdl.Run()
-}
-
-// topicCommand prints the expressions of a topic
-func topicCommand(opts TopicOptions, name string, isFile bool, ui UI) error {
-
-	fhr, err := getTopicHandler(opts.TopicPath, isFile)
-	if err != nil {
-		return err
-	}
-
-	// No name provided (list all)
-	if name == "" {
-		topicNames, err := fhr.Names()
-		if err != nil {
-			return err
-		}
-
-		for topicId, name := range topicNames {
-			fmt.Fprintf(ui.Out, "📖 %d %s \n", topicId, name)
-		}
-
-		return nil
-	}
-
-	tp, err := fhr.Topic(name)
-	if err != nil {
-		return err
-	}
-
-	r := render.NewRenderer()
-	r.Topic(tp.Exprs)
-	return nil
-}
-
-func importTopicCommand(opts ImportTopicOptions, ui UI) error {
-	src := filesystem.NewTopicHandler(opts.From)
-	pool, err := zombiezen.NewPool(opts.To)
-	if err != nil {
-		return err
-	}
-	defer pool.Close()
-
-	if err := zombiezen.CreateTopicTables(pool); err != nil {
-		return fmt.Errorf("failed to create topics table: %w", err)
-	}
-
-	dst := zombiezen.NewTopicHandler(pool)
-
-	topics, err := src.All()
-	if err != nil {
-		return err
-	}
-
-	for _, tp := range topics {
-		if err := dst.Write(tp); err != nil {
-			return fmt.Errorf("failed to import topic %s: %w", tp.Name, err)
-		}
-	}
-
-	fmt.Fprintf(ui.Out, "Successfully imported %d topics from %s to %s\n", len(topics), opts.From, opts.To)
-	return nil
-}
-
-func exportTopicCommand(opts ExportTopicOptions, ui UI) error {
-	pool, err := zombiezen.NewPool(opts.From)
-	if err != nil {
-		return err
-	}
-	defer pool.Close()
-	src := zombiezen.NewTopicHandler(pool)
-
-	dst := filesystem.NewTopicHandler(opts.To)
-
-	topics, err := src.All()
-	if err != nil {
-		return err
-	}
-
-	for _, tp := range topics {
-		if err := dst.Write(tp); err != nil {
-			return fmt.Errorf("failed to export topic %s: %w", tp.Name, err)
-		}
-	}
-
-	fmt.Fprintf(ui.Out, "Successfully exported %d topics from %s to %s\n", len(topics), opts.From, opts.To)
-	return nil
-}
-
 func getTopicHandler(path string, isFile bool) (storage.TopicRepository, error) {
 	if isFile {
 		pool, err := zombiezen.NewPool(path)
@@ -334,108 +226,4 @@ func getTopicHandler(path string, isFile bool) (storage.TopicRepository, error) 
 	}
 
 	return filesystem.NewTopicHandler(path), nil
-}
-
-func importDocCommand(opts ImportDocOptions, ui UI) error {
-	src, err := filesystem.NewDocHandler(opts.From)
-	if err != nil {
-		return err
-	}
-	if err := src.Load(nil); err != nil {
-		return err
-	}
-	pool, err := zombiezen.NewPool(opts.To)
-	if err != nil {
-		return err
-	}
-	defer pool.Close()
-
-	if err := zombiezen.CreateDocTables(pool); err != nil {
-		return fmt.Errorf("failed to create docs table: %w", err)
-	}
-
-	dst := zombiezen.NewDocHandler(pool)
-
-	fmt.Fprintf(ui.Out, "Reading docs from %s...\n", opts.From)
-	names, err := src.Names()
-	if err != nil {
-		return err
-	}
-
-	uiprogress.Start()
-	bar := uiprogress.AddBar(len(names))
-	bar.AppendCompleted()
-	bar.PrependElapsed()
-
-	count := 0
-	for _, name := range names {
-		doc, err := src.DocForName(name)
-		if err != nil {
-			uiprogress.Stop()
-			return fmt.Errorf("failed to read doc %s: %w", name, err)
-		}
-
-		if err := dst.WriteDoc(doc); err != nil {
-			uiprogress.Stop()
-			return fmt.Errorf("failed to write doc %s: %w", name, err)
-		}
-		count++
-		bar.Incr()
-	}
-	uiprogress.Stop()
-
-	fmt.Fprintf(ui.Out, "Successfully imported %d docs from %s to %s\n", count, opts.From, opts.To)
-	return nil
-}
-
-func exportDocCommand(opts ExportDocOptions, ui UI) error {
-	pool, err := zombiezen.NewPool(opts.From)
-	if err != nil {
-		return err
-	}
-	defer pool.Close()
-	src := zombiezen.NewDocHandler(pool)
-
-	// Ensure target directory exists
-	if err := os.MkdirAll(opts.To, 0755); err != nil {
-		return fmt.Errorf("failed to create target directory: %w", err)
-	}
-
-	names, err := src.Names()
-	if err != nil {
-		return err
-	}
-
-	uiprogress.Start()
-	bar := uiprogress.AddBar(len(names))
-	bar.AppendCompleted()
-	bar.PrependElapsed()
-
-	count := 0
-	for _, name := range names {
-		doc, err := src.DocForName(name)
-		if err != nil {
-			uiprogress.Stop()
-			return fmt.Errorf("failed to read doc %s: %w", name, err)
-		}
-
-		// Write to JSON
-		data, err := json.MarshalIndent(doc, "", "  ")
-		if err != nil {
-			uiprogress.Stop()
-			return err
-		}
-
-		targetPath := filepath.Join(opts.To, name)
-		if err := os.WriteFile(targetPath, data, 0644); err != nil {
-			uiprogress.Stop()
-			return fmt.Errorf("failed to write file %s: %w", targetPath, err)
-		}
-		count++
-		bar.Incr()
-	}
-	uiprogress.Stop()
-
-	fmt.Fprintf(ui.Out, "Successfully exported %d docs from %s to %s\n", count, opts.From, opts.To)
-	return nil
 }
