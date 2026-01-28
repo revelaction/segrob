@@ -22,6 +22,7 @@ type ExprOptions struct {
 	Sent     *int // nil = not set
 	NMatches int
 	Format   string
+	DocPath  string
 }
 
 type QueryOptions struct {
@@ -257,7 +258,7 @@ func parseSentenceArgs(args []string, ui UI) (string, int, bool, error) {
 	return source, sentId, isFile, nil
 }
 
-func parseTopicsArgs(args []string, ui UI) (TopicsOptions, string, int, bool, error) {
+func parseTopicsArgs(args []string, ui UI) (TopicsOptions, string, int, bool, bool, error) {
 	fs := flag.NewFlagSet("topics", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
 
@@ -282,33 +283,33 @@ func parseTopicsArgs(args []string, ui UI) (TopicsOptions, string, int, bool, er
 		if errors.Is(err, flag.ErrHelp) {
 			fs.SetOutput(ui.Out)
 			fs.Usage()
-			return opts, "", 0, false, err
+			return opts, "", 0, false, false, err
 		}
 		fs.SetOutput(ui.Err)
 		fprintErr(ui.Err, err)
 		fs.Usage()
-		return opts, "", 0, false, err
+		return opts, "", 0, false, false, err
 	}
 
 	if opts.TopicPath == "" {
-		return opts, "", 0, false, errors.New("Topic path must be specified via -t or SEGROB_TOPIC_PATH")
+		return opts, "", 0, false, false, errors.New("Topic path must be specified via -t or SEGROB_TOPIC_PATH")
 	}
 
-	_, err := os.Stat(opts.TopicPath)
+	tinfo, err := os.Stat(opts.TopicPath)
 	if err != nil {
-		return opts, "", 0, false, fmt.Errorf("Topic path not found: %s", opts.TopicPath)
+		return opts, "", 0, false, false, fmt.Errorf("Topic path not found: %s", opts.TopicPath)
 	}
 
 	if fs.NArg() != 2 {
 		fs.SetOutput(ui.Err)
 		fs.Usage()
-		return opts, "", 0, false, errors.New("topics command needs two arguments: <source> <sentenceId>")
+		return opts, "", 0, false, false, errors.New("topics command needs two arguments: <source> <sentenceId>")
 	}
 
 	source := fs.Arg(0)
 	sentId, sentErr := strconv.Atoi(fs.Arg(1))
 	if sentErr != nil {
-		return opts, "", 0, false, fmt.Errorf("invalid sentenceId: %v", sentErr)
+		return opts, "", 0, false, false, fmt.Errorf("invalid sentenceId: %v", sentErr)
 	}
 
 	isFile := false
@@ -318,14 +319,14 @@ func parseTopicsArgs(args []string, ui UI) (TopicsOptions, string, int, bool, er
 		// regex check for digits if not a file
 		digitRegex := regexp.MustCompile(`^\d+$`)
 		if !digitRegex.MatchString(source) {
-			return opts, "", 0, false, fmt.Errorf("source not found and not a valid DB ID: %s", source)
+			return opts, "", 0, false, false, fmt.Errorf("source not found and not a valid DB ID: %s", source)
 		}
 	}
 
-	return opts, source, sentId, isFile, nil
+	return opts, source, sentId, !tinfo.IsDir(), isFile, nil
 }
 
-func parseExprArgs(args []string, ui UI) (ExprOptions, []string, error) {
+func parseExprArgs(args []string, ui UI) (ExprOptions, []string, bool, error) {
 	fs := flag.NewFlagSet("expr", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
 
@@ -355,6 +356,9 @@ func parseExprArgs(args []string, ui UI) (ExprOptions, []string, error) {
 	fs.Var(formatFlag, "format", "Show whole sentence (all), only surrounding of matched words (part) or only matches words (lemma)")
 	fs.Var(formatFlag, "f", "alias for -format")
 
+	fs.StringVar(&opts.DocPath, "doc-path", os.Getenv("SEGROB_DOC_PATH"), "Path to docs directory or SQLite file")
+	fs.StringVar(&opts.DocPath, "dp", os.Getenv("SEGROB_DOC_PATH"), "alias for -doc-path")
+
 	fs.Usage = func() {
 		_, _ = fmt.Fprintf(fs.Output(), "Usage: %s expr [options] <topic expr item> ...\n", os.Args[0])
 		_, _ = fmt.Fprintf(fs.Output(), "\nDescription:\n")
@@ -367,12 +371,12 @@ func parseExprArgs(args []string, ui UI) (ExprOptions, []string, error) {
 		if errors.Is(err, flag.ErrHelp) {
 			fs.SetOutput(ui.Out)
 			fs.Usage()
-			return opts, nil, err
+			return opts, nil, false, err
 		}
 		fs.SetOutput(ui.Err)
 		fprintErr(ui.Err, err)
 		fs.Usage()
-		return opts, nil, err
+		return opts, nil, false, err
 	}
 
 	opts.Doc = docOpt.value
@@ -381,13 +385,22 @@ func parseExprArgs(args []string, ui UI) (ExprOptions, []string, error) {
 	if fs.NArg() < 1 {
 		fs.SetOutput(ui.Err)
 		fs.Usage()
-		return opts, nil, errors.New("expr command needs at least one argument")
+		return opts, nil, false, errors.New("expr command needs at least one argument")
 	}
 
-	return opts, fs.Args(), nil
+	if opts.DocPath == "" {
+		return opts, nil, false, errors.New("Doc path must be specified via -dp or SEGROB_DOC_PATH")
+	}
+
+	info, err := os.Stat(opts.DocPath)
+	if err != nil {
+		return opts, nil, false, fmt.Errorf("Doc path not found: %s", opts.DocPath)
+	}
+
+	return opts, fs.Args(), !info.IsDir(), nil
 }
 
-func parseQueryArgs(args []string, ui UI) (QueryOptions, bool, error) {
+func parseQueryArgs(args []string, ui UI) (QueryOptions, bool, bool, error) {
 	fs := flag.NewFlagSet("query", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
 
@@ -419,31 +432,40 @@ func parseQueryArgs(args []string, ui UI) (QueryOptions, bool, error) {
 		_, _ = fmt.Fprintf(fs.Output(), "\nOptions:\n")
 		fs.PrintDefaults()
 		_, _ = fmt.Fprintf(fs.Output(), "  -t, --topic-path    Path to topics directory or SQLite file (required, or set SEGROB_TOPIC_PATH)\n")
-		_, _ = fmt.Fprintf(fs.Output(), "  -d, --doc-path      Path to docs directory or SQLite file (optional, defaults to filesystem corpus/token/)\n")
+		_, _ = fmt.Fprintf(fs.Output(), "  -d, --doc-path      Path to docs directory or SQLite file (required, or set SEGROB_DOC_PATH)\n")
 	}
 
 	if err := fs.Parse(args); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
 			fs.SetOutput(ui.Out)
 			fs.Usage()
-			return opts, false, err
+			return opts, false, false, err
 		}
 		fs.SetOutput(ui.Err)
 		fprintErr(ui.Err, err)
 		fs.Usage()
-		return opts, false, err
+		return opts, false, false, err
 	}
 
 	if opts.TopicPath == "" {
-		return opts, false, errors.New("Topic path must be specified via -t or SEGROB_TOPIC_PATH")
+		return opts, false, false, errors.New("Topic path must be specified via -t or SEGROB_TOPIC_PATH")
 	}
 
-	info, err := os.Stat(opts.TopicPath)
+	if opts.DocPath == "" {
+		return opts, false, false, errors.New("Doc path must be specified via -d or SEGROB_DOC_PATH")
+	}
+
+	tinfo, err := os.Stat(opts.TopicPath)
 	if err != nil {
-		return opts, false, fmt.Errorf("Topic path not found: %s", opts.TopicPath)
+		return opts, false, false, fmt.Errorf("Topic path not found: %s", opts.TopicPath)
 	}
 
-	return opts, !info.IsDir(), nil
+	dinfo, err := os.Stat(opts.DocPath)
+	if err != nil {
+		return opts, false, false, fmt.Errorf("Doc path not found: %s", opts.DocPath)
+	}
+
+	return opts, !tinfo.IsDir(), !dinfo.IsDir(), nil
 }
 
 func parseEditArgs(args []string, ui UI) (EditOptions, bool, error) {

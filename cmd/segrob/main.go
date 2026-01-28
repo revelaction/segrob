@@ -13,7 +13,6 @@ import (
 	"golang.org/x/term"
 
 	"github.com/revelaction/segrob/edit"
-	"github.com/revelaction/segrob/file"
 	"github.com/revelaction/segrob/match"
 	"github.com/revelaction/segrob/query"
 	"github.com/revelaction/segrob/render"
@@ -109,34 +108,34 @@ func runCommand(cmd string, args []string, ui UI) error {
 		return sentenceCommand(source, sentId, isFile, ui)
 
 	case "topics":
-		opts, source, sentId, isFile, err := parseTopicsArgs(args, ui)
+		opts, source, sentId, isTopicFile, isSourceFile, err := parseTopicsArgs(args, ui)
 		if err != nil {
 			if errors.Is(err, flag.ErrHelp) {
 				return nil
 			}
 			return err
 		}
-		return topicsCommand(opts, source, sentId, isFile, ui)
+		return topicsCommand(opts, source, sentId, isTopicFile, isSourceFile, ui)
 
 	case "expr":
-		opts, cmdArgs, err := parseExprArgs(args, ui)
+		opts, cmdArgs, isDocFile, err := parseExprArgs(args, ui)
 		if err != nil {
 			if errors.Is(err, flag.ErrHelp) {
 				return nil
 			}
 			return err
 		}
-		return exprCommand(opts, cmdArgs, ui)
+		return exprCommand(opts, cmdArgs, isDocFile, ui)
 
 	case "query":
-		opts, isFile, err := parseQueryArgs(args, ui)
+		opts, isTopicFile, isDocFile, err := parseQueryArgs(args, ui)
 		if err != nil {
 			if errors.Is(err, flag.ErrHelp) {
 				return nil
 			}
 			return err
 		}
-		return queryCommand(opts, isFile, ui)
+		return queryCommand(opts, isTopicFile, isDocFile, ui)
 
 	case "edit":
 		opts, isFile, err := parseEditArgs(args, ui)
@@ -229,38 +228,50 @@ func runCommand(cmd string, args []string, ui UI) error {
 }
 
 // Query command
-func queryCommand(opts QueryOptions, isFile bool, ui UI) error {
+func queryCommand(opts QueryOptions, isTopicFile, isDocFile bool, ui UI) error {
 
-	if isFile {
-		// This flag might be obsolete now with auto-detection
-	}
+	var dr storage.DocRepository
+	path := opts.DocPath
 
-	// Load docs
-	uiprogress.Start()
-	bar := uiprogress.AddBar(1) // Placeholder, updated in callback
-	bar.AppendCompleted()
-	bar.PrependElapsed()
-
-	var currentName string
-	bar.AppendFunc(func(b *uiprogress.Bar) string {
-		return currentName
-	})
-
-	dr, err := getDocHandler(opts.DocPath, func(total int, name string) {
-		if bar.Total <= 1 {
-			bar.Total = total
-			bar.Set(0)
+	if isDocFile {
+		pool, err := zombiezen.NewPool(path)
+		if err != nil {
+			return err
 		}
-		currentName = name
-		bar.Incr()
-	})
-	uiprogress.Stop()
+		dr = zombiezen.NewDocHandler(pool)
+	} else {
+		h, err := filesystem.NewDocHandler(path)
+		if err != nil {
+			return err
+		}
 
-	if err != nil {
-		return err
+		uiprogress.Start()
+		bar := uiprogress.AddBar(1) // Placeholder, updated in callback
+		bar.AppendCompleted()
+		bar.PrependElapsed()
+
+		var currentName string
+		bar.AppendFunc(func(b *uiprogress.Bar) string {
+			return currentName
+		})
+
+		err = h.Load(func(total int, name string) {
+			if bar.Total <= 1 {
+				bar.Total = total
+				bar.Set(0)
+			}
+			currentName = name
+			bar.Incr()
+		})
+		uiprogress.Stop()
+
+		if err != nil {
+			return err
+		}
+		dr = h
 	}
 
-	th, err := getTopicHandler(opts.TopicPath)
+	th, err := getTopicHandler(opts.TopicPath, isTopicFile)
 	if err != nil {
 		return err
 	}
@@ -305,7 +316,7 @@ func topicLibrary(th storage.TopicReader, ui UI) (topic.Library, error) {
 	return library, nil
 }
 
-func matchDocs(matcher *match.Matcher, opts ExprOptions, ui UI) error {
+func matchDocs(matcher *match.Matcher, opts ExprOptions, isDocFile bool, ui UI) error {
 
 	if opts.Sent != nil {
 		if opts.Doc == nil {
@@ -320,9 +331,24 @@ func matchDocs(matcher *match.Matcher, opts ExprOptions, ui UI) error {
 	r.Format = opts.Format
 	r.NumMatches = opts.NMatches
 
-	dr, err := getDocHandler("", nil)
-	if err != nil {
-		return err
+	var dr storage.DocRepository
+	path := opts.DocPath
+
+	if isDocFile {
+		pool, err := zombiezen.NewPool(path)
+		if err != nil {
+			return err
+		}
+		dr = zombiezen.NewDocHandler(pool)
+	} else {
+		h, err := filesystem.NewDocHandler(path)
+		if err != nil {
+			return err
+		}
+		if err := h.Load(nil); err != nil {
+			return err
+		}
+		dr = h
 	}
 
 	if opts.Doc != nil {
@@ -369,7 +395,7 @@ func matchDocs(matcher *match.Matcher, opts ExprOptions, ui UI) error {
 	return nil
 }
 
-func exprCommand(opts ExprOptions, args []string, ui UI) error {
+func exprCommand(opts ExprOptions, args []string, isDocFile bool, ui UI) error {
 
 	// args is guaranteed to have at least 1 element by parseExprArgs
 	// parse the expr expression
@@ -380,7 +406,7 @@ func exprCommand(opts ExprOptions, args []string, ui UI) error {
 
 	matcher := match.NewMatcher(topic.Topic{})
 	matcher.AddTopicExpr(expr)
-	err := matchDocs(matcher, opts, ui)
+	err := matchDocs(matcher, opts, isDocFile, ui)
 	if err != nil {
 		return err
 	}
@@ -390,11 +416,7 @@ func exprCommand(opts ExprOptions, args []string, ui UI) error {
 
 func editCommand(opts EditOptions, isFile bool, ui UI) error {
 
-	if isFile {
-		// This flag might be obsolete now with auto-detection
-	}
-
-	th, err := getTopicHandler(opts.TopicPath)
+	th, err := getTopicHandler(opts.TopicPath, isFile)
 	if err != nil {
 		return err
 	}
@@ -434,11 +456,7 @@ func hasLabels(fileLabels, cmdLabels []string) bool {
 // topicCommand prints the expressions of a topic
 func topicCommand(opts TopicOptions, name string, isFile bool, ui UI) error {
 
-	if isFile {
-		// This flag might be obsolete now with auto-detection
-	}
-
-	fhr, err := getTopicHandler(opts.TopicPath)
+	fhr, err := getTopicHandler(opts.TopicPath, isFile)
 	if err != nil {
 		return err
 	}
@@ -521,10 +539,8 @@ func exportTopicCommand(opts ExportTopicOptions, ui UI) error {
 	return nil
 }
 
-func getTopicHandler(path string) (storage.TopicRepository, error) {
-	info, err := os.Stat(path)
-	if err != nil {
-		// Path doesn't exist, assume new SQLite DB if it looks like a file path
+func getTopicHandler(path string, isFile bool) (storage.TopicRepository, error) {
+	if isFile {
 		pool, err := zombiezen.NewPool(path)
 		if err != nil {
 			return nil, err
@@ -532,48 +548,15 @@ func getTopicHandler(path string) (storage.TopicRepository, error) {
 		return zombiezen.NewTopicHandler(pool), nil
 	}
 
-	if info.IsDir() {
-		return filesystem.NewTopicHandler(path), nil
-	}
-
-	// Non-directory = SQLite file
-	pool, err := zombiezen.NewPool(path)
-	if err != nil {
-		return nil, err
-	}
-	return zombiezen.NewTopicHandler(pool), nil
-}
-
-func getDocHandler(path string, cb func(int, string)) (storage.DocRepository, error) {
-	if path == "" {
-		path = file.TokenDir
-	}
-
-	info, err := os.Stat(path)
-	if err != nil {
-		// Path doesn't exist, assume new SQLite DB
-		pool, err := zombiezen.NewPool(path)
-		if err != nil {
-			return nil, err
-		}
-		return zombiezen.NewDocHandler(pool), nil
-	}
-
-	if info.IsDir() {
-		return filesystem.NewDocHandler(path, cb)
-	}
-
-	// Non-directory = SQLite file
-	pool, err := zombiezen.NewPool(path)
-	if err != nil {
-		return nil, err
-	}
-	return zombiezen.NewDocHandler(pool), nil
+	return filesystem.NewTopicHandler(path), nil
 }
 
 func importDocCommand(opts ImportDocOptions, ui UI) error {
-	src, err := filesystem.NewDocHandler(opts.From, nil)
+	src, err := filesystem.NewDocHandler(opts.From)
 	if err != nil {
+		return err
+	}
+	if err := src.Load(nil); err != nil {
 		return err
 	}
 	pool, err := zombiezen.NewPool(opts.To)

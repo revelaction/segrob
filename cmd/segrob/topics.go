@@ -10,35 +10,35 @@ import (
 	sent "github.com/revelaction/segrob/sentence"
 )
 
-func topicsCommand(opts TopicsOptions, source string, sentId int, isFile bool, ui UI) error {
-	if isFile {
-		return topicsFile(source, sentId, opts, ui)
+func topicsCommand(opts TopicsOptions, source string, sentId int, isTopicFile, isSourceFile bool, ui UI) error {
+	if isSourceFile {
+		return topicsFile(source, sentId, isTopicFile, opts, ui)
 	}
 
 	id, err := strconv.Atoi(source)
 	if err != nil {
 		return fmt.Errorf("invalid DB ID: %v", err)
 	}
-	return topicsDocDB(id, sentId, opts, ui)
+	return topicsDocDB(id, sentId, isTopicFile, opts, ui)
 }
 
-func topicsFile(path string, sentId int, opts TopicsOptions, ui UI) error {
+func topicsFile(path string, sentId int, isTopicFile bool, opts TopicsOptions, ui UI) error {
 	doc, err := file.ReadDoc(path)
 	if err != nil {
 		return err
 	}
 
-	return renderTopics(doc, sentId, opts, ui)
+	return renderTopics(doc, sentId, isTopicFile, opts, ui)
 }
 
-func topicsDocDB(docId int, sentId int, opts TopicsOptions, ui UI) error {
+func topicsDocDB(docId int, sentId int, isTopicFile bool, opts TopicsOptions, ui UI) error {
 	// For now, mirroring statDocDB behavior as requested
 	// If we want to use the current DocHandler (filesystem-based "DB"), we could call it here,
 	// but following the pattern in stat.go:
 	return fmt.Errorf("database mode not implemented")
 }
 
-func renderTopics(doc sent.Doc, sentId int, opts TopicsOptions, ui UI) error {
+func renderTopics(doc sent.Doc, sentId int, isTopicFile bool, opts TopicsOptions, ui UI) error {
 	if sentId < 0 || sentId >= len(doc.Tokens) {
 		return fmt.Errorf("sentence index %d out of range (0-%d)", sentId, len(doc.Tokens)-1)
 	}
@@ -54,7 +54,7 @@ func renderTopics(doc sent.Doc, sentId int, opts TopicsOptions, ui UI) error {
 	r.Sentence(s, prefix)
 	fmt.Fprintln(ui.Out)
 
-	th, err := getTopicHandler(opts.TopicPath)
+	th, err := getTopicHandler(opts.TopicPath, isTopicFile)
 	if err != nil {
 		return err
 	}
