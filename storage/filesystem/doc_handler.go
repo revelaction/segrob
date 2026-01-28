@@ -28,6 +28,8 @@ func NewDocHandler(docDir string) (*DocHandler, error) {
 }
 
 // Load preloads all docs into memory.
+// It is deterministic: os.ReadDir returns entries sorted by filename,
+// ensuring the document order is stable and alphabetical.
 // The callback is called for each file loaded (total, current_name).
 func (h *DocHandler) Load(cb func(total int, name string)) error {
 	if h.docs != nil {

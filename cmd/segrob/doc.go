@@ -6,6 +6,7 @@ import (
 
 	"github.com/revelaction/segrob/render"
 	sent "github.com/revelaction/segrob/sentence"
+	"github.com/revelaction/segrob/storage"
 	"github.com/revelaction/segrob/storage/filesystem"
 	"github.com/revelaction/segrob/storage/sqlite/zombiezen"
 )
@@ -15,12 +16,37 @@ func docCommand(opts DocOptions, arg string, isArgFile bool, isRepoFile bool, ui
 		return renderFile(arg, opts, ui)
 	}
 
-	if arg != "" {
-		id, _ := strconv.Atoi(arg)
-		return renderDocDB(id, opts, isRepoFile, ui)
+	var repo storage.DocRepository
+	if isRepoFile {
+		pool, err := zombiezen.NewPool(opts.DocPath)
+		if err != nil {
+			return err
+		}
+		defer pool.Close()
+		repo = zombiezen.NewDocHandler(pool)
+	} else {
+		h, err := filesystem.NewDocHandler(opts.DocPath)
+		if err != nil {
+			return err
+		}
+		if err := h.Load(nil); err != nil {
+			return err
+		}
+		repo = h
 	}
 
-	return listDocsDB(opts, isRepoFile, ui)
+	if arg == "" {
+		return listDocs(repo, ui)
+	}
+
+	id, _ := strconv.Atoi(arg)
+	doc, err := repo.Doc(id)
+	if err != nil {
+		return err
+	}
+
+	renderDoc(doc, opts, ui)
+	return nil
 }
 
 func renderFile(path string, opts DocOptions, ui UI) error {
@@ -55,73 +81,14 @@ func renderDoc(doc sent.Doc, opts DocOptions, ui UI) {
 	}
 }
 
-func listDocsDB(opts DocOptions, isRepoFile bool, ui UI) error {
-	var names []string
-	var err error
-
-	if isRepoFile {
-		pool, err := zombiezen.NewPool(opts.DocPath)
-		if err != nil {
-			return err
-		}
-		defer pool.Close()
-		repo := zombiezen.NewDocHandler(pool)
-		names, err = repo.Names()
-	} else {
-		repo, err := filesystem.NewDocHandler(opts.DocPath)
-		if err != nil {
-			return err
-		}
-		if err := repo.Load(nil); err != nil {
-			return err
-		}
-		names, err = repo.Names()
-	}
-
+func listDocs(repo storage.DocReader, ui UI) error {
+	names, err := repo.Names()
 	if err != nil {
 		return err
 	}
 
-	for _, name := range names {
-		fmt.Fprintln(ui.Out, name)
+	for i, name := range names {
+		fmt.Fprintf(ui.Out, "📖 %d %s\n", i, name)
 	}
-	return nil
-}
-
-func renderDocDB(id int, opts DocOptions, isRepoFile bool, ui UI) error {
-	var doc sent.Doc
-	var err error
-
-	if isRepoFile {
-		pool, err := zombiezen.NewPool(opts.DocPath)
-		if err != nil {
-			return err
-		}
-		defer pool.Close()
-		repo := zombiezen.NewDocHandler(pool)
-		doc, err = repo.Doc(id)
-	} else {
-		repo, err := filesystem.NewDocHandler(opts.DocPath)
-		if err != nil {
-			return err
-		}
-		if err := repo.Load(nil); err != nil {
-			return err
-		}
-		names, err := repo.Names()
-		if err != nil {
-			return err
-		}
-		if id < 0 || id >= len(names) {
-			return fmt.Errorf("invalid doc index: %d", id)
-		}
-		doc, err = repo.DocForName(names[id])
-	}
-
-	if err != nil {
-		return err
-	}
-
-	renderDoc(doc, opts, ui)
 	return nil
 }
