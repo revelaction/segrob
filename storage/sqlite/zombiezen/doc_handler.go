@@ -4,9 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"math/rand"
 	"strings"
-	"time"
 
 	sent "github.com/revelaction/segrob/sentence"
 	"github.com/revelaction/segrob/storage"
@@ -252,12 +250,7 @@ func (h *DocHandler) WriteDoc(doc sent.Doc) error {
 	}
 	docID := conn.LastInsertRowID()
 
-	// Shuffle sentences indices
-	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
-	perm := rng.Perm(len(doc.Tokens))
-
-	for _, idx := range perm {
-		sentence := doc.Tokens[idx]
+	for _, sentence := range doc.Tokens {
 		data, marshalErr := json.Marshal(sentence)
 		if marshalErr != nil {
 			return marshalErr
