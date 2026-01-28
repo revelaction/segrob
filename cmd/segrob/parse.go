@@ -157,7 +157,7 @@ func parseMainArgs(args []string, ui UI) (string, []string, error) {
 	return cmd, cmdArgs, nil
 }
 
-func parseDocArgs(args []string, ui UI) (DocOptions, string, bool, error) {
+func parseDocArgs(args []string, ui UI) (DocOptions, string, bool, bool, error) {
 	fs := flag.NewFlagSet("doc", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
 
@@ -179,41 +179,41 @@ func parseDocArgs(args []string, ui UI) (DocOptions, string, bool, error) {
 		if errors.Is(err, flag.ErrHelp) {
 			fs.SetOutput(ui.Out)
 			fs.Usage()
-			return opts, "", false, err
+			return opts, "", false, false, err
 		}
-		fs.SetOutput(ui.Err)
-		fprintErr(ui.Err, err)
-		fs.Usage()
-		return opts, "", false, err
-	}
-
-	if fs.NArg() > 1 {
-		fs.SetOutput(ui.Err)
-		fs.Usage()
-		return opts, "", false, errors.New("doc command accepts at most one argument")
+		return opts, "", false, false, err
 	}
 
 	arg := fs.Arg(0)
-	isFile := false
-
-	// Validation
+	isArgFile := false
 	if arg != "" {
 		if info, err := os.Stat(arg); err == nil && !info.IsDir() {
-			isFile = true
-		} else {
-			// regex check for digits if not a file
-			digitRegex := regexp.MustCompile(`^\d+$`)
-			if !digitRegex.MatchString(arg) {
-				return opts, "", false, fmt.Errorf("file not found and not a valid DB ID: %s", arg)
-			}
+			isArgFile = true
 		}
 	}
 
-	if !isFile && opts.DocPath == "" {
-		return opts, "", false, errors.New("Doc path must be specified via -d or SEGROB_DOC_PATH when not reading from a file")
+	if isArgFile {
+		return opts, arg, true, false, nil
 	}
 
-	return opts, arg, isFile, nil
+	// Repository Case
+	if opts.DocPath == "" {
+		return opts, "", false, false, errors.New("no document source specified (use -d or SEGROB_DOC_PATH)")
+	}
+
+	info, err := os.Stat(opts.DocPath)
+	if err != nil {
+		return opts, "", false, false, fmt.Errorf("document source not found: %s", opts.DocPath)
+	}
+	isRepoFile := !info.IsDir()
+
+	if arg != "" {
+		if !regexp.MustCompile(`^\d+$`).MatchString(arg) {
+			return opts, "", false, false, fmt.Errorf("file not found and not a valid DB ID: %s", arg)
+		}
+	}
+
+	return opts, arg, false, isRepoFile, nil
 }
 
 func parseSentenceArgs(args []string, ui UI) (string, int, bool, error) {
