@@ -13,6 +13,9 @@ func importDocCommand(opts ImportDocOptions, ui UI) error {
 	if err != nil {
 		return err
 	}
+	if err := src.LoadNames(); err != nil {
+		return err
+	}
 	if err := src.LoadContents(nil); err != nil {
 		return err
 	}

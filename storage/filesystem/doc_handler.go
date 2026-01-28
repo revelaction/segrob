@@ -54,8 +54,8 @@ func (h *DocHandler) LoadContents(cb func(total int, name string)) error {
 		return nil
 	}
 
-	if err := h.LoadNames(); err != nil {
-		return err
+	if h.docNames == nil {
+		return fmt.Errorf("doc names not loaded: call LoadNames first")
 	}
 
 	h.docs = make([]sent.Doc, 0, len(h.docNames))

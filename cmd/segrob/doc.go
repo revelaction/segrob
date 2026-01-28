@@ -34,6 +34,9 @@ func docCommand(opts DocOptions, arg string, isArgFile bool, isRepoFile bool, ui
 				return err
 			}
 		} else {
+			if err := h.LoadNames(); err != nil {
+				return err
+			}
 			if err := h.LoadContents(nil); err != nil {
 				return err
 			}
