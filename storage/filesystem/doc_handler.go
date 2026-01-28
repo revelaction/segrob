@@ -22,24 +22,9 @@ var _ storage.DocRepository = (*DocHandler)(nil)
 
 // NewDocHandler creates a filesystem document handler.
 func NewDocHandler(docDir string) (*DocHandler, error) {
-	h := &DocHandler{
+	return &DocHandler{
 		docDir: docDir,
-	}
-
-	files, err := os.ReadDir(h.docDir)
-	if err != nil {
-		return nil, err
-	}
-
-	var names []string
-	for _, file := range files {
-		if filepath.Ext(file.Name()) == ".json" {
-			names = append(names, file.Name())
-		}
-	}
-	h.docNames = names
-
-	return h, nil
+	}, nil
 }
 
 // Load preloads all docs into memory.
@@ -47,6 +32,17 @@ func NewDocHandler(docDir string) (*DocHandler, error) {
 func (h *DocHandler) Load(cb func(total int, name string)) error {
 	if h.docs != nil {
 		return nil
+	}
+
+	files, err := os.ReadDir(h.docDir)
+	if err != nil {
+		return err
+	}
+
+	for _, file := range files {
+		if filepath.Ext(file.Name()) == ".json" {
+			h.docNames = append(h.docNames, file.Name())
+		}
 	}
 
 	h.docs = make([]sent.Doc, 0, len(h.docNames))
