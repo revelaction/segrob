@@ -493,8 +493,8 @@ func importTopicCommand(opts ImportTopicOptions, ui UI) error {
 	}
 	defer pool.Close()
 
-	if err := zombiezen.Setup(pool); err != nil {
-		return fmt.Errorf("failed to setup sqlite database: %w", err)
+	if err := zombiezen.CreateTopicTables(pool); err != nil {
+		return fmt.Errorf("failed to create topics table: %w", err)
 	}
 
 	dst := zombiezen.NewTopicHandler(pool)
@@ -565,8 +565,8 @@ func importDocCommand(opts ImportDocOptions, ui UI) error {
 	}
 	defer pool.Close()
 
-	if err := zombiezen.SetupDocs(pool); err != nil {
-		return fmt.Errorf("failed to setup sqlite docs database: %w", err)
+	if err := zombiezen.CreateDocTables(pool); err != nil {
+		return fmt.Errorf("failed to create docs table: %w", err)
 	}
 
 	dst := zombiezen.NewDocHandler(pool)

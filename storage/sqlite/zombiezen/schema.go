@@ -48,7 +48,7 @@ CREATE INDEX IF NOT EXISTS idx_lemma_rowid ON sentence_lemmas(lemma, sentence_ro
 const schemaDocsSentencesIndex = `
 CREATE INDEX IF NOT EXISTS idx_sentences_doc_id ON sentences(doc_id);`
 
-func Setup(pool *sqlitex.Pool) error {
+func CreateTopicTables(pool *sqlitex.Pool) error {
 	conn, err := pool.Take(context.TODO())
 	if err != nil {
 		return err
@@ -64,7 +64,7 @@ func Setup(pool *sqlitex.Pool) error {
 	return nil
 }
 
-func SetupDocs(pool *sqlitex.Pool) error {
+func CreateDocTables(pool *sqlitex.Pool) error {
 	conn, err := pool.Take(context.TODO())
 	if err != nil {
 		return err
