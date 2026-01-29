@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"runtime"
 
 	"github.com/revelaction/segrob/storage"
 	"github.com/revelaction/segrob/topic"
@@ -21,29 +20,6 @@ var _ storage.TopicWriter = (*TopicStore)(nil)
 
 func NewTopicStore(pool *sqlitex.Pool) *TopicStore {
 	return &TopicStore{pool: pool}
-}
-
-// NewPool creates a new Zombiezen SQLite connection pool with reasonable defaults
-// (e.g., WAL mode enabled, busy_timeout set).
-func NewPool(dbPath string) (*sqlitex.Pool, error) {
-	poolSize := runtime.NumCPU()
-	// Re-add busy_timeout pragma as part of reasonable defaults for Zombiezen.
-	//initString := fmt.Sprintf("file:%s?_pragma=busy_timeout(5000)", dbPath)
-	initString := fmt.Sprintf("file:%s", dbPath)
-
-	// zombiezen/sqlitex.NewPool with default options uses flags:
-	// sqlite.OpenReadWrite | sqlite.OpenCreate | sqlite.OpenWAL | sqlite.OpenURI
-	pool, err := sqlitex.NewPool(initString, sqlitex.PoolOptions{
-		PoolSize: poolSize,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("failed to create default zombiezen pool at %s: %w", dbPath, err)
-	}
-	return pool, nil
-}
-
-func (h *TopicStore) Close() error {
-	return h.pool.Close()
 }
 
 func (h *TopicStore) ReadAll() (topic.Library, error) {
