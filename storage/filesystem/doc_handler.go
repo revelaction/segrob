@@ -94,15 +94,6 @@ func (h *DocHandler) Doc(id int) (sent.Doc, error) {
 	return h.docs[id], nil
 }
 
-func (h *DocHandler) DocForName(name string) (sent.Doc, error) {
-	for _, doc := range h.docs {
-		if doc.Title == name {
-			return doc, nil
-		}
-	}
-	return sent.Doc{}, fmt.Errorf("doc not found: %s", name)
-}
-
 // FindCandidates returns ALL sentences from memory.
 func (h *DocHandler) FindCandidates(lemmas []string, after storage.Cursor, limit int) ([]storage.SentenceResult, storage.Cursor, error) {
 	// If cursor > 0, we already returned everything (EOF).

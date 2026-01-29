@@ -83,44 +83,6 @@ func (h *DocHandler) Doc(id int) (sent.Doc, error) {
 	return doc, nil
 }
 
-func (h *DocHandler) DocForName(name string) (sent.Doc, error) {
-	conn, err := h.pool.Take(context.TODO())
-	if err != nil {
-		return sent.Doc{}, err
-	}
-
-	var id int
-	var labelsStr string
-	found := false
-	err = sqlitex.Execute(conn, "SELECT id, labels FROM docs WHERE title = ?", &sqlitex.ExecOptions{
-		Args: []interface{}{name},
-		ResultFunc: func(stmt *sqlite.Stmt) error {
-			id = stmt.ColumnInt(0)
-			labelsStr = stmt.ColumnText(1)
-			found = true
-			return nil
-		},
-	})
-	h.pool.Put(conn) // Release connection early
-
-	if err != nil {
-		return sent.Doc{}, err
-	}
-	if !found {
-		return sent.Doc{}, fmt.Errorf("doc not found: %s", name)
-	}
-
-	doc, err := h.Doc(id)
-	if err != nil {
-		return sent.Doc{}, err
-	}
-	doc.Title = name
-	if labelsStr != "" {
-		doc.Labels = strings.Split(labelsStr, ",")
-	}
-	return doc, nil
-}
-
 func (h *DocHandler) FindCandidates(lemmas []string, after storage.Cursor, limit int) ([]storage.SentenceResult, storage.Cursor, error) {
 	if len(lemmas) == 0 {
 		return nil, after, nil

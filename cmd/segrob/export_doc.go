@@ -35,11 +35,14 @@ func exportDocCommand(opts ExportDocOptions, ui UI) error {
 
 	count := 0
 	for _, docMeta := range docs {
-		doc, err := src.DocForName(docMeta.Title)
+		doc, err := src.Doc(docMeta.Id)
 		if err != nil {
 			uiprogress.Stop()
-			return fmt.Errorf("failed to read doc %s: %w", docMeta.Title, err)
+			return fmt.Errorf("failed to read doc %s (id %d): %w", docMeta.Title, docMeta.Id, err)
 		}
+
+		// Ensure title is set in the exported document
+		doc.Title = docMeta.Title
 
 		// Write to JSON
 		data, err := json.MarshalIndent(doc, "", "  ")

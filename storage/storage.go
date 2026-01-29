@@ -49,9 +49,6 @@ type DocReader interface {
 	// Doc returns a document by ID
 	Doc(id int) (sent.Doc, error)
 
-	// DocForName returns a document by title
-	DocForName(name string) (sent.Doc, error)
-
 	// FindCandidates returns sentence ROWIDs matching ALL given lemmas,
 	// resuming after the given cursor. Returns hydrated sentences and new cursor.
 	FindCandidates(lemmas []string, after Cursor, limit int) ([]SentenceResult, Cursor, error)
