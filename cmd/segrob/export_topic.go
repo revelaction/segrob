@@ -13,11 +13,11 @@ func exportTopicCommand(opts ExportTopicOptions, ui UI) error {
 		return err
 	}
 	defer pool.Close()
-	src := zombiezen.NewTopicHandler(pool)
+	src := zombiezen.NewTopicStore(pool)
 
-	dst := filesystem.NewTopicHandler(opts.To)
+	dst := filesystem.NewTopicStore(opts.To)
 
-	topics, err := src.All()
+	topics, err := src.List()
 	if err != nil {
 		return err
 	}

@@ -8,22 +8,41 @@ import (
 )
 
 func importTopicCommand(opts ImportTopicOptions, ui UI) error {
-	src := filesystem.NewTopicHandler(opts.From)
+
+	src := filesystem.NewTopicStore(opts.From)
+
+
+
 	pool, err := zombiezen.NewPool(opts.To)
+
 	if err != nil {
+
 		return err
+
 	}
+
 	defer pool.Close()
 
+
+
 	if err := zombiezen.CreateTopicTables(pool); err != nil {
+
 		return fmt.Errorf("failed to create topics table: %w", err)
+
 	}
 
-	dst := zombiezen.NewTopicHandler(pool)
 
-	topics, err := src.All()
+
+	dst := zombiezen.NewTopicStore(pool)
+
+
+
+	topics, err := src.List()
+
 	if err != nil {
+
 		return err
+
 	}
 
 	for _, tp := range topics {

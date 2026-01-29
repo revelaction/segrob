@@ -159,7 +159,7 @@ func (h *DocStore) FindCandidates(lemmas []string, after storage.Cursor, limit i
 	return results, newCursor, nil
 }
 
-func (h *DocStore) WriteDoc(doc sent.Doc) error {
+func (h *DocStore) Write(doc sent.Doc) error {
 	conn, err := h.pool.Take(context.TODO())
 	if err != nil {
 		return err

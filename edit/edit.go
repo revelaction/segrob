@@ -88,7 +88,7 @@ func (h *Handler) Run() error {
 		// reload the topic after write
 		for i, t := range h.Library {
 			if t.Name == tp.Name {
-				newTp, err := h.TopicReader.Topic(t.Name)
+				newTp, err := h.TopicReader.Read(t.Name)
 				if err != nil {
 					return nil
 				}

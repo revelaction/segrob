@@ -13,18 +13,18 @@ import (
 	tpc "github.com/revelaction/segrob/topic"
 )
 
-type TopicHandler struct {
+type TopicStore struct {
 	root string
 }
 
-var _ storage.TopicReader = (*TopicHandler)(nil)
-var _ storage.TopicWriter = (*TopicHandler)(nil)
+var _ storage.TopicReader = (*TopicStore)(nil)
+var _ storage.TopicWriter = (*TopicStore)(nil)
 
-func NewTopicHandler(root string) *TopicHandler {
-	return &TopicHandler{root: root}
+func NewTopicStore(root string) *TopicStore {
+	return &TopicStore{root: root}
 }
 
-func (th *TopicHandler) All() (tpc.Library, error) {
+func (th *TopicStore) List() (tpc.Library, error) {
 	names, err := th.Names()
 	if err != nil {
 		return nil, err
@@ -32,7 +32,7 @@ func (th *TopicHandler) All() (tpc.Library, error) {
 
 	topics := tpc.Library{}
 	for _, n := range names {
-		t, err := th.Topic(n)
+		t, err := th.Read(n)
 		if err != nil {
 			return nil, err
 		}
@@ -43,7 +43,7 @@ func (th *TopicHandler) All() (tpc.Library, error) {
 	return topics, nil
 }
 
-func (th *TopicHandler) Names() ([]string, error) {
+func (th *TopicStore) Names() ([]string, error) {
 	files, err := os.ReadDir(th.root)
 	if err != nil {
 		return nil, err
@@ -61,7 +61,7 @@ func (th *TopicHandler) Names() ([]string, error) {
 	return names, nil
 }
 
-func (th *TopicHandler) Random() (tpc.Topic, error) {
+func (th *TopicStore) Random() (tpc.Topic, error) {
 	all, err := th.Names()
 	if err != nil {
 		return tpc.Topic{}, err
@@ -69,10 +69,10 @@ func (th *TopicHandler) Random() (tpc.Topic, error) {
 
 	rand.Seed(time.Now().Unix())
 	idx := rand.Intn(len(all))
-	return th.Topic(all[idx])
+	return th.Read(all[idx])
 }
 
-func (th *TopicHandler) Topic(name string) (tpc.Topic, error) {
+func (th *TopicStore) Read(name string) (tpc.Topic, error) {
 	tf, err := os.ReadFile(filepath.Join(th.root, name+".json"))
 	if err != nil {
 		return tpc.Topic{}, err
@@ -100,7 +100,7 @@ func (th *TopicHandler) Topic(name string) (tpc.Topic, error) {
 	return t, nil
 }
 
-func (th *TopicHandler) Write(tp tpc.Topic) error {
+func (th *TopicStore) Write(tp tpc.Topic) error {
 	jsonData, err := json.Marshal(tp.Exprs)
 	if err != nil {
 		return err

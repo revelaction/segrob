@@ -28,7 +28,7 @@ func topicCommand(opts TopicOptions, name string, isFile bool, ui UI) error {
 		return nil
 	}
 
-	tp, err := fhr.Topic(name)
+	tp, err := fhr.Read(name)
 	if err != nil {
 		return err
 	}

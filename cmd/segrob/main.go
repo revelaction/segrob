@@ -222,8 +222,8 @@ func getTopicHandler(path string, isFile bool) (storage.TopicRepository, error) 
 		if err != nil {
 			return nil, err
 		}
-		return zombiezen.NewTopicHandler(pool), nil
+		return zombiezen.NewTopicStore(pool), nil
 	}
 
-	return filesystem.NewTopicHandler(path), nil
+	return filesystem.NewTopicStore(path), nil
 }

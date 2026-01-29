@@ -51,7 +51,7 @@ func importDocCommand(opts ImportDocOptions, ui UI) error {
 			doc.Title = docMeta.Title
 		}
 
-		if err := dst.WriteDoc(doc); err != nil {
+		if err := dst.Write(doc); err != nil {
 			return fmt.Errorf("failed to write doc %s: %w", docMeta.Title, err)
 		}
 		count++

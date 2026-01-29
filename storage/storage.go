@@ -7,11 +7,11 @@ import (
 
 // TopicReader defines read operations for topic storage
 type TopicReader interface {
-	// All returns all topics from storage
-	All() (topic.Library, error)
+	// List returns all topics from storage
+	List() (topic.Library, error)
 
-	// Topic returns a single topic by name
-	Topic(name string) (topic.Topic, error)
+	// Read returns a single topic by name
+	Read(name string) (topic.Topic, error)
 
 	// Names returns the names of all available topics
 	Names() ([]string, error)
@@ -56,8 +56,8 @@ type DocReader interface {
 
 // DocWriter defines write operations for document storage
 type DocWriter interface {
-	// WriteDoc persists a document and its sentences/lemmas to storage
-	WriteDoc(doc sent.Doc) error
+	// Write persists a document and its sentences/lemmas to storage
+	Write(doc sent.Doc) error
 }
 
 // DocRepository combines read and write operations

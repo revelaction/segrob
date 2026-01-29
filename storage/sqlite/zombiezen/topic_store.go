@@ -12,15 +12,15 @@ import (
 	"zombiezen.com/go/sqlite/sqlitex"
 )
 
-type TopicHandler struct {
+type TopicStore struct {
 	pool *sqlitex.Pool
 }
 
-var _ storage.TopicReader = (*TopicHandler)(nil)
-var _ storage.TopicWriter = (*TopicHandler)(nil)
+var _ storage.TopicReader = (*TopicStore)(nil)
+var _ storage.TopicWriter = (*TopicStore)(nil)
 
-func NewTopicHandler(pool *sqlitex.Pool) *TopicHandler {
-	return &TopicHandler{pool: pool}
+func NewTopicStore(pool *sqlitex.Pool) *TopicStore {
+	return &TopicStore{pool: pool}
 }
 
 // NewPool creates a new Zombiezen SQLite connection pool with reasonable defaults
@@ -42,11 +42,11 @@ func NewPool(dbPath string) (*sqlitex.Pool, error) {
 	return pool, nil
 }
 
-func (h *TopicHandler) Close() error {
+func (h *TopicStore) Close() error {
 	return h.pool.Close()
 }
 
-func (h *TopicHandler) All() (topic.Library, error) {
+func (h *TopicStore) List() (topic.Library, error) {
 	conn, err := h.pool.Take(context.TODO())
 	if err != nil {
 		return nil, err
@@ -76,7 +76,7 @@ func (h *TopicHandler) All() (topic.Library, error) {
 	return topics, nil
 }
 
-func (h *TopicHandler) Names() ([]string, error) {
+func (h *TopicStore) Names() ([]string, error) {
 	conn, err := h.pool.Take(context.TODO())
 	if err != nil {
 		return nil, err
@@ -98,7 +98,7 @@ func (h *TopicHandler) Names() ([]string, error) {
 	return names, nil
 }
 
-func (h *TopicHandler) Topic(name string) (topic.Topic, error) {
+func (h *TopicStore) Read(name string) (topic.Topic, error) {
 	conn, err := h.pool.Take(context.TODO())
 	if err != nil {
 		return topic.Topic{}, err
@@ -135,7 +135,7 @@ func (h *TopicHandler) Topic(name string) (topic.Topic, error) {
 	return t, nil
 }
 
-func (h *TopicHandler) Write(tp topic.Topic) error {
+func (h *TopicStore) Write(tp topic.Topic) error {
 	conn, err := h.pool.Take(context.TODO())
 	if err != nil {
 		return err
@@ -161,7 +161,7 @@ func (h *TopicHandler) Write(tp topic.Topic) error {
 }
 
 // assembleTopic sets TopicName, ExprIndex and ExprId for each item
-func (h *TopicHandler) assembleTopic(name string, exprs []topic.TopicExpr) topic.Topic {
+func (h *TopicStore) assembleTopic(name string, exprs []topic.TopicExpr) topic.Topic {
 	for index := range exprs {
 		for idx := range exprs[index] {
 			exprs[index][idx].TopicName = name
