@@ -54,21 +54,21 @@ func renderTopics(doc sent.Doc, sentId int, isTopicFile bool, opts TopicsOptions
 	r.Sentence(s, prefix)
 	fmt.Fprintln(ui.Out)
 
-		th, err := getTopicHandler(opts.TopicPath, isTopicFile)
+	th, err := getTopicHandler(opts.TopicPath, isTopicFile)
 
-		if err != nil {
+	if err != nil {
 
-			return err
+		return err
 
-		}
+	}
 
-		allTopics, err := th.List()
+	allTopics, err := th.List()
 
-		if err != nil {
+	if err != nil {
 
-			return err
+		return err
 
-		}
+	}
 
 	r.HasColor = true
 	r.HasPrefix = true

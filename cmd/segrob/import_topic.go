@@ -11,8 +11,6 @@ func importTopicCommand(opts ImportTopicOptions, ui UI) error {
 
 	src := filesystem.NewTopicStore(opts.From)
 
-
-
 	pool, err := zombiezen.NewPool(opts.To)
 
 	if err != nil {
@@ -23,19 +21,13 @@ func importTopicCommand(opts ImportTopicOptions, ui UI) error {
 
 	defer pool.Close()
 
-
-
 	if err := zombiezen.CreateTopicTables(pool); err != nil {
 
 		return fmt.Errorf("failed to create topics table: %w", err)
 
 	}
 
-
-
 	dst := zombiezen.NewTopicStore(pool)
-
-
 
 	topics, err := src.List()
 
