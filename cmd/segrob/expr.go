@@ -61,9 +61,6 @@ func matchDocs(matcher *match.Matcher, opts ExprOptions, isDocFile bool, ui UI) 
 		if err != nil {
 			return err
 		}
-		if err := h.LoadList(); err != nil {
-			return err
-		}
 		if err := h.LoadAll(nil); err != nil {
 			return err
 		}

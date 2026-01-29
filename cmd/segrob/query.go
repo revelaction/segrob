@@ -27,10 +27,6 @@ func queryCommand(opts QueryOptions, isTopicFile, isDocFile bool, ui UI) error {
 			return err
 		}
 
-		if err := h.LoadList(); err != nil {
-			return err
-		}
-
 		uiprogress.Start()
 		bar := uiprogress.AddBar(1) // Placeholder, updated in callback
 		bar.AppendCompleted()

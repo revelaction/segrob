@@ -30,14 +30,7 @@ func docCommand(opts DocOptions, arg string, isArgFile bool, isRepoFile bool, ui
 		if err != nil {
 			return err
 		}
-		if arg == "" {
-			if err := h.LoadList(); err != nil {
-				return err
-			}
-		} else {
-			if err := h.LoadList(); err != nil {
-				return err
-			}
+		if arg != "" {
 			if err := h.LoadAll(nil); err != nil {
 				return err
 			}

@@ -21,44 +21,35 @@ var _ storage.DocRepository = (*DocStore)(nil)
 
 // NewDocStore creates a filesystem document handler.
 func NewDocStore(docDir string) (*DocStore, error) {
-	return &DocStore{
-		docDir: docDir,
-	}, nil
-}
-
-// LoadList populates the list of documents from the directory.
-// It is deterministic: os.ReadDir returns entries sorted by filename.
-func (h *DocStore) LoadList() error {
-	if h.docs != nil {
-		return nil
-	}
-
-	files, err := os.ReadDir(h.docDir)
+	files, err := os.ReadDir(docDir)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	h.docs = make([]sent.Doc, 0, len(files))
+	docs := make([]sent.Doc, 0, len(files))
 
 	idx := 0
 	for _, file := range files {
 		if filepath.Ext(file.Name()) == ".json" {
 			// TODO: maybe load labels here?
-			h.docs = append(h.docs, sent.Doc{
+			docs = append(docs, sent.Doc{
 				Id:    idx,
 				Title: file.Name(),
 			})
 			idx++
 		}
 	}
-	return nil
+
+	return &DocStore{
+		docDir: docDir,
+		docs:   docs,
+	}, nil
 }
 
 // LoadAll preloads all docs into memory.
-// The callback is called for each file loaded (total, current_name).
 func (h *DocStore) LoadAll(cb func(total int, name string)) error {
 	if h.docs == nil {
-		return fmt.Errorf("docs not loaded: call LoadList first")
+		return fmt.Errorf("docs not initialized")
 	}
 
 	total := len(h.docs)

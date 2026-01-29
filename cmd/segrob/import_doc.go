@@ -13,10 +13,6 @@ func importDocCommand(opts ImportDocOptions, ui UI) error {
 	if err != nil {
 		return err
 	}
-	// We only need the list of filenames
-	if err := src.LoadList(); err != nil {
-		return err
-	}
 
 	pool, err := zombiezen.NewPool(opts.To)
 	if err != nil {
