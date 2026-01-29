@@ -29,7 +29,7 @@ func importTopicCommand(opts ImportTopicOptions, ui UI) error {
 
 	dst := zombiezen.NewTopicStore(pool)
 
-	topics, err := src.List()
+	topics, err := src.ReadAll()
 
 	if err != nil {
 

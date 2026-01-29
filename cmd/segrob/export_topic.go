@@ -17,7 +17,7 @@ func exportTopicCommand(opts ExportTopicOptions, ui UI) error {
 
 	dst := filesystem.NewTopicStore(opts.To)
 
-	topics, err := src.List()
+	topics, err := src.ReadAll()
 	if err != nil {
 		return err
 	}

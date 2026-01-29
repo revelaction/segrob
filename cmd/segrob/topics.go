@@ -62,7 +62,7 @@ func renderTopics(doc sent.Doc, sentId int, isTopicFile bool, opts TopicsOptions
 
 	}
 
-	allTopics, err := th.List()
+	allTopics, err := th.ReadAll()
 
 	if err != nil {
 

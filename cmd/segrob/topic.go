@@ -16,12 +16,12 @@ func topicCommand(opts TopicOptions, name string, isFile bool, ui UI) error {
 
 	// No name provided (list all)
 	if name == "" {
-		topicNames, err := fhr.Names()
+		topicLib, err := fhr.ReadAll()
 		if err != nil {
 			return err
 		}
 
-		for topicId, name := range topicNames {
+		for topicId, name := range topicLib.Names() {
 			fmt.Fprintf(ui.Out, "📖 %d %s \n", topicId, name)
 		}
 

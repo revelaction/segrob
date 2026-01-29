@@ -46,7 +46,7 @@ func (h *TopicStore) Close() error {
 	return h.pool.Close()
 }
 
-func (h *TopicStore) List() (topic.Library, error) {
+func (h *TopicStore) ReadAll() (topic.Library, error) {
 	conn, err := h.pool.Take(context.TODO())
 	if err != nil {
 		return nil, err
@@ -74,28 +74,6 @@ func (h *TopicStore) List() (topic.Library, error) {
 	}
 
 	return topics, nil
-}
-
-func (h *TopicStore) Names() ([]string, error) {
-	conn, err := h.pool.Take(context.TODO())
-	if err != nil {
-		return nil, err
-	}
-	defer h.pool.Put(conn)
-
-	var names []string
-	err = sqlitex.Execute(conn, "SELECT name FROM topics WHERE user_id IS NULL ORDER BY name", &sqlitex.ExecOptions{
-		ResultFunc: func(stmt *sqlite.Stmt) error {
-			names = append(names, stmt.ColumnText(0))
-			return nil
-		},
-	})
-
-	if err != nil {
-		return nil, err
-	}
-
-	return names, nil
 }
 
 func (h *TopicStore) Read(name string) (topic.Topic, error) {

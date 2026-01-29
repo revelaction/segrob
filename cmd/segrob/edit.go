@@ -11,7 +11,7 @@ func editCommand(opts EditOptions, isFile bool, ui UI) error {
 		return err
 	}
 
-	topicLib, err := th.List()
+	topicLib, err := th.ReadAll()
 	if err != nil {
 		return err
 	}

@@ -24,8 +24,8 @@ func NewTopicStore(root string) *TopicStore {
 	return &TopicStore{root: root}
 }
 
-func (th *TopicStore) List() (tpc.Library, error) {
-	names, err := th.Names()
+func (th *TopicStore) ReadAll() (tpc.Library, error) {
+	names, err := th.names()
 	if err != nil {
 		return nil, err
 	}
@@ -43,7 +43,7 @@ func (th *TopicStore) List() (tpc.Library, error) {
 	return topics, nil
 }
 
-func (th *TopicStore) Names() ([]string, error) {
+func (th *TopicStore) names() ([]string, error) {
 	files, err := os.ReadDir(th.root)
 	if err != nil {
 		return nil, err
@@ -62,7 +62,7 @@ func (th *TopicStore) Names() ([]string, error) {
 }
 
 func (th *TopicStore) Random() (tpc.Topic, error) {
-	all, err := th.Names()
+	all, err := th.names()
 	if err != nil {
 		return tpc.Topic{}, err
 	}

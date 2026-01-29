@@ -7,14 +7,11 @@ import (
 
 // TopicReader defines read operations for topic storage
 type TopicReader interface {
-	// List returns all topics from storage
-	List() (topic.Library, error)
+	// ReadAll returns all topics from storage
+	ReadAll() (topic.Library, error)
 
 	// Read returns a single topic by name
 	Read(name string) (topic.Topic, error)
-
-	// Names returns the names of all available topics
-	Names() ([]string, error)
 }
 
 // TopicWriter defines write operations for topic storage

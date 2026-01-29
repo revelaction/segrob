@@ -61,7 +61,7 @@ func queryCommand(opts QueryOptions, isTopicFile, isDocFile bool, ui UI) error {
 	if err != nil {
 		return err
 	}
-	topicLib, err := th.List()
+	topicLib, err := th.ReadAll()
 	if err != nil {
 		return err
 	}
