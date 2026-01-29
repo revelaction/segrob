@@ -78,7 +78,7 @@ func (h *DocHandler) LoadContents(cb func(total int, name string)) error {
 		if err := json.Unmarshal(content, &fullDoc); err != nil {
 			return err
 		}
-		
+
 		// Copy loaded content into existing metadata struct
 		doc.Tokens = fullDoc.Tokens
 		doc.Labels = fullDoc.Labels
@@ -138,13 +138,13 @@ func (h *DocHandler) WriteDoc(doc sent.Doc) error {
 func ReadDoc(path string) (sent.Doc, error) {
 	f, err := os.ReadFile(path)
 	if err != nil {
-		return sent.Doc{}, err
+		return sent.Doc{}, fmt.Errorf("IO error: %w", err)
 	}
 
 	var doc sent.Doc
 	err = json.Unmarshal(f, &doc)
 	if err != nil {
-		return sent.Doc{}, err
+		return sent.Doc{}, fmt.Errorf("JSON decoding error: %w", err)
 	}
 
 	return doc, nil

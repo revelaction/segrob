@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"path/filepath"
 	"strconv"
 
 	"github.com/revelaction/segrob/render"
@@ -61,7 +62,8 @@ func docCommand(opts DocOptions, arg string, isArgFile bool, isRepoFile bool, ui
 func renderFile(path string, opts DocOptions, ui UI) error {
 	doc, err := filesystem.ReadDoc(path)
 	if err != nil {
-		return err
+		absPath, _ := filepath.Abs(path)
+		return fmt.Errorf("filesystem document %q: %w", absPath, err)
 	}
 
 	renderDoc(doc, opts, ui)
