@@ -23,22 +23,22 @@ func exportDocCommand(opts ExportDocOptions, ui UI) error {
 		return fmt.Errorf("failed to create target directory: %w", err)
 	}
 
-	names, err := src.Names()
+	docs, err := src.List()
 	if err != nil {
 		return err
 	}
 
 	uiprogress.Start()
-	bar := uiprogress.AddBar(len(names))
+	bar := uiprogress.AddBar(len(docs))
 	bar.AppendCompleted()
 	bar.PrependElapsed()
 
 	count := 0
-	for _, name := range names {
-		doc, err := src.DocForName(name)
+	for _, docMeta := range docs {
+		doc, err := src.DocForName(docMeta.Title)
 		if err != nil {
 			uiprogress.Stop()
-			return fmt.Errorf("failed to read doc %s: %w", name, err)
+			return fmt.Errorf("failed to read doc %s: %w", docMeta.Title, err)
 		}
 
 		// Write to JSON
@@ -48,7 +48,7 @@ func exportDocCommand(opts ExportDocOptions, ui UI) error {
 			return err
 		}
 
-		targetPath := filepath.Join(opts.To, name)
+		targetPath := filepath.Join(opts.To, docMeta.Title)
 		if err := os.WriteFile(targetPath, data, 0644); err != nil {
 			uiprogress.Stop()
 			return fmt.Errorf("failed to write file %s: %w", targetPath, err)

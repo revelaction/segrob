@@ -42,8 +42,9 @@ type SentenceResult struct {
 
 // DocReader defines read operations for document storage
 type DocReader interface {
-	// Names returns the titles of all documents
-	Names() ([]string, error)
+	// List returns the metadata (Id, Title, Labels) of all documents.
+	// Content (Tokens) is not loaded.
+	List() ([]sent.Doc, error)
 
 	// Doc returns a document by ID
 	Doc(id int) (sent.Doc, error)

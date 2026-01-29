@@ -14,8 +14,7 @@ type DocHandler struct {
 	docDir string
 
 	// In-memory cache
-	docs     []sent.Doc
-	docNames []string
+	docs []sent.Doc
 }
 
 var _ storage.DocRepository = (*DocHandler)(nil)
@@ -27,10 +26,10 @@ func NewDocHandler(docDir string) (*DocHandler, error) {
 	}, nil
 }
 
-// LoadNames populates the list of document names from the directory.
+// LoadList populates the list of documents from the directory.
 // It is deterministic: os.ReadDir returns entries sorted by filename.
-func (h *DocHandler) LoadNames() error {
-	if h.docNames != nil {
+func (h *DocHandler) LoadList() error {
+	if h.docs != nil {
 		return nil
 	}
 
@@ -39,9 +38,17 @@ func (h *DocHandler) LoadNames() error {
 		return err
 	}
 
+	h.docs = make([]sent.Doc, 0, len(files))
+
+	idx := 0
 	for _, file := range files {
 		if filepath.Ext(file.Name()) == ".json" {
-			h.docNames = append(h.docNames, file.Name())
+			// TODO: maybe load labels here?
+			h.docs = append(h.docs, sent.Doc{
+				Id:    idx,
+				Title: file.Name(),
+			})
+			idx++
 		}
 	}
 	return nil
@@ -50,42 +57,39 @@ func (h *DocHandler) LoadNames() error {
 // LoadContents preloads all docs into memory.
 // The callback is called for each file loaded (total, current_name).
 func (h *DocHandler) LoadContents(cb func(total int, name string)) error {
-	if h.docs != nil {
-		return nil
+	if h.docs == nil {
+		return fmt.Errorf("docs not loaded: call LoadList first")
 	}
 
-	if h.docNames == nil {
-		return fmt.Errorf("doc names not loaded: call LoadNames first")
-	}
+	total := len(h.docs)
+	for i := range h.docs {
+		doc := &h.docs[i] // pointer to modify in place
 
-	h.docs = make([]sent.Doc, 0, len(h.docNames))
-
-	total := len(h.docNames)
-	for i, name := range h.docNames {
 		if cb != nil {
-			cb(total, name)
+			cb(total, doc.Title)
 		}
 
-		content, err := os.ReadFile(filepath.Join(h.docDir, name))
+		content, err := os.ReadFile(filepath.Join(h.docDir, doc.Title))
 		if err != nil {
 			return err
 		}
 
-		var doc sent.Doc
-		if err := json.Unmarshal(content, &doc); err != nil {
+		var fullDoc sent.Doc
+		if err := json.Unmarshal(content, &fullDoc); err != nil {
 			return err
 		}
-		doc.Title = name
-		doc.Id = i
-
-		h.docs = append(h.docs, doc)
+		
+		// Copy loaded content into existing metadata struct
+		doc.Tokens = fullDoc.Tokens
+		doc.Labels = fullDoc.Labels
+		// Title and Id are already set
 	}
 
 	return nil
 }
 
-func (h *DocHandler) Names() ([]string, error) {
-	return h.docNames, nil
+func (h *DocHandler) List() ([]sent.Doc, error) {
+	return h.docs, nil
 }
 
 func (h *DocHandler) Doc(id int) (sent.Doc, error) {

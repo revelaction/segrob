@@ -30,11 +30,11 @@ func docCommand(opts DocOptions, arg string, isArgFile bool, isRepoFile bool, ui
 			return err
 		}
 		if arg == "" {
-			if err := h.LoadNames(); err != nil {
+			if err := h.LoadList(); err != nil {
 				return err
 			}
 		} else {
-			if err := h.LoadNames(); err != nil {
+			if err := h.LoadList(); err != nil {
 				return err
 			}
 			if err := h.LoadContents(nil); err != nil {
@@ -91,13 +91,13 @@ func renderDoc(doc sent.Doc, opts DocOptions, ui UI) {
 }
 
 func listDocs(repo storage.DocReader, ui UI) error {
-	names, err := repo.Names()
+	docs, err := repo.List()
 	if err != nil {
 		return err
 	}
 
-	for i, name := range names {
-		fmt.Fprintf(ui.Out, "📖 %d %s\n", i, name)
+	for _, doc := range docs {
+		fmt.Fprintf(ui.Out, "📖 %d %s\n", doc.Id, doc.Title)
 	}
 	return nil
 }

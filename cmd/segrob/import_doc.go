@@ -13,7 +13,7 @@ func importDocCommand(opts ImportDocOptions, ui UI) error {
 	if err != nil {
 		return err
 	}
-	if err := src.LoadNames(); err != nil {
+	if err := src.LoadList(); err != nil {
 		return err
 	}
 	if err := src.LoadContents(nil); err != nil {
@@ -32,27 +32,27 @@ func importDocCommand(opts ImportDocOptions, ui UI) error {
 	dst := zombiezen.NewDocHandler(pool)
 
 	fmt.Fprintf(ui.Out, "Reading docs from %s...\n", opts.From)
-	names, err := src.Names()
+	docs, err := src.List()
 	if err != nil {
 		return err
 	}
 
 	uiprogress.Start()
-	bar := uiprogress.AddBar(len(names))
+	bar := uiprogress.AddBar(len(docs))
 	bar.AppendCompleted()
 	bar.PrependElapsed()
 
 	count := 0
-	for _, name := range names {
-		doc, err := src.DocForName(name)
+	for _, docMeta := range docs {
+		doc, err := src.DocForName(docMeta.Title)
 		if err != nil {
 			uiprogress.Stop()
-			return fmt.Errorf("failed to read doc %s: %w", name, err)
+			return fmt.Errorf("failed to read doc %s: %w", docMeta.Title, err)
 		}
 
 		if err := dst.WriteDoc(doc); err != nil {
 			uiprogress.Stop()
-			return fmt.Errorf("failed to write doc %s: %w", name, err)
+			return fmt.Errorf("failed to write doc %s: %w", docMeta.Title, err)
 		}
 		count++
 		bar.Incr()

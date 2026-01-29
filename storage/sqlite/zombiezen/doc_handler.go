@@ -22,24 +22,32 @@ func NewDocHandler(pool *sqlitex.Pool) *DocHandler {
 	return &DocHandler{pool: pool}
 }
 
-func (h *DocHandler) Names() ([]string, error) {
+func (h *DocHandler) List() ([]sent.Doc, error) {
 	conn, err := h.pool.Take(context.TODO())
 	if err != nil {
 		return nil, err
 	}
 	defer h.pool.Put(conn)
 
-	var names []string
-	err = sqlitex.Execute(conn, "SELECT title FROM docs ORDER BY title", &sqlitex.ExecOptions{
+	var docs []sent.Doc
+	err = sqlitex.Execute(conn, "SELECT id, title, labels FROM docs ORDER BY title", &sqlitex.ExecOptions{
 		ResultFunc: func(stmt *sqlite.Stmt) error {
-			names = append(names, stmt.ColumnText(0))
+			doc := sent.Doc{
+				Id:    stmt.ColumnInt(0),
+				Title: stmt.ColumnText(1),
+			}
+			labelsStr := stmt.ColumnText(2)
+			if labelsStr != "" {
+				doc.Labels = strings.Split(labelsStr, ",")
+			}
+			docs = append(docs, doc)
 			return nil
 		},
 	})
 	if err != nil {
 		return nil, err
 	}
-	return names, nil
+	return docs, nil
 }
 
 func (h *DocHandler) Doc(id int) (sent.Doc, error) {
@@ -53,7 +61,6 @@ func (h *DocHandler) Doc(id int) (sent.Doc, error) {
 	found := false
 
 	// Fetch Metadata
-	// Note: id here is expected to be the storage ID (rowid alias for integer primary key)
 	err = sqlitex.Execute(conn, "SELECT id, title, labels FROM docs WHERE id = ?", &sqlitex.ExecOptions{
 		Args: []interface{}{id},
 		ResultFunc: func(stmt *sqlite.Stmt) error {

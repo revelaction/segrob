@@ -27,7 +27,7 @@ func queryCommand(opts QueryOptions, isTopicFile, isDocFile bool, ui UI) error {
 			return err
 		}
 
-		if err := h.LoadNames(); err != nil {
+		if err := h.LoadList(); err != nil {
 			return err
 		}
 

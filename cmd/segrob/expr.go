@@ -61,7 +61,7 @@ func matchDocs(matcher *match.Matcher, opts ExprOptions, isDocFile bool, ui UI) 
 		if err != nil {
 			return err
 		}
-		if err := h.LoadNames(); err != nil {
+		if err := h.LoadList(); err != nil {
 			return err
 		}
 		if err := h.LoadContents(nil); err != nil {
@@ -85,14 +85,14 @@ func matchDocs(matcher *match.Matcher, opts ExprOptions, isDocFile bool, ui UI) 
 		matcher.Match(doc)
 
 	} else {
-		docNames, err := dr.Names()
+		docs, err := dr.List()
 		if err != nil {
 			return err
 		}
 
-		for docId, name := range docNames {
+		for _, metaDoc := range docs {
 
-			doc, err := dr.DocForName(name)
+			doc, err := dr.DocForName(metaDoc.Title)
 			if err != nil {
 				return err
 			}
@@ -101,8 +101,8 @@ func matchDocs(matcher *match.Matcher, opts ExprOptions, isDocFile bool, ui UI) 
 				continue
 			}
 
-			doc.Id = docId
-			r.AddDocName(docId, doc.Title)
+			doc.Id = metaDoc.Id
+			r.AddDocName(metaDoc.Id, doc.Title)
 			matcher.Match(doc)
 		}
 	}
