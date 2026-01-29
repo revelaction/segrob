@@ -3,11 +3,9 @@ package filesystem
 import (
 	"bytes"
 	"encoding/json"
-	"math/rand"
 	"os"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/revelaction/segrob/storage"
 	tpc "github.com/revelaction/segrob/topic"
@@ -59,17 +57,6 @@ func (th *TopicStore) names() ([]string, error) {
 	}
 
 	return names, nil
-}
-
-func (th *TopicStore) Random() (tpc.Topic, error) {
-	all, err := th.names()
-	if err != nil {
-		return tpc.Topic{}, err
-	}
-
-	rand.Seed(time.Now().Unix())
-	idx := rand.Intn(len(all))
-	return th.Read(all[idx])
 }
 
 func (th *TopicStore) Read(name string) (tpc.Topic, error) {
