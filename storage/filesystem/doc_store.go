@@ -54,9 +54,9 @@ func (h *DocStore) LoadList() error {
 	return nil
 }
 
-// LoadContents preloads all docs into memory.
+// LoadAll preloads all docs into memory.
 // The callback is called for each file loaded (total, current_name).
-func (h *DocStore) LoadContents(cb func(total int, name string)) error {
+func (h *DocStore) LoadAll(cb func(total int, name string)) error {
 	if h.docs == nil {
 		return fmt.Errorf("docs not loaded: call LoadList first")
 	}

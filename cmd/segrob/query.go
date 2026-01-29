@@ -41,7 +41,7 @@ func queryCommand(opts QueryOptions, isTopicFile, isDocFile bool, ui UI) error {
 			return currentName
 		})
 
-		err = h.LoadContents(func(total int, name string) {
+		err = h.LoadAll(func(total int, name string) {
 			if bar.Total <= 1 {
 				bar.Total = total
 				bar.Set(0)
