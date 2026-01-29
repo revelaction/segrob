@@ -32,6 +32,6 @@ func importTopicCommand(opts ImportTopicOptions, ui UI) error {
 		}
 	}
 
-	fmt.Fprintf(ui.Out, "Successfully imported %d topics from %s to %s\n", len(topics), opts.From, opts.To)
+	_, _ = fmt.Fprintf(ui.Err, "Successfully imported %d topics from %s to %s\n", len(topics), opts.From, opts.To)
 	return nil
 }
