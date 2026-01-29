@@ -69,13 +69,8 @@ func (h *DocHandler) LoadContents(cb func(total int, name string)) error {
 			cb(total, doc.Title)
 		}
 
-		content, err := os.ReadFile(filepath.Join(h.docDir, doc.Title))
+		fullDoc, err := ReadDoc(filepath.Join(h.docDir, doc.Title))
 		if err != nil {
-			return err
-		}
-
-		var fullDoc sent.Doc
-		if err := json.Unmarshal(content, &fullDoc); err != nil {
 			return err
 		}
 
