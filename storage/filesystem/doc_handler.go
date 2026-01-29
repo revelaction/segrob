@@ -10,25 +10,25 @@ import (
 	"github.com/revelaction/segrob/storage"
 )
 
-type DocHandler struct {
+type DocStore struct {
 	docDir string
 
 	// In-memory cache
 	docs []sent.Doc
 }
 
-var _ storage.DocRepository = (*DocHandler)(nil)
+var _ storage.DocRepository = (*DocStore)(nil)
 
-// NewDocHandler creates a filesystem document handler.
-func NewDocHandler(docDir string) (*DocHandler, error) {
-	return &DocHandler{
+// NewDocStore creates a filesystem document handler.
+func NewDocStore(docDir string) (*DocStore, error) {
+	return &DocStore{
 		docDir: docDir,
 	}, nil
 }
 
 // LoadList populates the list of documents from the directory.
 // It is deterministic: os.ReadDir returns entries sorted by filename.
-func (h *DocHandler) LoadList() error {
+func (h *DocStore) LoadList() error {
 	if h.docs != nil {
 		return nil
 	}
@@ -56,7 +56,7 @@ func (h *DocHandler) LoadList() error {
 
 // LoadContents preloads all docs into memory.
 // The callback is called for each file loaded (total, current_name).
-func (h *DocHandler) LoadContents(cb func(total int, name string)) error {
+func (h *DocStore) LoadContents(cb func(total int, name string)) error {
 	if h.docs == nil {
 		return fmt.Errorf("docs not loaded: call LoadList first")
 	}
@@ -83,11 +83,11 @@ func (h *DocHandler) LoadContents(cb func(total int, name string)) error {
 	return nil
 }
 
-func (h *DocHandler) List() ([]sent.Doc, error) {
+func (h *DocStore) List() ([]sent.Doc, error) {
 	return h.docs, nil
 }
 
-func (h *DocHandler) Doc(id int) (sent.Doc, error) {
+func (h *DocStore) Read(id int) (sent.Doc, error) {
 	if id < 0 || id >= len(h.docs) {
 		return sent.Doc{}, fmt.Errorf("doc id out of range: %d", id)
 	}
@@ -95,7 +95,7 @@ func (h *DocHandler) Doc(id int) (sent.Doc, error) {
 }
 
 // FindCandidates returns ALL sentences from memory.
-func (h *DocHandler) FindCandidates(lemmas []string, after storage.Cursor, limit int) ([]storage.SentenceResult, storage.Cursor, error) {
+func (h *DocStore) FindCandidates(lemmas []string, after storage.Cursor, limit int) ([]storage.SentenceResult, storage.Cursor, error) {
 	// If cursor > 0, we already returned everything (EOF).
 	if after > 0 {
 		return nil, after, nil
@@ -116,7 +116,7 @@ func (h *DocHandler) FindCandidates(lemmas []string, after storage.Cursor, limit
 	return results, 1, nil
 }
 
-func (h *DocHandler) WriteDoc(doc sent.Doc) error {
+func (h *DocStore) WriteDoc(doc sent.Doc) error {
 	return fmt.Errorf("read-only storage")
 }
 

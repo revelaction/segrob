@@ -9,7 +9,7 @@ import (
 )
 
 func importDocCommand(opts ImportDocOptions, ui UI) error {
-	src, err := filesystem.NewDocHandler(opts.From)
+	src, err := filesystem.NewDocStore(opts.From)
 	if err != nil {
 		return err
 	}
@@ -28,7 +28,7 @@ func importDocCommand(opts ImportDocOptions, ui UI) error {
 		return fmt.Errorf("failed to create docs table: %w", err)
 	}
 
-	dst := zombiezen.NewDocHandler(pool)
+	dst := zombiezen.NewDocStore(pool)
 
 	docs, err := src.List()
 	if err != nil {

@@ -12,17 +12,17 @@ import (
 	"zombiezen.com/go/sqlite/sqlitex"
 )
 
-type DocHandler struct {
+type DocStore struct {
 	pool *sqlitex.Pool
 }
 
-var _ storage.DocRepository = (*DocHandler)(nil)
+var _ storage.DocRepository = (*DocStore)(nil)
 
-func NewDocHandler(pool *sqlitex.Pool) *DocHandler {
-	return &DocHandler{pool: pool}
+func NewDocStore(pool *sqlitex.Pool) *DocStore {
+	return &DocStore{pool: pool}
 }
 
-func (h *DocHandler) List() ([]sent.Doc, error) {
+func (h *DocStore) List() ([]sent.Doc, error) {
 	conn, err := h.pool.Take(context.TODO())
 	if err != nil {
 		return nil, err
@@ -50,7 +50,7 @@ func (h *DocHandler) List() ([]sent.Doc, error) {
 	return docs, nil
 }
 
-func (h *DocHandler) Doc(id int) (sent.Doc, error) {
+func (h *DocStore) Read(id int) (sent.Doc, error) {
 	conn, err := h.pool.Take(context.TODO())
 	if err != nil {
 		return sent.Doc{}, err
@@ -83,7 +83,7 @@ func (h *DocHandler) Doc(id int) (sent.Doc, error) {
 	return doc, nil
 }
 
-func (h *DocHandler) FindCandidates(lemmas []string, after storage.Cursor, limit int) ([]storage.SentenceResult, storage.Cursor, error) {
+func (h *DocStore) FindCandidates(lemmas []string, after storage.Cursor, limit int) ([]storage.SentenceResult, storage.Cursor, error) {
 	if len(lemmas) == 0 {
 		return nil, after, nil
 	}
@@ -159,7 +159,7 @@ func (h *DocHandler) FindCandidates(lemmas []string, after storage.Cursor, limit
 	return results, newCursor, nil
 }
 
-func (h *DocHandler) WriteDoc(doc sent.Doc) error {
+func (h *DocStore) WriteDoc(doc sent.Doc) error {
 	conn, err := h.pool.Take(context.TODO())
 	if err != nil {
 		return err

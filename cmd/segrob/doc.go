@@ -24,9 +24,9 @@ func docCommand(opts DocOptions, arg string, isArgFile bool, isRepoFile bool, ui
 			return err
 		}
 		defer pool.Close()
-		repo = zombiezen.NewDocHandler(pool)
+		repo = zombiezen.NewDocStore(pool)
 	} else {
-		h, err := filesystem.NewDocHandler(opts.DocPath)
+		h, err := filesystem.NewDocStore(opts.DocPath)
 		if err != nil {
 			return err
 		}
@@ -50,7 +50,7 @@ func docCommand(opts DocOptions, arg string, isArgFile bool, isRepoFile bool, ui
 	}
 
 	id, _ := strconv.Atoi(arg)
-	doc, err := repo.Doc(id)
+	doc, err := repo.Read(id)
 	if err != nil {
 		return err
 	}

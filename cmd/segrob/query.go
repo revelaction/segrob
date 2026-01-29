@@ -20,9 +20,9 @@ func queryCommand(opts QueryOptions, isTopicFile, isDocFile bool, ui UI) error {
 		if err != nil {
 			return err
 		}
-		dr = zombiezen.NewDocHandler(pool)
+		dr = zombiezen.NewDocStore(pool)
 	} else {
-		h, err := filesystem.NewDocHandler(path)
+		h, err := filesystem.NewDocStore(path)
 		if err != nil {
 			return err
 		}

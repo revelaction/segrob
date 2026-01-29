@@ -46,8 +46,8 @@ type DocReader interface {
 	// Content (Tokens) is not loaded.
 	List() ([]sent.Doc, error)
 
-	// Doc returns a document by ID
-	Doc(id int) (sent.Doc, error)
+	// Read returns a document by ID
+	Read(id int) (sent.Doc, error)
 
 	// FindCandidates returns sentence ROWIDs matching ALL given lemmas,
 	// resuming after the given cursor. Returns hydrated sentences and new cursor.

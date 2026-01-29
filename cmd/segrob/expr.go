@@ -55,9 +55,9 @@ func matchDocs(matcher *match.Matcher, opts ExprOptions, isDocFile bool, ui UI) 
 		if err != nil {
 			return err
 		}
-		dr = zombiezen.NewDocHandler(pool)
+		dr = zombiezen.NewDocStore(pool)
 	} else {
-		h, err := filesystem.NewDocHandler(opts.DocPath)
+		h, err := filesystem.NewDocStore(opts.DocPath)
 		if err != nil {
 			return err
 		}
@@ -71,7 +71,7 @@ func matchDocs(matcher *match.Matcher, opts ExprOptions, isDocFile bool, ui UI) 
 	}
 	if opts.Doc != nil {
 		docId := *opts.Doc
-		doc, err := dr.Doc(docId)
+		doc, err := dr.Read(docId)
 		if err != nil {
 			return err
 		}
@@ -95,7 +95,7 @@ func matchDocs(matcher *match.Matcher, opts ExprOptions, isDocFile bool, ui UI) 
 				continue
 			}
 
-			doc, err := dr.Doc(metaDoc.Id)
+			doc, err := dr.Read(metaDoc.Id)
 			if err != nil {
 				return err
 			}

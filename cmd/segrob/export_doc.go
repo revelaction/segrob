@@ -15,7 +15,7 @@ func exportDocCommand(opts ExportDocOptions, ui UI) error {
 		return err
 	}
 	defer pool.Close()
-	src := zombiezen.NewDocHandler(pool)
+	src := zombiezen.NewDocStore(pool)
 
 	// Ensure target directory exists
 	if err := os.MkdirAll(opts.To, 0755); err != nil {
@@ -31,7 +31,7 @@ func exportDocCommand(opts ExportDocOptions, ui UI) error {
 
 	count := 0
 	for _, docMeta := range docs {
-		doc, err := src.Doc(docMeta.Id)
+		doc, err := src.Read(docMeta.Id)
 		if err != nil {
 			return fmt.Errorf("failed to read doc %s (id %d): %w", docMeta.Title, docMeta.Id, err)
 		}
