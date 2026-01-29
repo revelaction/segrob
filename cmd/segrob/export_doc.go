@@ -6,7 +6,6 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/gosuri/uiprogress"
 	"github.com/revelaction/segrob/storage/sqlite/zombiezen"
 )
 
@@ -28,16 +27,12 @@ func exportDocCommand(opts ExportDocOptions, ui UI) error {
 		return err
 	}
 
-	uiprogress.Start()
-	bar := uiprogress.AddBar(len(docs))
-	bar.AppendCompleted()
-	bar.PrependElapsed()
+	_, _ = fmt.Fprintf(ui.Err, "Exporting %d docs from %s to %s...\n", len(docs), opts.From, opts.To)
 
 	count := 0
 	for _, docMeta := range docs {
 		doc, err := src.Doc(docMeta.Id)
 		if err != nil {
-			uiprogress.Stop()
 			return fmt.Errorf("failed to read doc %s (id %d): %w", docMeta.Title, docMeta.Id, err)
 		}
 
@@ -47,20 +42,17 @@ func exportDocCommand(opts ExportDocOptions, ui UI) error {
 		// Write to JSON
 		data, err := json.MarshalIndent(doc, "", "  ")
 		if err != nil {
-			uiprogress.Stop()
 			return err
 		}
 
 		targetPath := filepath.Join(opts.To, docMeta.Title)
 		if err := os.WriteFile(targetPath, data, 0644); err != nil {
-			uiprogress.Stop()
 			return fmt.Errorf("failed to write file %s: %w", targetPath, err)
 		}
 		count++
-		bar.Incr()
+		_, _ = fmt.Fprintf(ui.Err, "[%d/%d] Exported %s\n", count, len(docs), docMeta.Title)
 	}
-	uiprogress.Stop()
 
-	fmt.Fprintf(ui.Out, "Successfully exported %d docs from %s to %s\n", count, opts.From, opts.To)
+	_, _ = fmt.Fprintf(ui.Err, "Successfully exported %d docs from %s to %s\n", count, opts.From, opts.To)
 	return nil
 }
