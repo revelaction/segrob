@@ -91,17 +91,17 @@ func matchDocs(matcher *match.Matcher, opts ExprOptions, isDocFile bool, ui UI) 
 		}
 
 		for _, metaDoc := range docs {
+			if !hasLabels(metaDoc.Labels, opts.Labels) {
+				continue
+			}
 
-			doc, err := dr.DocForName(metaDoc.Title)
+			doc, err := dr.Doc(metaDoc.Id)
 			if err != nil {
 				return err
 			}
 
-			if !hasLabels(doc.Labels, opts.Labels) {
-				continue
-			}
-
-			doc.Id = metaDoc.Id
+			doc.Title = metaDoc.Title
+			doc.Labels = metaDoc.Labels
 			r.AddDocName(metaDoc.Id, doc.Title)
 			matcher.Match(doc)
 		}

@@ -57,34 +57,13 @@ func (h *DocHandler) Doc(id int) (sent.Doc, error) {
 	}
 	defer h.pool.Put(conn)
 
-	var doc sent.Doc
+	doc := sent.Doc{Id: id}
 	found := false
 
-	// Fetch Metadata
-	err = sqlitex.Execute(conn, "SELECT id, title, labels FROM docs WHERE id = ?", &sqlitex.ExecOptions{
-		Args: []interface{}{id},
-		ResultFunc: func(stmt *sqlite.Stmt) error {
-			doc.Id = stmt.ColumnInt(0)
-			doc.Title = stmt.ColumnText(1)
-			labelsStr := stmt.ColumnText(2)
-			if labelsStr != "" {
-				doc.Labels = strings.Split(labelsStr, ",")
-			}
-			found = true
-			return nil
-		},
-	})
-	if err != nil {
-		return sent.Doc{}, err
-	}
-	if !found {
-		return sent.Doc{}, fmt.Errorf("doc not found: %d", id)
-	}
-
-	// Fetch Sentences
 	err = sqlitex.Execute(conn, "SELECT data FROM sentences WHERE doc_id = ? ORDER BY rowid", &sqlitex.ExecOptions{
 		Args: []interface{}{id},
 		ResultFunc: func(stmt *sqlite.Stmt) error {
+			found = true
 			data := stmt.ColumnText(0)
 			var tokens []sent.Token
 			if err := json.Unmarshal([]byte(data), &tokens); err != nil {
@@ -97,6 +76,9 @@ func (h *DocHandler) Doc(id int) (sent.Doc, error) {
 	if err != nil {
 		return sent.Doc{}, err
 	}
+	if !found {
+		return sent.Doc{}, fmt.Errorf("doc not found: %d", id)
+	}
 
 	return doc, nil
 }
@@ -106,14 +88,15 @@ func (h *DocHandler) DocForName(name string) (sent.Doc, error) {
 	if err != nil {
 		return sent.Doc{}, err
 	}
-	// No defer Put(conn) here because we release manually before calling h.Doc(id)
 
 	var id int
+	var labelsStr string
 	found := false
-	err = sqlitex.Execute(conn, "SELECT id FROM docs WHERE title = ?", &sqlitex.ExecOptions{
+	err = sqlitex.Execute(conn, "SELECT id, labels FROM docs WHERE title = ?", &sqlitex.ExecOptions{
 		Args: []interface{}{name},
 		ResultFunc: func(stmt *sqlite.Stmt) error {
 			id = stmt.ColumnInt(0)
+			labelsStr = stmt.ColumnText(1)
 			found = true
 			return nil
 		},
@@ -127,7 +110,15 @@ func (h *DocHandler) DocForName(name string) (sent.Doc, error) {
 		return sent.Doc{}, fmt.Errorf("doc not found: %s", name)
 	}
 
-	return h.Doc(id)
+	doc, err := h.Doc(id)
+	if err != nil {
+		return sent.Doc{}, err
+	}
+	doc.Title = name
+	if labelsStr != "" {
+		doc.Labels = strings.Split(labelsStr, ",")
+	}
+	return doc, nil
 }
 
 func (h *DocHandler) FindCandidates(lemmas []string, after storage.Cursor, limit int) ([]storage.SentenceResult, storage.Cursor, error) {
