@@ -316,14 +316,6 @@ func parseSentenceArgs(args []string, ui UI) (SentenceOptions, string, int, bool
 		if !regexp.MustCompile(`^\d+$`).MatchString(argDoc) {
 			return opts, "", 0, false, fmt.Errorf("argument must be a valid integer ID when using -d: %s", argDoc)
 		}
-	} else {
-		info, err := os.Stat(argDoc)
-		if err != nil {
-			return opts, "", 0, false, fmt.Errorf("document source not found: %s", argDoc)
-		}
-		if info.IsDir() {
-			return opts, "", 0, false, fmt.Errorf("document source cannot be a directory without -d: %s", argDoc)
-		}
 	}
 
 	return opts, argDoc, sentId, isFilesystem, nil
