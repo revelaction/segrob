@@ -77,14 +77,14 @@ func runCommand(cmd string, args []string, ui UI) error {
 		return nil
 
 	case "doc":
-		opts, arg, isArgFile, isRepoFile, err := parseDocArgs(args, ui)
+		opts, arg, isFilesystem, err := parseDocArgs(args, ui)
 		if err != nil {
 			if errors.Is(err, flag.ErrHelp) {
 				return nil
 			}
 			return err
 		}
-		return docCommand(opts, arg, isArgFile, isRepoFile, ui)
+		return docCommand(opts, arg, isFilesystem, ui)
 
 	case "ls-doc":
 		opts, isFilesystem, err := parseLsDocArgs(args, ui)

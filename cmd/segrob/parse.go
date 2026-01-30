@@ -161,7 +161,7 @@ func parseMainArgs(args []string, ui UI) (string, []string, error) {
 	return cmd, cmdArgs, nil
 }
 
-func parseDocArgs(args []string, ui UI) (DocOptions, string, bool, bool, error) {
+func parseDocArgs(args []string, ui UI) (DocOptions, string, bool, error) {
 	fs := flag.NewFlagSet("doc", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
 
@@ -183,41 +183,34 @@ func parseDocArgs(args []string, ui UI) (DocOptions, string, bool, bool, error) 
 		if errors.Is(err, flag.ErrHelp) {
 			fs.SetOutput(ui.Out)
 			fs.Usage()
-			return opts, "", false, false, err
+			return opts, "", false, err
 		}
-		return opts, "", false, false, err
+		return opts, "", false, err
 	}
 
 	arg := fs.Arg(0)
-	isArgFile := false
-	if arg != "" {
-		if info, err := os.Stat(arg); err == nil && !info.IsDir() {
-			isArgFile = true
+	if arg == "" {
+		return opts, "", false, errors.New("document ID or file path required")
+	}
+
+	isFilesystem := true
+
+	if opts.DocPath != "" {
+		info, err := os.Stat(opts.DocPath)
+		if err != nil {
+			return opts, "", false, fmt.Errorf("document source not found: %s", opts.DocPath)
 		}
-	}
 
-	if isArgFile {
-		return opts, arg, true, false, nil
-	}
+		if !info.IsDir() {
+			isFilesystem = false
+		}
 
-	// Repository Case
-	if opts.DocPath == "" {
-		return opts, "", false, false, errors.New("no document source specified (use -d or SEGROB_DOC_PATH)")
-	}
-
-	info, err := os.Stat(opts.DocPath)
-	if err != nil {
-		return opts, "", false, false, fmt.Errorf("document source not found: %s", opts.DocPath)
-	}
-	isRepoFile := !info.IsDir()
-
-	if arg != "" {
 		if !regexp.MustCompile(`^\d+$`).MatchString(arg) {
-			return opts, "", false, false, fmt.Errorf("file not found and not a valid DB ID: %s", arg)
+			return opts, "", false, fmt.Errorf("argument must be a valid integer ID when using -d: %s", arg)
 		}
 	}
 
-	return opts, arg, false, isRepoFile, nil
+	return opts, arg, isFilesystem, nil
 }
 
 func parseLsDocArgs(args []string, ui UI) (LsDocOptions, bool, error) {

@@ -12,13 +12,13 @@ import (
 	"github.com/revelaction/segrob/storage/sqlite/zombiezen"
 )
 
-func docCommand(opts DocOptions, arg string, isArgFile bool, isRepoFile bool, ui UI) error {
-	if isArgFile {
+func docCommand(opts DocOptions, arg string, isFilesystem bool, ui UI) error {
+	if opts.DocPath == "" {
 		return renderFile(arg, opts, ui)
 	}
 
 	var repo storage.DocRepository
-	if isRepoFile {
+	if !isFilesystem {
 		pool, err := zombiezen.NewPool(opts.DocPath)
 		if err != nil {
 			return err
@@ -30,16 +30,10 @@ func docCommand(opts DocOptions, arg string, isArgFile bool, isRepoFile bool, ui
 		if err != nil {
 			return err
 		}
-		if arg != "" {
-			if err := h.LoadAll(nil); err != nil {
-				return err
-			}
+		if err := h.LoadAll(nil); err != nil {
+			return err
 		}
 		repo = h
-	}
-
-	if arg == "" {
-		return fmt.Errorf("document ID or file path required")
 	}
 
 	id, _ := strconv.Atoi(arg)
