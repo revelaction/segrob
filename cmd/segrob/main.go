@@ -84,7 +84,12 @@ func runCommand(cmd string, args []string, ui UI) error {
 			}
 			return err
 		}
-		return docCommand(opts, id, ui)
+		repo, err := getDocRepository(opts.DocPath)
+		if err != nil {
+			return err
+		}
+		defer repo.Close()
+		return docCommand(repo, opts, id, ui)
 
 	case "ls-doc":
 		opts, isFilesystem, err := parseLsDocArgs(args, ui)
@@ -104,7 +109,12 @@ func runCommand(cmd string, args []string, ui UI) error {
 			}
 			return err
 		}
-		return sentenceCommand(opts, docId, sentId, ui)
+		repo, err := getDocRepository(opts.DocPath)
+		if err != nil {
+			return err
+		}
+		defer repo.Close()
+		return sentenceCommand(repo, opts, docId, sentId, ui)
 
 	case "topics":
 		opts, docId, sentId, err := parseTopicsArgs(args, ui)
@@ -114,7 +124,12 @@ func runCommand(cmd string, args []string, ui UI) error {
 			}
 			return err
 		}
-		return topicsCommand(opts, docId, sentId, ui)
+		repo, err := getDocRepository(opts.DocPath)
+		if err != nil {
+			return err
+		}
+		defer repo.Close()
+		return topicsCommand(repo, opts, docId, sentId, ui)
 
 	case "expr":
 		opts, cmdArgs, isDocFile, err := parseExprArgs(args, ui)
@@ -164,7 +179,12 @@ func runCommand(cmd string, args []string, ui UI) error {
 			}
 			return err
 		}
-		return statCommand(opts, docId, sentId, ui)
+		repo, err := getDocRepository(opts.DocPath)
+		if err != nil {
+			return err
+		}
+		defer repo.Close()
+		return statCommand(repo, opts, docId, sentId, ui)
 
 	case "bash":
 		if err := parseBashArgs(args, ui); err != nil {
@@ -236,4 +256,21 @@ func getTopicHandler(path string, isFile bool) (storage.TopicRepository, error) 
 	}
 
 	return filesystem.NewTopicStore(path), nil
+}
+
+func getDocRepository(path string) (storage.DocRepository, error) {
+	info, err := os.Stat(path)
+	if err != nil {
+		return nil, fmt.Errorf("repository not found: %s", path)
+	}
+
+	if info.IsDir() {
+		return filesystem.NewDocStore(path)
+	}
+
+	pool, err := zombiezen.NewPool(path)
+	if err != nil {
+		return nil, err
+	}
+	return zombiezen.NewDocStore(pool), nil
 }
