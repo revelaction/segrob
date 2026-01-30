@@ -13,44 +13,35 @@ import (
 )
 
 func docCommand(opts DocOptions, arg string, isFilesystem bool, ui UI) error {
-	if opts.DocPath == "" {
-		return renderFile(arg, opts, ui)
+	repoPath := opts.DocPath
+	if repoPath == "" {
+		repoPath = arg
 	}
 
 	var repo storage.DocRepository
 	if !isFilesystem {
-		pool, err := zombiezen.NewPool(opts.DocPath)
+		pool, err := zombiezen.NewPool(repoPath)
 		if err != nil {
 			return err
 		}
 		defer pool.Close()
 		repo = zombiezen.NewDocStore(pool)
 	} else {
-		h, err := filesystem.NewDocStore(opts.DocPath)
+		h, err := filesystem.NewDocStore(repoPath)
 		if err != nil {
-			return err
-		}
-		if err := h.LoadAll(nil); err != nil {
 			return err
 		}
 		repo = h
 	}
 
-	id, _ := strconv.Atoi(arg)
+	id := 0
+	if opts.DocPath != "" {
+		id, _ = strconv.Atoi(arg)
+	}
+
 	doc, err := repo.Read(id)
 	if err != nil {
 		return err
-	}
-
-	renderDoc(doc, opts, ui)
-	return nil
-}
-
-func renderFile(path string, opts DocOptions, ui UI) error {
-	doc, err := filesystem.ReadDoc(path)
-	if err != nil {
-		absPath, _ := filepath.Abs(path)
-		return fmt.Errorf("filesystem document %q: %w", absPath, err)
 	}
 
 	renderDoc(doc, opts, ui)

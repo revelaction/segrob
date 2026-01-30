@@ -11,7 +11,7 @@ import (
 )
 
 type DocStore struct {
-	docDir string
+	docsPath string
 
 	// In-memory cache
 	docs []sent.Doc
@@ -20,27 +20,43 @@ type DocStore struct {
 var _ storage.DocRepository = (*DocStore)(nil)
 
 // NewDocStore creates a filesystem document handler.
-func NewDocStore(docDir string) (*DocStore, error) {
-	files, err := os.ReadDir(docDir)
+func NewDocStore(path string) (*DocStore, error) {
+	info, err := os.Stat(path)
 	if err != nil {
 		return nil, err
 	}
 
-	docs := make([]sent.Doc, 0, len(files))
+	var docsPath string
+	var docs []sent.Doc
 
-	idx := 0
-	for _, file := range files {
-		if filepath.Ext(file.Name()) == ".json" {
-			// TODO: maybe load labels here?
-			docs = append(docs, sent.Doc{
-				Id:    idx,
-				Title: file.Name(),
-			})
-			idx++
+	if !info.IsDir() {
+		docsPath = filepath.Dir(path)
+		docs = []sent.Doc{{
+			Id:    0,
+			Title: filepath.Base(path),
+		}}
+	} else {
+		docsPath = path
+		files, err := os.ReadDir(docsPath)
+		if err != nil {
+			return nil, err
+		}
+
+		docs = make([]sent.Doc, 0, len(files))
+		idx := 0
+		for _, file := range files {
+			if filepath.Ext(file.Name()) == ".json" {
+				// TODO: maybe load labels here?
+				docs = append(docs, sent.Doc{
+					Id:    idx,
+					Title: file.Name(),
+				})
+				idx++
+			}
 		}
 	}
 
-	return &DocStore{docDir: docDir, docs:docs}, nil
+	return &DocStore{docsPath: docsPath, docs: docs}, nil
 }
 
 // LoadAll preloads all docs into memory.
@@ -57,7 +73,7 @@ func (h *DocStore) LoadAll(cb func(total int, name string)) error {
 			cb(total, doc.Title)
 		}
 
-		fullDoc, err := ReadDoc(filepath.Join(h.docDir, doc.Title))
+		fullDoc, err := h.Read(i)
 		if err != nil {
 			return err
 		}
@@ -79,7 +95,26 @@ func (h *DocStore) Read(id int) (sent.Doc, error) {
 	if id < 0 || id >= len(h.docs) {
 		return sent.Doc{}, fmt.Errorf("doc id out of range: %d", id)
 	}
-	return h.docs[id], nil
+
+	meta := h.docs[id]
+	fullPath := filepath.Join(h.docsPath, meta.Title)
+
+	f, err := os.ReadFile(fullPath)
+	if err != nil {
+		return sent.Doc{}, fmt.Errorf("IO error: %w", err)
+	}
+
+	var doc sent.Doc
+	err = json.Unmarshal(f, &doc)
+	if err != nil {
+		return sent.Doc{}, fmt.Errorf("JSON decoding error: %w", err)
+	}
+
+	// Ensure metadata consistency
+	doc.Id = meta.Id
+	doc.Title = meta.Title
+
+	return doc, nil
 }
 
 // FindCandidates returns ALL sentences from memory.
@@ -106,20 +141,4 @@ func (h *DocStore) FindCandidates(lemmas []string, after storage.Cursor, limit i
 
 func (h *DocStore) Write(doc sent.Doc) error {
 	return fmt.Errorf("read-only storage")
-}
-
-// ReadDoc reads a Doc JSON from the given path and unmarshals it.
-func ReadDoc(path string) (sent.Doc, error) {
-	f, err := os.ReadFile(path)
-	if err != nil {
-		return sent.Doc{}, fmt.Errorf("IO error: %w", err)
-	}
-
-	var doc sent.Doc
-	err = json.Unmarshal(f, &doc)
-	if err != nil {
-		return sent.Doc{}, fmt.Errorf("JSON decoding error: %w", err)
-	}
-
-	return doc, nil
 }
