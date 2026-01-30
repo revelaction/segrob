@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"path/filepath"
 
 	"github.com/revelaction/segrob/storage/filesystem"
 	"github.com/revelaction/segrob/storage/sqlite/zombiezen"
@@ -35,16 +34,9 @@ func importDocCommand(opts ImportDocOptions, ui UI) error {
 
 	count := 0
 	for _, docMeta := range docs {
-		// Read document directly from disk to avoid keeping everything in memory
-		docPath := filepath.Join(opts.From, docMeta.Title)
-		doc, err := filesystem.ReadDoc(docPath)
+		doc, err := src.Read(docMeta.Id)
 		if err != nil {
 			return fmt.Errorf("failed to read doc %s: %w", docMeta.Title, err)
-		}
-
-		// Ensure Title is set (fallback to filename if missing in JSON)
-		if doc.Title == "" {
-			doc.Title = docMeta.Title
 		}
 
 		if err := dst.Write(doc); err != nil {
