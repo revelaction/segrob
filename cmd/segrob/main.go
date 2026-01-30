@@ -86,6 +86,16 @@ func runCommand(cmd string, args []string, ui UI) error {
 		}
 		return docCommand(opts, arg, isArgFile, isRepoFile, ui)
 
+	case "ls-doc":
+		opts, isFilesystem, err := parseLsDocArgs(args, ui)
+		if err != nil {
+			if errors.Is(err, flag.ErrHelp) {
+				return nil
+			}
+			return err
+		}
+		return lsDocCommand(opts, isFilesystem, ui)
+
 	case "sentence":
 		source, sentId, isFile, err := parseSentenceArgs(args, ui)
 		if err != nil {

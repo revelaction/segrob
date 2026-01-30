@@ -39,7 +39,7 @@ func docCommand(opts DocOptions, arg string, isArgFile bool, isRepoFile bool, ui
 	}
 
 	if arg == "" {
-		return listDocs(repo, ui)
+		return fmt.Errorf("document ID or file path required")
 	}
 
 	id, _ := strconv.Atoi(arg)
@@ -83,16 +83,4 @@ func renderDoc(doc sent.Doc, opts DocOptions, ui UI) {
 		prefix := fmt.Sprintf("✍  %d ", start+i)
 		r.Sentence(sentence, prefix)
 	}
-}
-
-func listDocs(repo storage.DocReader, ui UI) error {
-	docs, err := repo.List()
-	if err != nil {
-		return err
-	}
-
-	for _, doc := range docs {
-		fmt.Fprintf(ui.Out, "📖 %d %s\n", doc.Id, doc.Title)
-	}
-	return nil
 }

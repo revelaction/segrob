@@ -49,6 +49,10 @@ type DocOptions struct {
 	DocPath string
 }
 
+type LsDocOptions struct {
+	DocPath string
+}
+
 type EditOptions struct {
 	TopicPath string
 }
@@ -214,6 +218,46 @@ func parseDocArgs(args []string, ui UI) (DocOptions, string, bool, bool, error) 
 	}
 
 	return opts, arg, false, isRepoFile, nil
+}
+
+func parseLsDocArgs(args []string, ui UI) (LsDocOptions, bool, error) {
+	fs := flag.NewFlagSet("ls-doc", flag.ContinueOnError)
+	fs.SetOutput(io.Discard)
+
+	var opts LsDocOptions
+	fs.StringVar(&opts.DocPath, "doc-path", os.Getenv("SEGROB_DOC_PATH"), "Path to docs directory or SQLite file")
+	fs.StringVar(&opts.DocPath, "d", os.Getenv("SEGROB_DOC_PATH"), "alias for -doc-path")
+
+	fs.Usage = func() {
+		_, _ = fmt.Fprintf(fs.Output(), "Usage: %s ls-doc [options]\n", os.Args[0])
+		_, _ = fmt.Fprintf(fs.Output(), "\nDescription:\n")
+		_, _ = fmt.Fprintf(fs.Output(), "  List all documents in the repository.\n")
+		_, _ = fmt.Fprintf(fs.Output(), "\nOptions:\n")
+		fs.PrintDefaults()
+	}
+
+	if err := fs.Parse(args); err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			fs.SetOutput(ui.Out)
+			fs.Usage()
+			return opts, false, err
+		}
+		fs.SetOutput(ui.Err)
+		fprintErr(ui.Err, err)
+		fs.Usage()
+		return opts, false, err
+	}
+
+	if opts.DocPath == "" {
+		return opts, false, errors.New("no document source specified (use -d or SEGROB_DOC_PATH)")
+	}
+
+	info, err := os.Stat(opts.DocPath)
+	if err != nil {
+		return opts, false, fmt.Errorf("document source not found: %s", opts.DocPath)
+	}
+
+	return opts, info.IsDir(), nil
 }
 
 func parseSentenceArgs(args []string, ui UI) (string, int, bool, error) {
@@ -741,7 +785,8 @@ func setupUsage(fs *flag.FlagSet) {
 		_, _ = fmt.Fprintf(output, "\nDescription:\n")
 		_, _ = fmt.Fprintf(output, "  Sentence dictionary based on NLP topics\n")
 		_, _ = fmt.Fprintf(output, "\nCommands:\n")
-		_, _ = fmt.Fprintf(output, "  doc       List metadata of all/some token files.\n")
+		_, _ = fmt.Fprintf(output, "  doc       Show contents of a document file or DB entry.\n")
+		_, _ = fmt.Fprintf(output, "  ls-doc    List all documents in the repository.\n")
 		_, _ = fmt.Fprintf(output, "  sentence  Show a specific sentence details.\n")
 		_, _ = fmt.Fprintf(output, "  topics    Show topics for a specific sentence.\n")
 		_, _ = fmt.Fprintf(output, "  expr      Evaluate a topic expression.\n")
