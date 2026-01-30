@@ -11,31 +11,26 @@ import (
 	"github.com/revelaction/segrob/storage/sqlite/zombiezen"
 )
 
-func docCommand(opts DocOptions, arg string, isFilesystem bool, ui UI) error {
-	repoPath := opts.DocPath
-	if repoPath == "" {
-		repoPath = arg
+func docCommand(opts DocOptions, id int, ui UI) error {
+	info, err := os.Stat(opts.DocPath)
+	if err != nil {
+		return fmt.Errorf("repository not found: %s", opts.DocPath)
 	}
 
 	var repo storage.DocRepository
-	if !isFilesystem {
-		pool, err := zombiezen.NewPool(repoPath)
+	if info.IsDir() {
+		h, err := filesystem.NewDocStore(opts.DocPath)
+		if err != nil {
+			return err
+		}
+		repo = h
+	} else {
+		pool, err := zombiezen.NewPool(opts.DocPath)
 		if err != nil {
 			return err
 		}
 		defer pool.Close()
 		repo = zombiezen.NewDocStore(pool)
-	} else {
-		h, err := filesystem.NewDocStore(repoPath)
-		if err != nil {
-			return err
-		}
-		repo = h
-	}
-
-	id := 0
-	if opts.DocPath != "" {
-		id, _ = strconv.Atoi(arg)
 	}
 
 	doc, err := repo.Read(id)

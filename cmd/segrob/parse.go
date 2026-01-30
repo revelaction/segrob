@@ -165,7 +165,7 @@ func parseMainArgs(args []string, ui UI) (string, []string, error) {
 	return cmd, cmdArgs, nil
 }
 
-func parseDocArgs(args []string, ui UI) (DocOptions, string, bool, error) {
+func parseDocArgs(args []string, ui UI) (DocOptions, int, error) {
 	fs := flag.NewFlagSet("doc", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
 
@@ -176,9 +176,9 @@ func parseDocArgs(args []string, ui UI) (DocOptions, string, bool, error) {
 	fs.StringVar(&opts.DocPath, "d", os.Getenv("SEGROB_DOC_PATH"), "alias for -doc-path")
 
 	fs.Usage = func() {
-		_, _ = fmt.Fprintf(fs.Output(), "Usage: %s doc [options] [file_path|db_id]\n", os.Args[0])
+		_, _ = fmt.Fprintf(fs.Output(), "Usage: %s doc [options] <doc_id>\n", os.Args[0])
 		_, _ = fmt.Fprintf(fs.Output(), "\nDescription:\n")
-		_, _ = fmt.Fprintf(fs.Output(), "  Show contents of a document file or DB entry.\n")
+		_, _ = fmt.Fprintf(fs.Output(), "  Show contents of a document from the configured repository.\n")
 		_, _ = fmt.Fprintf(fs.Output(), "\nOptions:\n")
 		fs.PrintDefaults()
 	}
@@ -187,34 +187,26 @@ func parseDocArgs(args []string, ui UI) (DocOptions, string, bool, error) {
 		if errors.Is(err, flag.ErrHelp) {
 			fs.SetOutput(ui.Out)
 			fs.Usage()
-			return opts, "", false, err
+			return opts, 0, err
 		}
-		return opts, "", false, err
+		return opts, 0, err
+	}
+
+	if opts.DocPath == "" {
+		return opts, 0, errors.New("document source must be specified via -d or SEGROB_DOC_PATH")
 	}
 
 	arg := fs.Arg(0)
 	if arg == "" {
-		return opts, "", false, errors.New("document ID or file path required")
+		return opts, 0, errors.New("document ID required")
 	}
 
-	isFilesystem := true
-
-	if opts.DocPath != "" {
-		info, err := os.Stat(opts.DocPath)
-		if err != nil {
-			return opts, "", false, fmt.Errorf("document source not found: %s", opts.DocPath)
-		}
-
-		if !info.IsDir() {
-			isFilesystem = false
-		}
-
-		if !regexp.MustCompile(`^\d+$`).MatchString(arg) {
-			return opts, "", false, fmt.Errorf("argument must be a valid integer ID when using -d: %s", arg)
-		}
+	id, err := strconv.Atoi(arg)
+	if err != nil {
+		return opts, 0, fmt.Errorf("invalid document ID '%s': %w", arg, err)
 	}
 
-	return opts, arg, isFilesystem, nil
+	return opts, id, nil
 }
 
 func parseLsDocArgs(args []string, ui UI) (LsDocOptions, bool, error) {

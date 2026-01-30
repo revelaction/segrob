@@ -26,33 +26,26 @@ func NewDocStore(path string) (*DocStore, error) {
 		return nil, err
 	}
 
-	var docsPath string
-	var docs []sent.Doc
-
 	if !info.IsDir() {
-		docsPath = filepath.Dir(path)
-		docs = []sent.Doc{{
-			Id:    0,
-			Title: filepath.Base(path),
-		}}
-	} else {
-		docsPath = path
-		files, err := os.ReadDir(docsPath)
-		if err != nil {
-			return nil, err
-		}
+		return nil, fmt.Errorf("filesystem doc store requires a directory, got file: %s", path)
+	}
 
-		docs = make([]sent.Doc, 0, len(files))
-		idx := 0
-		for _, file := range files {
-			if filepath.Ext(file.Name()) == ".json" {
-				// TODO: maybe load labels here?
-				docs = append(docs, sent.Doc{
-					Id:    idx,
-					Title: file.Name(),
-				})
-				idx++
-			}
+	docsPath := path
+	files, err := os.ReadDir(docsPath)
+	if err != nil {
+		return nil, err
+	}
+
+	docs := make([]sent.Doc, 0, len(files))
+	idx := 0
+	for _, file := range files {
+		if filepath.Ext(file.Name()) == ".json" {
+			// TODO: maybe load labels here?
+			docs = append(docs, sent.Doc{
+				Id:    idx,
+				Title: file.Name(),
+			})
+			idx++
 		}
 	}
 
