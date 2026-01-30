@@ -52,8 +52,11 @@ func renderDoc(doc sent.Doc, opts DocOptions, ui UI) {
 	}
 
 	sentences := doc.Tokens[start:]
-	if opts.Count >= 0 && opts.Count < len(sentences) {
-		sentences = sentences[:opts.Count]
+	if opts.Count != nil {
+		limit := *opts.Count
+		if limit < len(sentences) {
+			sentences = sentences[:limit]
+		}
 	}
 
 	r := render.NewRenderer()

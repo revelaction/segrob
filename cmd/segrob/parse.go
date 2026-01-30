@@ -45,7 +45,7 @@ type TopicOptions struct {
 
 type DocOptions struct {
 	Start   int
-	Count   int
+	Count   *int
 	DocPath string
 }
 
@@ -175,7 +175,12 @@ func parseDocArgs(args []string, ui UI) (DocOptions, int, error) {
 
 	var opts DocOptions
 	fs.IntVar(&opts.Start, "start", 0, "Index of the first sentence to show")
-	fs.IntVar(&opts.Count, "n", -1, "Number of sentences to show (-1 for all)")
+	fs.IntVar(&opts.Start, "s", 0, "alias for -start")
+
+	var countOpt optionalInt
+	fs.Var(&countOpt, "number", "Number of sentences to show")
+	fs.Var(&countOpt, "n", "alias for -number")
+
 	fs.StringVar(&opts.DocPath, "doc-path", os.Getenv("SEGROB_DOC_PATH"), "Path to docs directory or SQLite file")
 	fs.StringVar(&opts.DocPath, "d", os.Getenv("SEGROB_DOC_PATH"), "alias for -doc-path")
 
@@ -195,6 +200,8 @@ func parseDocArgs(args []string, ui UI) (DocOptions, int, error) {
 		}
 		return opts, 0, err
 	}
+
+	opts.Count = countOpt.value
 
 	if opts.DocPath == "" {
 		return opts, 0, errors.New("document source must be specified via -d or SEGROB_DOC_PATH")
