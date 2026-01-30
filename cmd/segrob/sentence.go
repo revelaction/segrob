@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"strconv"
+	"os"
 
 	"github.com/revelaction/segrob/render"
 	"github.com/revelaction/segrob/storage"
@@ -10,31 +10,26 @@ import (
 	"github.com/revelaction/segrob/storage/sqlite/zombiezen"
 )
 
-func sentenceCommand(opts SentenceOptions, argDoc string, sentId int, isFilesystem bool, ui UI) error {
-	repoPath := opts.DocPath
-	if repoPath == "" {
-		repoPath = argDoc
+func sentenceCommand(opts SentenceOptions, docId int, sentId int, ui UI) error {
+	info, err := os.Stat(opts.DocPath)
+	if err != nil {
+		return fmt.Errorf("repository not found: %s", opts.DocPath)
 	}
 
 	var repo storage.DocRepository
-	if !isFilesystem {
-		pool, err := zombiezen.NewPool(repoPath)
+	if info.IsDir() {
+		h, err := filesystem.NewDocStore(opts.DocPath)
+		if err != nil {
+			return err
+		}
+		repo = h
+	} else {
+		pool, err := zombiezen.NewPool(opts.DocPath)
 		if err != nil {
 			return err
 		}
 		defer pool.Close()
 		repo = zombiezen.NewDocStore(pool)
-	} else {
-		h, err := filesystem.NewDocStore(repoPath)
-		if err != nil {
-			return err
-		}
-		repo = h
-	}
-
-	docId := 0
-	if opts.DocPath != "" {
-		docId, _ = strconv.Atoi(argDoc)
 	}
 
 	doc, err := repo.Read(docId)

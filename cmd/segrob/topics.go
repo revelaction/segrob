@@ -2,43 +2,64 @@ package main
 
 import (
 	"fmt"
-	"strconv"
+	"os"
 
 	"github.com/revelaction/segrob/match"
 	"github.com/revelaction/segrob/render"
 	sent "github.com/revelaction/segrob/sentence"
+	"github.com/revelaction/segrob/storage"
 	"github.com/revelaction/segrob/storage/filesystem"
+	"github.com/revelaction/segrob/storage/sqlite/zombiezen"
 )
 
-func topicsCommand(opts TopicsOptions, source string, sentId int, isTopicFile, isSourceFile bool, ui UI) error {
-	if isSourceFile {
-		return topicsFile(source, sentId, isTopicFile, opts, ui)
-	}
-
-	id, err := strconv.Atoi(source)
+func topicsCommand(opts TopicsOptions, docId int, sentId int, ui UI) error {
+	info, err := os.Stat(opts.DocPath)
 	if err != nil {
-		return fmt.Errorf("invalid DB ID: %v", err)
+		return fmt.Errorf("document repository not found: %s", opts.DocPath)
 	}
-	return topicsDocDB(id, sentId, isTopicFile, opts, ui)
-}
 
-func topicsFile(path string, sentId int, isTopicFile bool, opts TopicsOptions, ui UI) error {
-	doc, err := filesystem.ReadDoc(path)
+	var docRepo storage.DocRepository
+	if info.IsDir() {
+		h, err := filesystem.NewDocStore(opts.DocPath)
+		if err != nil {
+			return err
+		}
+		docRepo = h
+	} else {
+		pool, err := zombiezen.NewPool(opts.DocPath)
+		if err != nil {
+			return err
+		}
+		defer pool.Close()
+		docRepo = zombiezen.NewDocStore(pool)
+	}
+
+	tinfo, err := os.Stat(opts.TopicPath)
+	if err != nil {
+		return fmt.Errorf("topic repository not found: %s", opts.TopicPath)
+	}
+
+	var topicRepo storage.TopicRepository
+	if tinfo.IsDir() {
+		topicRepo = filesystem.NewTopicStore(opts.TopicPath)
+	} else {
+		pool, err := zombiezen.NewPool(opts.TopicPath)
+		if err != nil {
+			return err
+		}
+		defer pool.Close()
+		topicRepo = zombiezen.NewTopicStore(pool)
+	}
+
+	doc, err := docRepo.Read(docId)
 	if err != nil {
 		return err
 	}
 
-	return renderTopics(doc, sentId, isTopicFile, opts, ui)
+	return renderTopics(doc, sentId, topicRepo, opts, ui)
 }
 
-func topicsDocDB(docId int, sentId int, isTopicFile bool, opts TopicsOptions, ui UI) error {
-	// For now, mirroring statDocDB behavior as requested
-	// If we want to use the current DocHandler (filesystem-based "DB"), we could call it here,
-	// but following the pattern in stat.go:
-	return fmt.Errorf("database mode not implemented")
-}
-
-func renderTopics(doc sent.Doc, sentId int, isTopicFile bool, opts TopicsOptions, ui UI) error {
+func renderTopics(doc sent.Doc, sentId int, topicRepo storage.TopicRepository, opts TopicsOptions, ui UI) error {
 	if sentId < 0 || sentId >= len(doc.Tokens) {
 		return fmt.Errorf("sentence index %d out of range (0-%d)", sentId, len(doc.Tokens)-1)
 	}
@@ -54,20 +75,9 @@ func renderTopics(doc sent.Doc, sentId int, isTopicFile bool, opts TopicsOptions
 	r.Sentence(s, prefix)
 	fmt.Fprintln(ui.Out)
 
-	th, err := getTopicHandler(opts.TopicPath, isTopicFile)
-
+	allTopics, err := topicRepo.ReadAll()
 	if err != nil {
-
 		return err
-
-	}
-
-	allTopics, err := th.ReadAll()
-
-	if err != nil {
-
-		return err
-
 	}
 
 	r.HasColor = true

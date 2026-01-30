@@ -97,24 +97,24 @@ func runCommand(cmd string, args []string, ui UI) error {
 		return lsDocCommand(opts, isFilesystem, ui)
 
 	case "sentence":
-		opts, argDoc, sentId, isFilesystem, err := parseSentenceArgs(args, ui)
+		opts, docId, sentId, err := parseSentenceArgs(args, ui)
 		if err != nil {
 			if errors.Is(err, flag.ErrHelp) {
 				return nil
 			}
 			return err
 		}
-		return sentenceCommand(opts, argDoc, sentId, isFilesystem, ui)
+		return sentenceCommand(opts, docId, sentId, ui)
 
 	case "topics":
-		opts, source, sentId, isTopicFile, isSourceFile, err := parseTopicsArgs(args, ui)
+		opts, docId, sentId, err := parseTopicsArgs(args, ui)
 		if err != nil {
 			if errors.Is(err, flag.ErrHelp) {
 				return nil
 			}
 			return err
 		}
-		return topicsCommand(opts, source, sentId, isTopicFile, isSourceFile, ui)
+		return topicsCommand(opts, docId, sentId, ui)
 
 	case "expr":
 		opts, cmdArgs, isDocFile, err := parseExprArgs(args, ui)
@@ -157,14 +157,14 @@ func runCommand(cmd string, args []string, ui UI) error {
 		return topicCommand(opts, name, isFile, ui)
 
 	case "stat":
-		source, sentId, isFile, err := parseStatArgs(args, ui)
+		opts, docId, sentId, err := parseStatArgs(args, ui)
 		if err != nil {
 			if errors.Is(err, flag.ErrHelp) {
 				return nil
 			}
 			return err
 		}
-		return statCommand(source, sentId, isFile, ui)
+		return statCommand(opts, docId, sentId, ui)
 
 	case "bash":
 		if err := parseBashArgs(args, ui); err != nil {

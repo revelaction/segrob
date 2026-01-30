@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"strconv"
+	"os"
 
 	"github.com/revelaction/segrob/render"
 	sent "github.com/revelaction/segrob/sentence"

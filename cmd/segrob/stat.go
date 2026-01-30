@@ -2,27 +2,38 @@ package main
 
 import (
 	"fmt"
-	"strconv"
+	"os"
 
 	sent "github.com/revelaction/segrob/sentence"
 	"github.com/revelaction/segrob/stat"
+	"github.com/revelaction/segrob/storage"
 	"github.com/revelaction/segrob/storage/filesystem"
+	"github.com/revelaction/segrob/storage/sqlite/zombiezen"
 )
 
-func statCommand(source string, sentId *int, isFile bool, ui UI) error {
-	if isFile {
-		return statFile(source, sentId, ui)
-	}
-
-	id, err := strconv.Atoi(source)
+func statCommand(opts StatOptions, docId int, sentId *int, ui UI) error {
+	info, err := os.Stat(opts.DocPath)
 	if err != nil {
-		return fmt.Errorf("invalid DB ID: %v", err)
+		return fmt.Errorf("repository not found: %s", opts.DocPath)
 	}
-	return statDocDB(id, sentId, ui)
-}
 
-func statFile(path string, sentId *int, ui UI) error {
-	doc, err := filesystem.ReadDoc(path)
+	var repo storage.DocRepository
+	if info.IsDir() {
+		h, err := filesystem.NewDocStore(opts.DocPath)
+		if err != nil {
+			return err
+		}
+		repo = h
+	} else {
+		pool, err := zombiezen.NewPool(opts.DocPath)
+		if err != nil {
+			return err
+		}
+		defer pool.Close()
+		repo = zombiezen.NewDocStore(pool)
+	}
+
+	doc, err := repo.Read(docId)
 	if err != nil {
 		return err
 	}
@@ -41,8 +52,4 @@ func statFile(path string, sentId *int, ui UI) error {
 	fmt.Fprintf(ui.Out, "Num sentences %d, num tokens per sentence %d\n", stats.NumSentences, stats.TokensPerSentenceMean)
 
 	return nil
-}
-
-func statDocDB(docId int, sentId *int, ui UI) error {
-	return fmt.Errorf("database mode not implemented")
 }

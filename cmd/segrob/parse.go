@@ -37,6 +37,7 @@ type QueryOptions struct {
 type TopicsOptions struct {
 	Format    string
 	TopicPath string
+	DocPath   string
 }
 
 type TopicOptions struct {
@@ -54,6 +55,10 @@ type LsDocOptions struct {
 }
 
 type SentenceOptions struct {
+	DocPath string
+}
+
+type StatOptions struct {
 	DocPath string
 }
 
@@ -249,7 +254,7 @@ func parseLsDocArgs(args []string, ui UI) (LsDocOptions, bool, error) {
 	return opts, info.IsDir(), nil
 }
 
-func parseSentenceArgs(args []string, ui UI) (SentenceOptions, string, int, bool, error) {
+func parseSentenceArgs(args []string, ui UI) (SentenceOptions, int, int, error) {
 	fs := flag.NewFlagSet("sentence", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
 
@@ -258,9 +263,9 @@ func parseSentenceArgs(args []string, ui UI) (SentenceOptions, string, int, bool
 	fs.StringVar(&opts.DocPath, "d", os.Getenv("SEGROB_DOC_PATH"), "alias for -doc-path")
 
 	fs.Usage = func() {
-		_, _ = fmt.Fprintf(fs.Output(), "Usage: %s sentence [options] <source> <sentenceId>\n", os.Args[0])
+		_, _ = fmt.Fprintf(fs.Output(), "Usage: %s sentence [options] <doc_id> <sentence_id>\n", os.Args[0])
 		_, _ = fmt.Fprintf(fs.Output(), "\nDescription:\n")
-		_, _ = fmt.Fprintf(fs.Output(), "  Show a specific sentence details. <source> can be a file path or a DB ID.\n")
+		_, _ = fmt.Fprintf(fs.Output(), "  Show a specific sentence details from the configured repository.\n")
 		_, _ = fmt.Fprintf(fs.Output(), "\nOptions:\n")
 		fs.PrintDefaults()
 	}
@@ -269,51 +274,33 @@ func parseSentenceArgs(args []string, ui UI) (SentenceOptions, string, int, bool
 		if errors.Is(err, flag.ErrHelp) {
 			fs.SetOutput(ui.Out)
 			fs.Usage()
-			return opts, "", 0, false, err
+			return opts, 0, 0, err
 		}
-		fs.SetOutput(ui.Err)
-		fprintErr(ui.Err, err)
-		fs.Usage()
-		return opts, "", 0, false, err
+		return opts, 0, 0, err
+	}
+
+	if opts.DocPath == "" {
+		return opts, 0, 0, errors.New("document source must be specified via -d or SEGROB_DOC_PATH")
 	}
 
 	if fs.NArg() != 2 {
-		fs.SetOutput(ui.Err)
-		fs.Usage()
-		return opts, "", 0, false, errors.New("sentence command needs exactly two arguments: <source> <sentenceId>")
+		return opts, 0, 0, errors.New("sentence command needs exactly two arguments: <doc_id> <sentence_id>")
 	}
 
-	argDoc := fs.Arg(0)
-	sentId, sentErr := strconv.Atoi(fs.Arg(1))
-	if sentErr != nil {
-		return opts, "", 0, false, fmt.Errorf("invalid sentenceId: %v", sentErr)
+	docId, err := strconv.Atoi(fs.Arg(0))
+	if err != nil {
+		return opts, 0, 0, fmt.Errorf("invalid docID '%s': %w", fs.Arg(0), err)
 	}
 
-	if argDoc == "" {
-		return opts, "", 0, false, errors.New("document ID or file path required")
+	sentId, err := strconv.Atoi(fs.Arg(1))
+	if err != nil {
+		return opts, 0, 0, fmt.Errorf("invalid sentenceId '%s': %w", fs.Arg(1), err)
 	}
 
-	isFilesystem := true
-
-	if opts.DocPath != "" {
-		info, err := os.Stat(opts.DocPath)
-		if err != nil {
-			return opts, "", 0, false, fmt.Errorf("document source not found: %s", opts.DocPath)
-		}
-
-		if !info.IsDir() {
-			isFilesystem = false
-		}
-
-		if !regexp.MustCompile(`^\d+$`).MatchString(argDoc) {
-			return opts, "", 0, false, fmt.Errorf("argument must be a valid integer ID when using -d: %s", argDoc)
-		}
-	}
-
-	return opts, argDoc, sentId, isFilesystem, nil
+	return opts, docId, sentId, nil
 }
 
-func parseTopicsArgs(args []string, ui UI) (TopicsOptions, string, int, bool, bool, error) {
+func parseTopicsArgs(args []string, ui UI) (TopicsOptions, int, int, error) {
 	fs := flag.NewFlagSet("topics", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
 
@@ -321,15 +308,18 @@ func parseTopicsArgs(args []string, ui UI) (TopicsOptions, string, int, bool, bo
 	fs.StringVar(&opts.TopicPath, "topic-path", os.Getenv("SEGROB_TOPIC_PATH"), "Path to topics directory or SQLite file")
 	fs.StringVar(&opts.TopicPath, "t", os.Getenv("SEGROB_TOPIC_PATH"), "alias for -topic-path")
 
+	fs.StringVar(&opts.DocPath, "doc-path", os.Getenv("SEGROB_DOC_PATH"), "Path to docs directory or SQLite file")
+	fs.StringVar(&opts.DocPath, "d", os.Getenv("SEGROB_DOC_PATH"), "alias for -doc-path")
+
 	opts.Format = render.Defaultformat
 	formatFlag := &enumFlag{allowed: render.SupportedFormats(), value: &opts.Format}
 	fs.Var(formatFlag, "format", "Show whole sentence (all), only surrounding of matched words (part) or only matches words (lemma)")
 	fs.Var(formatFlag, "f", "alias for -format")
 
 	fs.Usage = func() {
-		_, _ = fmt.Fprintf(fs.Output(), "Usage: %s topics [options] <source> <sentenceId>\n", os.Args[0])
+		_, _ = fmt.Fprintf(fs.Output(), "Usage: %s topics [options] <doc_id> <sentence_id>\n", os.Args[0])
 		_, _ = fmt.Fprintf(fs.Output(), "\nDescription:\n")
-		_, _ = fmt.Fprintf(fs.Output(), "  Show topics for a specific sentence. <source> can be a file path or a DB ID.\n")
+		_, _ = fmt.Fprintf(fs.Output(), "  Show topics for a specific sentence from the configured repository.\n")
 		_, _ = fmt.Fprintf(fs.Output(), "\nOptions:\n")
 		fs.PrintDefaults()
 	}
@@ -338,47 +328,34 @@ func parseTopicsArgs(args []string, ui UI) (TopicsOptions, string, int, bool, bo
 		if errors.Is(err, flag.ErrHelp) {
 			fs.SetOutput(ui.Out)
 			fs.Usage()
-			return opts, "", 0, false, false, err
+			return opts, 0, 0, err
 		}
-		fs.SetOutput(ui.Err)
-		fprintErr(ui.Err, err)
-		fs.Usage()
-		return opts, "", 0, false, false, err
+		return opts, 0, 0, err
 	}
 
 	if opts.TopicPath == "" {
-		return opts, "", 0, false, false, errors.New("Topic path must be specified via -t or SEGROB_TOPIC_PATH")
+		return opts, 0, 0, errors.New("topic source must be specified via -t or SEGROB_TOPIC_PATH")
 	}
 
-	tinfo, err := os.Stat(opts.TopicPath)
-	if err != nil {
-		return opts, "", 0, false, false, fmt.Errorf("Topic path not found: %s", opts.TopicPath)
+	if opts.DocPath == "" {
+		return opts, 0, 0, errors.New("document source must be specified via -d or SEGROB_DOC_PATH")
 	}
 
 	if fs.NArg() != 2 {
-		fs.SetOutput(ui.Err)
-		fs.Usage()
-		return opts, "", 0, false, false, errors.New("topics command needs two arguments: <source> <sentenceId>")
+		return opts, 0, 0, errors.New("topics command needs exactly two arguments: <doc_id> <sentence_id>")
 	}
 
-	source := fs.Arg(0)
-	sentId, sentErr := strconv.Atoi(fs.Arg(1))
-	if sentErr != nil {
-		return opts, "", 0, false, false, fmt.Errorf("invalid sentenceId: %v", sentErr)
+	docId, err := strconv.Atoi(fs.Arg(0))
+	if err != nil {
+		return opts, 0, 0, fmt.Errorf("invalid docID '%s': %w", fs.Arg(0), err)
 	}
 
-	isFile := false
-	if info, err := os.Stat(source); err == nil && !info.IsDir() {
-		isFile = true
-	} else {
-		// regex check for digits if not a file
-		digitRegex := regexp.MustCompile(`^\d+$`)
-		if !digitRegex.MatchString(source) {
-			return opts, "", 0, false, false, fmt.Errorf("source not found and not a valid DB ID: %s", source)
-		}
+	sentId, err := strconv.Atoi(fs.Arg(1))
+	if err != nil {
+		return opts, 0, 0, fmt.Errorf("invalid sentenceId '%s': %w", fs.Arg(1), err)
 	}
 
-	return opts, source, sentId, !tinfo.IsDir(), isFile, nil
+	return opts, docId, sentId, nil
 }
 
 func parseExprArgs(args []string, ui UI) (ExprOptions, []string, bool, error) {
@@ -608,55 +585,54 @@ func parseTopicArgs(args []string, ui UI) (TopicOptions, string, bool, error) {
 	return opts, name, !info.IsDir(), nil
 }
 
-func parseStatArgs(args []string, ui UI) (string, *int, bool, error) {
+func parseStatArgs(args []string, ui UI) (StatOptions, int, *int, error) {
 	fs := flag.NewFlagSet("stat", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
+
+	var opts StatOptions
+	fs.StringVar(&opts.DocPath, "doc-path", os.Getenv("SEGROB_DOC_PATH"), "Path to docs directory or SQLite file")
+	fs.StringVar(&opts.DocPath, "d", os.Getenv("SEGROB_DOC_PATH"), "alias for -doc-path")
+
 	fs.Usage = func() {
-		_, _ = fmt.Fprintf(fs.Output(), "Usage: %s stat <source> [sentenceId]\n", os.Args[0])
+		_, _ = fmt.Fprintf(fs.Output(), "Usage: %s stat [options] <doc_id> [sentence_id]\n", os.Args[0])
 		_, _ = fmt.Fprintf(fs.Output(), "\nDescription:\n")
-		_, _ = fmt.Fprintf(fs.Output(), "  Show statistics for a document or sentence. <source> can be a file path or a DB ID.\n")
+		_, _ = fmt.Fprintf(fs.Output(), "  Show statistics for a document or sentence from the configured repository.\n")
+		_, _ = fmt.Fprintf(fs.Output(), "\nOptions:\n")
+		fs.PrintDefaults()
 	}
 
 	if err := fs.Parse(args); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
 			fs.SetOutput(ui.Out)
 			fs.Usage()
-			return "", nil, false, err
+			return opts, 0, nil, err
 		}
-		fs.SetOutput(ui.Err)
-		fprintErr(ui.Err, err)
-		fs.Usage()
-		return "", nil, false, err
+		return opts, 0, nil, err
 	}
 
-	if fs.NArg() == 0 {
-		fs.SetOutput(ui.Err)
-		fs.Usage()
-		return "", nil, false, errors.New("stat command needs at least one argument")
+	if opts.DocPath == "" {
+		return opts, 0, nil, errors.New("document source must be specified via -d or SEGROB_DOC_PATH")
 	}
 
-	source := fs.Arg(0)
+	if fs.NArg() < 1 {
+		return opts, 0, nil, errors.New("stat command needs at least one argument: <doc_id>")
+	}
+
+	docId, err := strconv.Atoi(fs.Arg(0))
+	if err != nil {
+		return opts, 0, nil, fmt.Errorf("invalid docID '%s': %w", fs.Arg(0), err)
+	}
+
 	var sentId *int
 	if fs.NArg() > 1 {
 		v, err := strconv.Atoi(fs.Arg(1))
 		if err != nil {
-			return "", nil, false, fmt.Errorf("invalid sentenceId: %v", err)
+			return opts, 0, nil, fmt.Errorf("invalid sentenceId '%s': %w", fs.Arg(1), err)
 		}
 		sentId = &v
 	}
 
-	isFile := false
-	if info, err := os.Stat(source); err == nil && !info.IsDir() {
-		isFile = true
-	} else {
-		// regex check for digits if not a file
-		digitRegex := regexp.MustCompile(`^\d+$`)
-		if !digitRegex.MatchString(source) {
-			return "", nil, false, fmt.Errorf("source not found and not a valid DB ID: %s", source)
-		}
-	}
-
-	return source, sentId, isFile, nil
+	return opts, docId, sentId, nil
 }
 
 func parseBashArgs(args []string, ui UI) error {
