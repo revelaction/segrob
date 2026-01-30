@@ -40,10 +40,7 @@ func NewDocStore(docDir string) (*DocStore, error) {
 		}
 	}
 
-	return &DocStore{
-		docDir: docDir,
-		docs:   docs,
-	}, nil
+	return &DocStore{docDir: docDir, docs:docs}, nil
 }
 
 // LoadAll preloads all docs into memory.
