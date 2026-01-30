@@ -5,20 +5,39 @@ import (
 	"strconv"
 
 	"github.com/revelaction/segrob/render"
+	"github.com/revelaction/segrob/storage"
 	"github.com/revelaction/segrob/storage/filesystem"
+	"github.com/revelaction/segrob/storage/sqlite/zombiezen"
 )
 
-func sentenceCommand(source string, sentId int, isFile bool, ui UI) error {
-	if isFile {
-		return renderSentenceFile(source, sentId, ui)
+func sentenceCommand(opts SentenceOptions, argDoc string, sentId int, isFilesystem bool, ui UI) error {
+	repoPath := opts.DocPath
+	if repoPath == "" {
+		repoPath = argDoc
 	}
 
-	docId, _ := strconv.Atoi(source)
-	return renderSentenceDB(docId, sentId, ui)
-}
+	var repo storage.DocRepository
+	if !isFilesystem {
+		pool, err := zombiezen.NewPool(repoPath)
+		if err != nil {
+			return err
+		}
+		defer pool.Close()
+		repo = zombiezen.NewDocStore(pool)
+	} else {
+		h, err := filesystem.NewDocStore(repoPath)
+		if err != nil {
+			return err
+		}
+		repo = h
+	}
 
-func renderSentenceFile(path string, sentId int, ui UI) error {
-	doc, err := filesystem.ReadDoc(path)
+	docId := 0
+	if opts.DocPath != "" {
+		docId, _ = strconv.Atoi(argDoc)
+	}
+
+	doc, err := repo.Read(docId)
 	if err != nil {
 		return err
 	}
@@ -39,8 +58,4 @@ func renderSentenceFile(path string, sentId int, ui UI) error {
 	}
 
 	return nil
-}
-
-func renderSentenceDB(docId int, sentId int, ui UI) error {
-	return fmt.Errorf("database mode not implemented")
 }

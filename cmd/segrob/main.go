@@ -97,14 +97,14 @@ func runCommand(cmd string, args []string, ui UI) error {
 		return lsDocCommand(opts, isFilesystem, ui)
 
 	case "sentence":
-		source, sentId, isFile, err := parseSentenceArgs(args, ui)
+		opts, argDoc, sentId, isFilesystem, err := parseSentenceArgs(args, ui)
 		if err != nil {
 			if errors.Is(err, flag.ErrHelp) {
 				return nil
 			}
 			return err
 		}
-		return sentenceCommand(source, sentId, isFile, ui)
+		return sentenceCommand(opts, argDoc, sentId, isFilesystem, ui)
 
 	case "topics":
 		opts, source, sentId, isTopicFile, isSourceFile, err := parseTopicsArgs(args, ui)
