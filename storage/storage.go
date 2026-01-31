@@ -66,5 +66,5 @@ type DocRepository interface {
 // Preloader defines an optional capability for repositories that require
 // or support eager loading of data into memory.
 type Preloader interface {
-	Preload(cb func(total int, name string)) error
+	Preload(cb func(current, total int, name string)) error
 }

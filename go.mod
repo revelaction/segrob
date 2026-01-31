@@ -4,7 +4,6 @@ go 1.24.2
 
 require (
 	github.com/c-bata/go-prompt v0.2.6
-	github.com/gosuri/uiprogress v0.0.1
 	golang.org/x/term v0.39.0
 	zombiezen.com/go/sqlite v1.4.2
 )
@@ -12,7 +11,6 @@ require (
 require (
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/google/uuid v1.6.0 // indirect
-	github.com/gosuri/uilive v0.0.4 // indirect
 	github.com/mattn/go-colorable v0.1.7 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mattn/go-runewidth v0.0.9 // indirect

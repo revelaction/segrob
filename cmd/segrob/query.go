@@ -1,7 +1,8 @@
 package main
 
 import (
-	"github.com/gosuri/uiprogress"
+	"fmt"
+
 	"github.com/revelaction/segrob/query"
 	"github.com/revelaction/segrob/render"
 	"github.com/revelaction/segrob/storage"
@@ -11,25 +12,10 @@ import (
 func queryCommand(dr storage.DocRepository, tr storage.TopicRepository, opts QueryOptions, ui UI) error {
 
 	if p, ok := dr.(storage.Preloader); ok {
-		uiprogress.Start()
-		bar := uiprogress.AddBar(1) // Placeholder, updated in callback
-		bar.AppendCompleted()
-		bar.PrependElapsed()
-
-		var currentName string
-		bar.AppendFunc(func(b *uiprogress.Bar) string {
-			return currentName
+		err := p.Preload(func(current, total int, name string) {
+			fmt.Fprintf(ui.Err, "\r📖 Loading docs: %d/%d (%s)...", current, total, name)
 		})
-
-		err := p.Preload(func(total int, name string) {
-			if bar.Total <= 1 {
-				bar.Total = total
-				bar.Set(0)
-			}
-			currentName = name
-			bar.Incr()
-		})
-		uiprogress.Stop()
+		fmt.Fprint(ui.Err, "\n")
 
 		if err != nil {
 			return err

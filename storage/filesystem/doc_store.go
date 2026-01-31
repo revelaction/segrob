@@ -53,7 +53,7 @@ func NewDocStore(path string) (*DocStore, error) {
 }
 
 // Preload preloads all docs into memory.
-func (h *DocStore) Preload(cb func(total int, name string)) error {
+func (h *DocStore) Preload(cb func(current, total int, name string)) error {
 	if h.docs == nil {
 		return fmt.Errorf("docs not initialized")
 	}
@@ -63,7 +63,7 @@ func (h *DocStore) Preload(cb func(total int, name string)) error {
 		doc := &h.docs[i] // pointer to modify in place
 
 		if cb != nil {
-			cb(total, doc.Title)
+			cb(i+1, total, doc.Title)
 		}
 
 		fullDoc, err := h.Read(i)
