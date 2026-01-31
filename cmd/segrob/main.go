@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 
 	"golang.org/x/term"
 
@@ -65,6 +66,9 @@ func runCommand(cmd string, args []string, ui UI) error {
 		}
 	}
 
+	p := &Pool{}
+	defer p.Close()
+
 	switch cmd {
 	case "help":
 		if len(args) > 0 {
@@ -84,22 +88,25 @@ func runCommand(cmd string, args []string, ui UI) error {
 			}
 			return err
 		}
-		repo, err := getDocRepository(opts.DocPath)
+		repo, err := NewDocRepository(p, opts.DocPath)
 		if err != nil {
 			return err
 		}
-		defer repo.Close()
 		return docCommand(repo, opts, id, ui)
 
 	case "ls-doc":
-		opts, isFilesystem, err := parseLsDocArgs(args, ui)
+		opts, _, err := parseLsDocArgs(args, ui)
 		if err != nil {
 			if errors.Is(err, flag.ErrHelp) {
 				return nil
 			}
 			return err
 		}
-		return lsDocCommand(opts, isFilesystem, ui)
+		repo, err := NewDocRepository(p, opts.DocPath)
+		if err != nil {
+			return err
+		}
+		return lsDocCommand(repo, opts, ui)
 
 	case "sentence":
 		opts, docId, sentId, err := parseSentenceArgs(args, ui)
@@ -109,11 +116,10 @@ func runCommand(cmd string, args []string, ui UI) error {
 			}
 			return err
 		}
-		repo, err := getDocRepository(opts.DocPath)
+		repo, err := NewDocRepository(p, opts.DocPath)
 		if err != nil {
 			return err
 		}
-		defer repo.Close()
 		return sentenceCommand(repo, opts, docId, sentId, ui)
 
 	case "topics":
@@ -124,52 +130,81 @@ func runCommand(cmd string, args []string, ui UI) error {
 			}
 			return err
 		}
-		repo, err := getDocRepository(opts.DocPath)
+		if err := validatePaths(opts.DocPath, opts.TopicPath); err != nil {
+			return err
+		}
+		dr, err := NewDocRepository(p, opts.DocPath)
 		if err != nil {
 			return err
 		}
-		defer repo.Close()
-		return topicsCommand(repo, opts, docId, sentId, ui)
+		tr, err := NewTopicRepository(p, opts.TopicPath)
+		if err != nil {
+			return err
+		}
+		return topicsCommand(dr, tr, opts, docId, sentId, ui)
 
 	case "expr":
-		opts, cmdArgs, isDocFile, err := parseExprArgs(args, ui)
+		opts, cmdArgs, _, err := parseExprArgs(args, ui)
 		if err != nil {
 			if errors.Is(err, flag.ErrHelp) {
 				return nil
 			}
 			return err
 		}
-		return exprCommand(opts, cmdArgs, isDocFile, ui)
+		dr, err := NewDocRepository(p, opts.DocPath)
+		if err != nil {
+			return err
+		}
+		return exprCommand(dr, opts, cmdArgs, ui)
 
 	case "query":
-		opts, isTopicFile, isDocFile, err := parseQueryArgs(args, ui)
+		opts, _, _, err := parseQueryArgs(args, ui)
 		if err != nil {
 			if errors.Is(err, flag.ErrHelp) {
 				return nil
 			}
 			return err
 		}
-		return queryCommand(opts, isTopicFile, isDocFile, ui)
+		if err := validatePaths(opts.DocPath, opts.TopicPath); err != nil {
+			return err
+		}
+		dr, err := NewDocRepository(p, opts.DocPath)
+		if err != nil {
+			return err
+		}
+		tr, err := NewTopicRepository(p, opts.TopicPath)
+		if err != nil {
+			return err
+		}
+		return queryCommand(dr, tr, opts, ui)
 
 	case "edit":
-		opts, isFile, err := parseEditArgs(args, ui)
+		opts, _, err := parseEditArgs(args, ui)
 		if err != nil {
 			if errors.Is(err, flag.ErrHelp) {
 				return nil
 			}
 			return err
 		}
-		return editCommand(opts, isFile, ui)
+		tr, err := NewTopicRepository(p, opts.TopicPath)
+		if err != nil {
+			return err
+		}
+		return editCommand(tr, opts, ui)
 
 	case "topic":
-		opts, name, isFile, err := parseTopicArgs(args, ui)
+		opts, name, _, err := parseTopicArgs(args, ui)
 		if err != nil {
 			if errors.Is(err, flag.ErrHelp) {
 				return nil
 			}
 			return err
 		}
-		return topicCommand(opts, name, isFile, ui)
+		tr, err := NewTopicRepository(p, opts.TopicPath)
+		if err != nil {
+			return err
+		}
+		return topicCommand(tr, opts, name, ui)
 
 	case "stat":
 		opts, docId, sentId, err := parseStatArgs(args, ui)
@@ -179,11 +214,10 @@ func runCommand(cmd string, args []string, ui UI) error {
 			}
 			return err
 		}
-		repo, err := getDocRepository(opts.DocPath)
+		repo, err := NewDocRepository(p, opts.DocPath)
 		if err != nil {
 			return err
 		}
-		defer repo.Close()
 		return statCommand(repo, opts, docId, sentId, ui)
 
 	case "bash":
@@ -246,19 +280,48 @@ func runCommand(cmd string, args []string, ui UI) error {
 	return fmt.Errorf("unknown command: %s", cmd)
 }
 
-func getTopicHandler(path string, isFile bool) (storage.TopicRepository, error) {
-	if isFile {
-		pool, err := zombiezen.NewPool(path)
-		if err != nil {
-			return nil, err
-		}
-		return zombiezen.NewTopicStore(pool), nil
+func validatePaths(path1, path2 string) error {
+	if path1 == "" || path2 == "" {
+		return nil
 	}
 
-	return filesystem.NewTopicStore(path), nil
+	i1, err := os.Stat(path1)
+	if err != nil {
+		return nil // Let factory handle missing paths
+	}
+	i2, err := os.Stat(path2)
+	if err != nil {
+		return nil
+	}
+
+	if !i1.IsDir() && !i2.IsDir() {
+		a1, _ := filepath.Abs(path1)
+		a2, _ := filepath.Abs(path2)
+		if a1 != a2 {
+			return fmt.Errorf("using two different SQLite files is not supported: %s and %s", path1, path2)
+		}
+	}
+	return nil
 }
 
-func getDocRepository(path string) (storage.DocRepository, error) {
+func NewTopicRepository(p *Pool, path string) (storage.TopicRepository, error) {
+	info, err := os.Stat(path)
+	if err != nil {
+		return nil, fmt.Errorf("repository not found: %s", path)
+	}
+
+	if info.IsDir() {
+		return filesystem.NewTopicStore(path), nil
+	}
+
+	pool, err := p.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	return zombiezen.NewTopicStore(pool), nil
+}
+
+func NewDocRepository(p *Pool, path string) (storage.DocRepository, error) {
 	info, err := os.Stat(path)
 	if err != nil {
 		return nil, fmt.Errorf("repository not found: %s", path)
@@ -268,7 +331,7 @@ func getDocRepository(path string) (storage.DocRepository, error) {
 		return filesystem.NewDocStore(path)
 	}
 
-	pool, err := zombiezen.NewPool(path)
+	pool, err := p.Open(path)
 	if err != nil {
 		return nil, err
 	}

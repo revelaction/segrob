@@ -2,34 +2,14 @@ package main
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/revelaction/segrob/match"
 	"github.com/revelaction/segrob/render"
 	sent "github.com/revelaction/segrob/sentence"
 	"github.com/revelaction/segrob/storage"
-	"github.com/revelaction/segrob/storage/filesystem"
-	"github.com/revelaction/segrob/storage/sqlite/zombiezen"
 )
 
-func topicsCommand(docRepo storage.DocRepository, opts TopicsOptions, docId int, sentId int, ui UI) error {
-	tinfo, err := os.Stat(opts.TopicPath)
-	if err != nil {
-		return fmt.Errorf("topic repository not found: %s", opts.TopicPath)
-	}
-
-	var topicRepo storage.TopicRepository
-	if tinfo.IsDir() {
-		topicRepo = filesystem.NewTopicStore(opts.TopicPath)
-	} else {
-		pool, err := zombiezen.NewPool(opts.TopicPath)
-		if err != nil {
-			return err
-		}
-		defer pool.Close()
-		topicRepo = zombiezen.NewTopicStore(pool)
-	}
-
+func topicsCommand(docRepo storage.DocRepository, topicRepo storage.TopicRepository, opts TopicsOptions, docId int, sentId int, ui UI) error {
 	doc, err := docRepo.Read(docId)
 	if err != nil {
 		return err

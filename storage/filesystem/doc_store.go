@@ -135,7 +135,3 @@ func (h *DocStore) FindCandidates(lemmas []string, after storage.Cursor, limit i
 func (h *DocStore) Write(doc sent.Doc) error {
 	return fmt.Errorf("read-only storage")
 }
-
-func (h *DocStore) Close() error {
-	return nil
-}

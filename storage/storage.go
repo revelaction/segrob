@@ -1,8 +1,6 @@
 package storage
 
 import (
-	"io"
-
 	sent "github.com/revelaction/segrob/sentence"
 	"github.com/revelaction/segrob/topic"
 )
@@ -63,5 +61,4 @@ type DocWriter interface {
 type DocRepository interface {
 	DocReader
 	DocWriter
-	io.Closer
 }

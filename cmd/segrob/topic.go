@@ -4,19 +4,15 @@ import (
 	"fmt"
 
 	"github.com/revelaction/segrob/render"
+	"github.com/revelaction/segrob/storage"
 )
 
 // topicCommand prints the expressions of a topic
-func topicCommand(opts TopicOptions, name string, isFile bool, ui UI) error {
-
-	fhr, err := getTopicHandler(opts.TopicPath, isFile)
-	if err != nil {
-		return err
-	}
+func topicCommand(tr storage.TopicRepository, opts TopicOptions, name string, ui UI) error {
 
 	// No name provided (list all)
 	if name == "" {
-		topicLib, err := fhr.ReadAll()
+		topicLib, err := tr.ReadAll()
 		if err != nil {
 			return err
 		}
@@ -28,7 +24,7 @@ func topicCommand(opts TopicOptions, name string, isFile bool, ui UI) error {
 		return nil
 	}
 
-	tp, err := fhr.Read(name)
+	tp, err := tr.Read(name)
 	if err != nil {
 		return err
 	}

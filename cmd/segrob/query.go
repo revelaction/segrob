@@ -6,27 +6,12 @@ import (
 	"github.com/revelaction/segrob/render"
 	"github.com/revelaction/segrob/storage"
 	"github.com/revelaction/segrob/storage/filesystem"
-	"github.com/revelaction/segrob/storage/sqlite/zombiezen"
 )
 
 // Query command
-func queryCommand(opts QueryOptions, isTopicFile, isDocFile bool, ui UI) error {
+func queryCommand(dr storage.DocRepository, tr storage.TopicRepository, opts QueryOptions, ui UI) error {
 
-	var dr storage.DocRepository
-	path := opts.DocPath
-
-	if isDocFile {
-		pool, err := zombiezen.NewPool(path)
-		if err != nil {
-			return err
-		}
-		dr = zombiezen.NewDocStore(pool)
-	} else {
-		h, err := filesystem.NewDocStore(path)
-		if err != nil {
-			return err
-		}
-
+	if h, ok := dr.(*filesystem.DocStore); ok {
 		uiprogress.Start()
 		bar := uiprogress.AddBar(1) // Placeholder, updated in callback
 		bar.AppendCompleted()
@@ -37,7 +22,7 @@ func queryCommand(opts QueryOptions, isTopicFile, isDocFile bool, ui UI) error {
 			return currentName
 		})
 
-		err = h.LoadAll(func(total int, name string) {
+		err := h.LoadAll(func(total int, name string) {
 			if bar.Total <= 1 {
 				bar.Total = total
 				bar.Set(0)
@@ -50,14 +35,9 @@ func queryCommand(opts QueryOptions, isTopicFile, isDocFile bool, ui UI) error {
 		if err != nil {
 			return err
 		}
-		dr = h
 	}
 
-	th, err := getTopicHandler(opts.TopicPath, isTopicFile)
-	if err != nil {
-		return err
-	}
-	topicLib, err := th.ReadAll()
+	topicLib, err := tr.ReadAll()
 	if err != nil {
 		return err
 	}

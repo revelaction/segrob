@@ -8,12 +8,10 @@ import (
 	"github.com/revelaction/segrob/render"
 	sent "github.com/revelaction/segrob/sentence"
 	"github.com/revelaction/segrob/storage"
-	"github.com/revelaction/segrob/storage/filesystem"
-	"github.com/revelaction/segrob/storage/sqlite/zombiezen"
 	"github.com/revelaction/segrob/topic"
 )
 
-func exprCommand(opts ExprOptions, args []string, isDocFile bool, ui UI) error {
+func exprCommand(dr storage.DocRepository, opts ExprOptions, args []string, ui UI) error {
 
 	// args is guaranteed to have at least 1 element by parseExprArgs
 	// parse the expr expression
@@ -24,7 +22,7 @@ func exprCommand(opts ExprOptions, args []string, isDocFile bool, ui UI) error {
 
 	matcher := match.NewMatcher(topic.Topic{})
 	matcher.AddTopicExpr(expr)
-	err := matchDocs(matcher, opts, isDocFile, ui)
+	err := matchDocs(dr, matcher, opts, ui)
 	if err != nil {
 		return err
 	}
@@ -32,7 +30,7 @@ func exprCommand(opts ExprOptions, args []string, isDocFile bool, ui UI) error {
 	return nil
 }
 
-func matchDocs(matcher *match.Matcher, opts ExprOptions, isDocFile bool, ui UI) error {
+func matchDocs(dr storage.DocRepository, matcher *match.Matcher, opts ExprOptions, ui UI) error {
 
 	if opts.Sent != nil {
 		if opts.Doc == nil {
@@ -47,25 +45,6 @@ func matchDocs(matcher *match.Matcher, opts ExprOptions, isDocFile bool, ui UI) 
 	r.Format = opts.Format
 	r.NumMatches = opts.NMatches
 
-	var dr storage.DocRepository
-	path := opts.DocPath
-
-	if isDocFile {
-		pool, err := zombiezen.NewPool(path)
-		if err != nil {
-			return err
-		}
-		dr = zombiezen.NewDocStore(pool)
-	} else {
-		h, err := filesystem.NewDocStore(opts.DocPath)
-		if err != nil {
-			return err
-		}
-		if err := h.LoadAll(nil); err != nil {
-			return err
-		}
-		dr = h
-	}
 	if opts.Doc != nil {
 		docId := *opts.Doc
 		doc, err := dr.Read(docId)

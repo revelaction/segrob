@@ -213,7 +213,3 @@ func (h *DocStore) Write(doc sent.Doc) error {
 
 	return nil
 }
-
-func (h *DocStore) Close() error {
-	return h.pool.Close()
-}
