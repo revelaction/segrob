@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -361,6 +362,10 @@ func parseTopicsArgs(args []string, ui UI) (TopicsOptions, int, int, error) {
 		return opts, 0, 0, fmt.Errorf("invalid sentenceId '%s': %w", fs.Arg(1), err)
 	}
 
+	if err := validatePaths(opts.DocPath, opts.TopicPath); err != nil {
+		return opts, 0, 0, err
+	}
+
 	return opts, docId, sentId, nil
 }
 
@@ -501,6 +506,10 @@ func parseQueryArgs(args []string, ui UI) (QueryOptions, bool, bool, error) {
 	dinfo, err := os.Stat(opts.DocPath)
 	if err != nil {
 		return opts, false, false, fmt.Errorf("Doc path not found: %s", opts.DocPath)
+	}
+
+	if err := validatePaths(opts.DocPath, opts.TopicPath); err != nil {
+		return opts, false, false, err
 	}
 
 	return opts, !tinfo.IsDir(), !dinfo.IsDir(), nil
@@ -789,4 +798,28 @@ func setupUsage(fs *flag.FlagSet) {
 		_, _ = fmt.Fprintf(output, "  bash      Output bash completion script.\n")
 		_, _ = fmt.Fprintf(output, "  help      Show help for a command.\n")
 	}
+}
+
+func validatePaths(path1, path2 string) error {
+	if path1 == "" || path2 == "" {
+		return nil
+	}
+
+	i1, err := os.Stat(path1)
+	if err != nil {
+		return nil // Let factory handle missing paths
+	}
+	i2, err := os.Stat(path2)
+	if err != nil {
+		return nil
+	}
+
+	if !i1.IsDir() && !i2.IsDir() {
+		a1, _ := filepath.Abs(path1)
+		a2, _ := filepath.Abs(path2)
+		if a1 != a2 {
+			return fmt.Errorf("using two different SQLite files is not supported: %s and %s", path1, path2)
+		}
+	}
+	return nil
 }

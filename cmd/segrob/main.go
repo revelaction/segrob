@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path/filepath"
 
 	"golang.org/x/term"
 
@@ -130,9 +129,6 @@ func runCommand(cmd string, args []string, ui UI) error {
 			}
 			return err
 		}
-		if err := validatePaths(opts.DocPath, opts.TopicPath); err != nil {
-			return err
-		}
 		dr, err := NewDocRepository(p, opts.DocPath)
 		if err != nil {
 			return err
@@ -163,9 +159,6 @@ func runCommand(cmd string, args []string, ui UI) error {
 			if errors.Is(err, flag.ErrHelp) {
 				return nil
 			}
-			return err
-		}
-		if err := validatePaths(opts.DocPath, opts.TopicPath); err != nil {
 			return err
 		}
 		dr, err := NewDocRepository(p, opts.DocPath)
@@ -278,30 +271,6 @@ func runCommand(cmd string, args []string, ui UI) error {
 	}
 
 	return fmt.Errorf("unknown command: %s", cmd)
-}
-
-func validatePaths(path1, path2 string) error {
-	if path1 == "" || path2 == "" {
-		return nil
-	}
-
-	i1, err := os.Stat(path1)
-	if err != nil {
-		return nil // Let factory handle missing paths
-	}
-	i2, err := os.Stat(path2)
-	if err != nil {
-		return nil
-	}
-
-	if !i1.IsDir() && !i2.IsDir() {
-		a1, _ := filepath.Abs(path1)
-		a2, _ := filepath.Abs(path2)
-		if a1 != a2 {
-			return fmt.Errorf("using two different SQLite files is not supported: %s and %s", path1, path2)
-		}
-	}
-	return nil
 }
 
 func NewTopicRepository(p *Pool, path string) (storage.TopicRepository, error) {
