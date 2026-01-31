@@ -62,3 +62,9 @@ type DocRepository interface {
 	DocReader
 	DocWriter
 }
+
+// Preloader defines an optional capability for repositories that require
+// or support eager loading of data into memory.
+type Preloader interface {
+	Preload(cb func(total int, name string)) error
+}

@@ -5,13 +5,12 @@ import (
 	"github.com/revelaction/segrob/query"
 	"github.com/revelaction/segrob/render"
 	"github.com/revelaction/segrob/storage"
-	"github.com/revelaction/segrob/storage/filesystem"
 )
 
 // Query command
 func queryCommand(dr storage.DocRepository, tr storage.TopicRepository, opts QueryOptions, ui UI) error {
 
-	if h, ok := dr.(*filesystem.DocStore); ok {
+	if p, ok := dr.(storage.Preloader); ok {
 		uiprogress.Start()
 		bar := uiprogress.AddBar(1) // Placeholder, updated in callback
 		bar.AppendCompleted()
@@ -22,7 +21,7 @@ func queryCommand(dr storage.DocRepository, tr storage.TopicRepository, opts Que
 			return currentName
 		})
 
-		err := h.LoadAll(func(total int, name string) {
+		err := p.Preload(func(total int, name string) {
 			if bar.Total <= 1 {
 				bar.Total = total
 				bar.Set(0)

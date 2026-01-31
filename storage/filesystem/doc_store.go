@@ -52,8 +52,8 @@ func NewDocStore(path string) (*DocStore, error) {
 	return &DocStore{docsPath: docsPath, docs: docs}, nil
 }
 
-// LoadAll preloads all docs into memory.
-func (h *DocStore) LoadAll(cb func(total int, name string)) error {
+// Preload preloads all docs into memory.
+func (h *DocStore) Preload(cb func(total int, name string)) error {
 	if h.docs == nil {
 		return fmt.Errorf("docs not initialized")
 	}
