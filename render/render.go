@@ -33,6 +33,7 @@ var (
 	Yellow256 = "\033[1;38;5;130m"
 	Grey256   = "\033[1;38;5;145m"
 	Green256  = "\033[1;38;5;70m"
+	ClearLine = "\033[K"
 )
 
 func SupportedFormats() []string {

@@ -13,7 +13,7 @@ func queryCommand(dr storage.DocRepository, tr storage.TopicRepository, opts Que
 
 	if p, ok := dr.(storage.Preloader); ok {
 		err := p.Preload(func(current, total int, name string) {
-			fmt.Fprintf(ui.Err, "\r📖 Loading docs: %d/%d (%s)...", current, total, name)
+			fmt.Fprintf(ui.Err, "\r📖 Loading docs: %d/%d (%s)...%s", current, total, name, render.ClearLine)
 		})
 		fmt.Fprint(ui.Err, "\n")
 
