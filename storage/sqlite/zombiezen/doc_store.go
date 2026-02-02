@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"strings"
 
 	sent "github.com/revelaction/segrob/sentence"
@@ -94,7 +95,9 @@ func (h *DocStore) FindCandidates(lemmas []string, after storage.Cursor, limit i
 	}
 	defer h.pool.Put(conn)
 
-	// Build query dynamically based on number of lemmas
+	// Build query dynamically based on number of lemmas.
+	// We use INTERSECT to ensure that we only get sentence_rowids that contain ALL lemmas.
+	// Note: INTERSECT also guarantees that the resulting set of rowIDs is unique.
 	var queryBuilder strings.Builder
 	var args []interface{}
 
@@ -125,35 +128,39 @@ func (h *DocStore) FindCandidates(lemmas []string, after storage.Cursor, limit i
 		return nil, after, nil
 	}
 
+	// TODO: Consolidate into a single query using a subquery for better performance.
+	// For now, we use a second bulk query to fetch the sentence data.
+	idStrings := make([]string, len(rowIDs))
+	for i, id := range rowIDs {
+		idStrings[i] = strconv.FormatInt(id, 10)
+	}
+	idList := strings.Join(idStrings, ",")
+
 	results := make([]storage.SentenceResult, 0, len(rowIDs))
+	query := fmt.Sprintf("SELECT rowid, doc_id, data FROM sentences WHERE rowid IN (%s) ORDER BY rowid", idList)
+
 	newCursor := after
+	err = sqlitex.Execute(conn, query, &sqlitex.ExecOptions{
+		ResultFunc: func(stmt *sqlite.Stmt) error {
+			rowID := stmt.ColumnInt64(0)
+			if storage.Cursor(rowID) > newCursor {
+				newCursor = storage.Cursor(rowID)
+			}
 
-	for _, rowID := range rowIDs {
-		// Update cursor to the last processed rowID
-		if storage.Cursor(rowID) > newCursor {
-			newCursor = storage.Cursor(rowID)
-		}
-
-		var res storage.SentenceResult
-		res.RowID = rowID
-
-		err = sqlitex.Execute(conn, "SELECT s.doc_id, s.data, d.title FROM sentences s JOIN docs d ON s.doc_id = d.id WHERE s.rowid = ?", &sqlitex.ExecOptions{
-			Args: []interface{}{rowID},
-			ResultFunc: func(stmt *sqlite.Stmt) error {
-				res.DocID = stmt.ColumnInt(0)
-				data := stmt.ColumnText(1)
-				res.DocTitle = stmt.ColumnText(2)
-
-				if err := json.Unmarshal([]byte(data), &res.Tokens); err != nil {
-					return err
-				}
-				return nil
-			},
-		})
-		if err != nil {
-			return nil, after, err
-		}
-		results = append(results, res)
+			res := storage.SentenceResult{
+				RowID: rowID,
+				DocID: stmt.ColumnInt(1),
+			}
+			data := stmt.ColumnText(2)
+			if err := json.Unmarshal([]byte(data), &res.Tokens); err != nil {
+				return err
+			}
+			results = append(results, res)
+			return nil
+		},
+	})
+	if err != nil {
+		return nil, after, err
 	}
 
 	return results, newCursor, nil

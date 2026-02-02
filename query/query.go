@@ -82,11 +82,20 @@ func (h *Handler) Run() error {
 		matcher := match.NewMatcher(tp)
 		matcher.AddTopicExpr(expr)
 
+		// Fetch doc names for rendering
+		docList, err := h.DocRepo.List()
+		if err != nil {
+			fmt.Printf("Error listing docs: %v\n", err)
+			continue
+		}
+		docNames := make(map[int]string)
+		for _, d := range docList {
+			docNames[d.Id] = d.Title
+		}
+
 		// Extract lemmas from all relevant expressions (OR logic)
 		queries := extractLemmas(tp, expr)
 
-		// Collect candidates (deduplicated by RowID)
-		candidates := make(map[int64]storage.SentenceResult)
 		limit := 2000 // Limit candidates per expression to avoid hang
 
 		for _, lemmas := range queries {
@@ -104,9 +113,15 @@ func (h *Handler) Run() error {
 				}
 
 				for _, r := range res {
-					if _, exists := candidates[r.RowID]; !exists {
-						candidates[r.RowID] = r
+					h.Renderer.AddDocName(r.DocID, docNames[r.DocID])
+					// Construct a valid doc with single sentence for matching
+					// TODO: Pass the real sentence index to avoid overwrites in the matcher
+					doc := sent.Doc{
+						Id:     r.DocID,
+						Title:  docNames[r.DocID],
+						Tokens: [][]sent.Token{r.Tokens},
 					}
+					matcher.Match(doc)
 				}
 
 				fetched += len(res)
@@ -115,17 +130,6 @@ func (h *Handler) Run() error {
 				}
 				cursor = newCursor
 			}
-		}
-
-		for _, res := range candidates {
-			h.Renderer.AddDocName(res.DocID, res.DocTitle)
-			// Construct a valid doc with single sentence for matching
-			doc := sent.Doc{
-				Id:     res.DocID,
-				Title:  res.DocTitle,
-				Tokens: [][]sent.Token{res.Tokens},
-			}
-			matcher.Match(doc)
 		}
 
 		result := matcher.Sentences()

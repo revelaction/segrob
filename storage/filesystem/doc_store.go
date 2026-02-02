@@ -121,10 +121,9 @@ func (h *DocStore) FindCandidates(lemmas []string, after storage.Cursor, limit i
 	for i, doc := range h.docs {
 		for _, tokens := range doc.Tokens {
 			results = append(results, storage.SentenceResult{
-				RowID:    0,
-				DocID:    i,
-				DocTitle: doc.Title,
-				Tokens:   tokens,
+				RowID:  0,
+				DocID:  i,
+				Tokens: tokens,
 			})
 		}
 	}

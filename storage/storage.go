@@ -31,10 +31,9 @@ type Cursor int64
 
 // SentenceResult represents a sentence candidate with metadata
 type SentenceResult struct {
-	RowID    int64
-	DocID    int
-	DocTitle string
-	Tokens   []sent.Token
+	RowID  int64
+	DocID  int
+	Tokens []sent.Token
 }
 
 // DocReader defines read operations for document storage
