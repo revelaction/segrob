@@ -183,7 +183,21 @@ func (sm *SentenceMatch) TopicName() string {
 func (m *Matcher) Match(doc sent.Doc) {
 	hasTopic := len(m.Topic.Exprs) > 0
 	hasExpr := len(m.ArgExpr) > 0
-	for sentId, sentence := range doc.Tokens {
+	for _, sentence := range doc.Tokens {
+
+		// HACK: We extract the true sentence ID from the tokens themselves because
+		// the current Doc structure (slice-of-slices) doesn't preserve sentence
+		// metadata when passed partially.
+		//
+		// TODO: The proper fix is to introduce a 'Sentence' struct in the 'sentence'
+		// package and update the document serialization format to:
+		// type Sentence struct { Id int; Tokens []Token }
+		// type Doc struct { ...; Sentences []Sentence }
+		sentId := 0
+		if len(sentence) > 0 {
+			sentId = sentence[0].SentenceId
+		}
+
 		// We priorize the possible ArgExpr
 		// If there is a ArgExpr, the sentence must match it
 		argExprMap := itemTokenMap{}
