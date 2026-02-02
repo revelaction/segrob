@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 
 	"github.com/revelaction/segrob/match"
@@ -12,6 +13,17 @@ import (
 )
 
 func exprCommand(dr storage.DocRepository, opts ExprOptions, args []string, ui UI) error {
+
+	if p, ok := dr.(storage.Preloader); ok {
+		err := p.Preload(func(current, total int, name string) {
+			fmt.Fprintf(ui.Err, "\r📖 Loading docs: %d/%d (%s)...%s", current, total, name, render.ClearLine)
+		})
+		fmt.Fprint(ui.Err, "\n")
+
+		if err != nil {
+			return err
+		}
+	}
 
 	// args is guaranteed to have at least 1 element by parseExprArgs
 	// Flatten arguments to support quoted expressions containing spaces,
