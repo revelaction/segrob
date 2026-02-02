@@ -73,25 +73,44 @@ func matchDocs(dr storage.DocRepository, matcher *match.Matcher, opts ExprOption
 		matcher.Match(doc)
 
 	} else {
+		// Optimized search using FindCandidates for SQLite performance.
+		// We extract positive lemmas to narrow down candidate sentences using the index.
+		// The Matcher then performs the full expression evaluation on these candidates.
+		lemmas := matcher.ArgExpr.Lemmas()
+		if len(lemmas) == 0 {
+			return errors.New("expression must contain at least one lemma for indexing")
+		}
+
+		// Fetch doc IDs and titles for metadata mapping
 		docs, err := dr.List()
 		if err != nil {
 			return err
 		}
+		docNames := make(map[int]string)
+		for _, d := range docs {
+			docNames[d.Id] = d.Title
+			r.AddDocName(d.Id, d.Title)
+		}
 
-		for _, metaDoc := range docs {
-			if !hasLabels(metaDoc.Labels, opts.Labels) {
-				continue
-			}
-
-			doc, err := dr.Read(metaDoc.Id)
+		cursor := storage.Cursor(0)
+		for {
+			newCursor, err := dr.FindCandidates(lemmas, cursor, 1000, func(res storage.SentenceResult) error {
+				// Construct a valid doc with single sentence for matching
+				doc := sent.Doc{
+					Id:     res.DocID,
+					Title:  docNames[res.DocID],
+					Tokens: [][]sent.Token{res.Tokens},
+				}
+				matcher.Match(doc)
+				return nil
+			})
 			if err != nil {
 				return err
 			}
-
-			doc.Title = metaDoc.Title
-			doc.Labels = metaDoc.Labels
-			r.AddDocName(metaDoc.Id, doc.Title)
-			matcher.Match(doc)
+			if cursor == newCursor {
+				break // No more candidates
+			}
+			cursor = newCursor
 		}
 	}
 

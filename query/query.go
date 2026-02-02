@@ -93,8 +93,15 @@ func (h *Handler) Run() error {
 			docNames[d.Id] = d.Title
 		}
 
-		// Extract lemmas from all relevant expressions (OR logic)
-		queries := extractLemmas(tp, expr)
+		// Extract lemmas from all relevant expressions (OR logic) for indexed retrieval.
+		// We only extract positive lemmas to find candidates in the database.
+		// Fine-grained matching (including negative '!' lemmas) is performed
+		// by the Matcher on the retrieved candidates.
+		queries := tp.LemmaSets()
+		lemmas := expr.Lemmas()
+		if len(lemmas) > 0 {
+			queries = append(queries, lemmas)
+		}
 
 		limit := 2000 // Limit candidates per expression to avoid hang
 
@@ -272,36 +279,4 @@ func (h *Handler) parse(in string) (topic.Topic, topic.TopicExpr, error) {
 	}
 
 	return tp, exp, nil
-}
-
-func extractLemmas(tp topic.Topic, expr topic.TopicExpr) [][]string {
-	var sets [][]string
-
-	// From topic expressions
-	for _, e := range tp.Exprs {
-		var lemmas []string
-		for _, item := range e {
-			if item.Lemma != "" {
-				lemmas = append(lemmas, item.Lemma)
-			}
-		}
-		if len(lemmas) > 0 {
-			sets = append(sets, lemmas)
-		}
-	}
-
-	// From manual refined expression
-	if len(expr) > 0 {
-		var lemmas []string
-		for _, item := range expr {
-			if item.Lemma != "" {
-				lemmas = append(lemmas, item.Lemma)
-			}
-		}
-		if len(lemmas) > 0 {
-			sets = append(sets, lemmas)
-		}
-	}
-
-	return sets
 }

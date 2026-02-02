@@ -44,6 +44,36 @@ func (m TopicExpr) String() string {
 	return strings.Join(sl, " ")
 }
 
+// Lemmas returns all unique non-negative lemmas present in the TopicExpr.
+// Negative lemmas (starting with '!') are excluded because they cannot be used
+// for indexed candidate retrieval in storage; they are handled later by the Matcher.
+func (m TopicExpr) Lemmas() []string {
+	seen := make(map[string]bool)
+	var lemmas []string
+	for _, item := range m {
+		if item.Lemma != "" && !strings.HasPrefix(item.Lemma, "!") {
+			if !seen[item.Lemma] {
+				seen[item.Lemma] = true
+				lemmas = append(lemmas, item.Lemma)
+			}
+		}
+	}
+	return lemmas
+}
+
+// LemmaSets returns a slice of lemma sets, one for each expression in the topic.
+// It only includes positive lemmas suitable for indexed searching.
+func (t Topic) LemmaSets() [][]string {
+	var sets [][]string
+	for _, e := range t.Exprs {
+		lemmas := e.Lemmas()
+		if len(lemmas) > 0 {
+			sets = append(sets, lemmas)
+		}
+	}
+	return sets
+}
+
 type TopicExprItem struct {
 
 	// The Expr index.
