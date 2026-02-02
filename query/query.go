@@ -101,17 +101,16 @@ func (h *Handler) Run() error {
 		for _, lemmas := range queries {
 			cursor := storage.Cursor(0)
 			fetched := 0
+			doc := sent.Doc{Tokens: make([][]sent.Token, 1)}
 			for {
 				// Fetch batch
 				newCursor, err := h.DocRepo.FindCandidates(lemmas, cursor, 500, func(r storage.SentenceResult) error {
 					fetched++
 					h.Renderer.AddDocName(r.DocID, docNames[r.DocID])
 					// Construct a valid doc with single sentence for matching
-					doc := sent.Doc{
-						Id:     r.DocID,
-						Title:  docNames[r.DocID],
-						Tokens: [][]sent.Token{r.Tokens},
-					}
+					doc.Id = r.DocID
+					doc.Title = docNames[r.DocID]
+					doc.Tokens[0] = r.Tokens
 					matcher.Match(doc)
 					return nil
 				})
