@@ -15,14 +15,15 @@ import (
 
 // Option structs for subcommands that have flags
 type ExprOptions struct {
-	Labels   []string
-	NoColor  bool
-	NoPrefix bool
-	Doc      *int // nil = not set
-	Sent     *int // nil = not set
-	NMatches int
-	Format   string
-	DocPath  string
+	Labels    []string
+	NoColor   bool
+	NoPrefix  bool
+	Doc       *int // nil = not set
+	Sent      *int // nil = not set
+	NMatches  int
+	Format    string
+	DocPath   string
+	TopicPath string
 }
 
 type QueryOptions struct {
@@ -401,6 +402,9 @@ func parseExprArgs(args []string, ui UI) (ExprOptions, []string, bool, error) {
 
 	fs.StringVar(&opts.DocPath, "doc-path", os.Getenv("SEGROB_DOC_PATH"), "Path to docs directory or SQLite file")
 	fs.StringVar(&opts.DocPath, "dp", os.Getenv("SEGROB_DOC_PATH"), "alias for -doc-path")
+
+	fs.StringVar(&opts.TopicPath, "topic-path", os.Getenv("SEGROB_TOPIC_PATH"), "Path to topics directory or SQLite file")
+	fs.StringVar(&opts.TopicPath, "t", os.Getenv("SEGROB_TOPIC_PATH"), "alias for -topic-path")
 
 	fs.Usage = func() {
 		_, _ = fmt.Fprintf(fs.Output(), "Usage: %s expr [options] <topic expr item> ...\n", os.Args[0])
