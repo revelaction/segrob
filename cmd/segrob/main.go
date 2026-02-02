@@ -8,10 +8,6 @@ import (
 	"os"
 
 	"golang.org/x/term"
-
-	"github.com/revelaction/segrob/storage"
-	"github.com/revelaction/segrob/storage/filesystem"
-	"github.com/revelaction/segrob/storage/sqlite/zombiezen"
 )
 
 // UI contains the output streams for the application.
@@ -273,36 +269,3 @@ func runCommand(cmd string, args []string, ui UI) error {
 	return fmt.Errorf("unknown command: %s", cmd)
 }
 
-func NewTopicRepository(p *Pool, path string) (storage.TopicRepository, error) {
-	info, err := os.Stat(path)
-	if err != nil {
-		return nil, fmt.Errorf("repository not found: %s", path)
-	}
-
-	if info.IsDir() {
-		return filesystem.NewTopicStore(path), nil
-	}
-
-	pool, err := p.Open(path)
-	if err != nil {
-		return nil, err
-	}
-	return zombiezen.NewTopicStore(pool), nil
-}
-
-func NewDocRepository(p *Pool, path string) (storage.DocRepository, error) {
-	info, err := os.Stat(path)
-	if err != nil {
-		return nil, fmt.Errorf("repository not found: %s", path)
-	}
-
-	if info.IsDir() {
-		return filesystem.NewDocStore(path)
-	}
-
-	pool, err := p.Open(path)
-	if err != nil {
-		return nil, err
-	}
-	return zombiezen.NewDocStore(pool), nil
-}
