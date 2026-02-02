@@ -115,7 +115,6 @@ func (h *Handler) Run() error {
 				for _, r := range res {
 					h.Renderer.AddDocName(r.DocID, docNames[r.DocID])
 					// Construct a valid doc with single sentence for matching
-					// TODO: Pass the real sentence index to avoid overwrites in the matcher
 					doc := sent.Doc{
 						Id:     r.DocID,
 						Title:  docNames[r.DocID],
