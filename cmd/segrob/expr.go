@@ -14,8 +14,20 @@ import (
 func exprCommand(dr storage.DocRepository, opts ExprOptions, args []string, ui UI) error {
 
 	// args is guaranteed to have at least 1 element by parseExprArgs
+	// Flatten arguments to support quoted expressions containing spaces,
+	// matching the behavior of the query REPL.
+	//
+	// Verification use cases:
+	// - Unquoted: segrob expr a 1 el      -> args:["a", "1", "el"] -> flatArgs:["a", "1", "el"]
+	// - Quoted:   segrob expr "a 1 el"    -> args:["a 1 el"]       -> flatArgs:["a", "1", "el"]
+	// - Mixed:    segrob expr "a 1" el    -> args:["a 1", "el"]    -> flatArgs:["a", "1", "el"]
+	var flatArgs []string
+	for _, arg := range args {
+		flatArgs = append(flatArgs, strings.Fields(arg)...)
+	}
+
 	// parse the expr expression
-	expr, parseErr := topic.Parse(args)
+	expr, parseErr := topic.Parse(flatArgs)
 	if parseErr != nil {
 		return parseErr
 	}
