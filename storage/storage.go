@@ -45,9 +45,10 @@ type DocReader interface {
 	// Read returns a document by ID
 	Read(id int) (sent.Doc, error)
 
-	// FindCandidates returns sentence ROWIDs matching ALL given lemmas,
-	// resuming after the given cursor. Returns hydrated sentences and new cursor.
-	FindCandidates(lemmas []string, after Cursor, limit int) ([]SentenceResult, Cursor, error)
+	// FindCandidates returns sentence candidates matching ALL given lemmas,
+	// resuming after the given cursor. It calls onCandidate for each result.
+	// Returns the new cursor and any error.
+	FindCandidates(lemmas []string, after Cursor, limit int, onCandidate func(SentenceResult) error) (Cursor, error)
 }
 
 // DocWriter defines write operations for document storage

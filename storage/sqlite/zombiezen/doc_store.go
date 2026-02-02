@@ -84,14 +84,14 @@ func (h *DocStore) Read(id int) (sent.Doc, error) {
 	return doc, nil
 }
 
-func (h *DocStore) FindCandidates(lemmas []string, after storage.Cursor, limit int) ([]storage.SentenceResult, storage.Cursor, error) {
+func (h *DocStore) FindCandidates(lemmas []string, after storage.Cursor, limit int, onCandidate func(storage.SentenceResult) error) (storage.Cursor, error) {
 	if len(lemmas) == 0 {
-		return nil, after, nil
+		return after, nil
 	}
 
 	conn, err := h.pool.Take(context.TODO())
 	if err != nil {
-		return nil, after, err
+		return after, err
 	}
 	defer h.pool.Put(conn)
 
@@ -121,11 +121,11 @@ func (h *DocStore) FindCandidates(lemmas []string, after storage.Cursor, limit i
 		},
 	})
 	if err != nil {
-		return nil, after, err
+		return after, err
 	}
 
 	if len(rowIDs) == 0 {
-		return nil, after, nil
+		return after, nil
 	}
 
 	// TODO: Consolidate into a single query using a subquery for better performance.
@@ -136,7 +136,6 @@ func (h *DocStore) FindCandidates(lemmas []string, after storage.Cursor, limit i
 	}
 	idList := strings.Join(idStrings, ",")
 
-	results := make([]storage.SentenceResult, 0, len(rowIDs))
 	query := fmt.Sprintf("SELECT rowid, doc_id, data FROM sentences WHERE rowid IN (%s) ORDER BY rowid", idList)
 
 	newCursor := after
@@ -155,15 +154,15 @@ func (h *DocStore) FindCandidates(lemmas []string, after storage.Cursor, limit i
 			if err := json.Unmarshal([]byte(data), &res.Tokens); err != nil {
 				return err
 			}
-			results = append(results, res)
-			return nil
+
+			return onCandidate(res)
 		},
 	})
 	if err != nil {
-		return nil, after, err
+		return after, err
 	}
 
-	return results, newCursor, nil
+	return newCursor, nil
 }
 
 func (h *DocStore) Write(doc sent.Doc) error {

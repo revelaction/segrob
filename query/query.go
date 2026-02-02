@@ -103,16 +103,8 @@ func (h *Handler) Run() error {
 			fetched := 0
 			for {
 				// Fetch batch
-				res, newCursor, err := h.DocRepo.FindCandidates(lemmas, cursor, 500)
-				if err != nil {
-					fmt.Printf("Error fetching candidates: %v\n", err)
-					break
-				}
-				if len(res) == 0 {
-					break
-				}
-
-				for _, r := range res {
+				newCursor, err := h.DocRepo.FindCandidates(lemmas, cursor, 500, func(r storage.SentenceResult) error {
+					fetched++
 					h.Renderer.AddDocName(r.DocID, docNames[r.DocID])
 					// Construct a valid doc with single sentence for matching
 					doc := sent.Doc{
@@ -121,9 +113,16 @@ func (h *Handler) Run() error {
 						Tokens: [][]sent.Token{r.Tokens},
 					}
 					matcher.Match(doc)
+					return nil
+				})
+				if err != nil {
+					fmt.Printf("Error fetching candidates: %v\n", err)
+					break
+				}
+				if cursor == newCursor {
+					break // No more progress
 				}
 
-				fetched += len(res)
 				if fetched >= limit {
 					break
 				}

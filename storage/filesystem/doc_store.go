@@ -111,24 +111,26 @@ func (h *DocStore) Read(id int) (sent.Doc, error) {
 }
 
 // FindCandidates returns ALL sentences from memory.
-func (h *DocStore) FindCandidates(lemmas []string, after storage.Cursor, limit int) ([]storage.SentenceResult, storage.Cursor, error) {
+func (h *DocStore) FindCandidates(lemmas []string, after storage.Cursor, limit int, onCandidate func(storage.SentenceResult) error) (storage.Cursor, error) {
 	// If cursor > 0, we already returned everything (EOF).
 	if after > 0 {
-		return nil, after, nil
+		return after, nil
 	}
 
-	var results []storage.SentenceResult
 	for i, doc := range h.docs {
 		for _, tokens := range doc.Tokens {
-			results = append(results, storage.SentenceResult{
+			res := storage.SentenceResult{
 				RowID:  0,
 				DocID:  i,
 				Tokens: tokens,
-			})
+			}
+			if err := onCandidate(res); err != nil {
+				return after, err
+			}
 		}
 	}
 
-	return results, 1, nil
+	return 1, nil
 }
 
 func (h *DocStore) Write(doc sent.Doc) error {
