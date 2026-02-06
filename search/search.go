@@ -2,7 +2,6 @@ package search
 
 import (
 	"errors"
-	"fmt"
 
 	"github.com/revelaction/segrob/match"
 	"github.com/revelaction/segrob/storage"
@@ -61,16 +60,6 @@ func (s *Search) Sentences(expr topic.TopicExpr, cursor storage.Cursor, limit in
 	lemmas := expr.Lemmas()
 	if len(lemmas) == 0 {
 		return cursor, errors.New("expression must contain at least one lemma for indexing")
-	}
-
-	// Fetch titles for result enhancement
-	docMap := make(map[int]string)
-	docs, err := s.repo.List()
-	if err != nil {
-		return cursor, fmt.Errorf("failed to list docs: %w", err)
-	}
-	for _, d := range docs {
-		docMap[d.Id] = d.Title
 	}
 
 	m := match.NewMatcher(s.topic)
