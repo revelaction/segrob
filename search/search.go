@@ -58,7 +58,7 @@ func (s *Search) Sentences(expr topic.TopicExpr, cursor storage.Cursor, limit in
 		return cursor, nil
 	}
 
-	// Strategy 2: Indexed Search
+	// Strategy 2: Find candidated (indexed search)
 	lemmas := expr.Lemmas()
 	if len(lemmas) == 0 {
 		return cursor, errors.New("expression must contain at least one lemma for indexing")

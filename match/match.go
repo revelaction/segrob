@@ -188,6 +188,15 @@ func (m *Matcher) Match(doc sent.Doc) {
 		// HACK: We extract the true sentence ID from the tokens themselves because
 		// the current Doc structure (slice-of-slices) doesn't preserve sentence
 		// metadata when passed partially.
+		// that works for Findcandidates but not for a doc from Read(i)
+		// fndcandidates put there the rowid od the optimization table with is not the sentence id in the book
+		// for a doc file loaded with Read() we do not have sentences in there see tartaro bug
+		// main issue is all taht but mostly m.sentences[doc.Id][sentId] 
+		//    - is there mostly to allow calling Match many times. but we are leaing to streaming 
+	 	//		 see 
+		//    - is broken for findcandaytes with doc  
+		//     
+		//
 		//
 		// TODO: The proper fix is to introduce a 'Sentence' struct in the 'sentence'
 		// package and update the document serialization format to:
@@ -197,6 +206,7 @@ func (m *Matcher) Match(doc sent.Doc) {
 		if len(sentence) > 0 {
 			sentId = sentence[0].SentenceId
 		}
+
 
 		// We priorize the possible ArgExpr
 		// If there is a ArgExpr, the sentence must match it
