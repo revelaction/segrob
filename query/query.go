@@ -3,11 +3,11 @@ package query
 import (
 	"errors"
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/revelaction/segrob/match"
 	"github.com/revelaction/segrob/render"
-	sent "github.com/revelaction/segrob/sentence"
 	"github.com/revelaction/segrob/topic"
 
 	"github.com/c-bata/go-prompt"
@@ -105,20 +105,25 @@ func (h *Handler) Run() error {
 
 		limit := 2000 // Limit candidates per expression to avoid hang
 
+		var results []*match.SentenceMatch
+
 		for _, lemmas := range queries {
 			cursor := storage.Cursor(0)
 			fetched := 0
-			doc := sent.Doc{Tokens: make([][]sent.Token, 1)}
+			// doc := sent.Doc{Tokens: make([][]sent.Token, 1)} // No longer needed
 			for {
 				// Fetch batch
 				newCursor, err := h.DocRepo.FindCandidates(lemmas, cursor, 500, func(r storage.SentenceResult) error {
 					fetched++
 					h.Renderer.AddDocName(r.DocID, docNames[r.DocID])
-					// Construct a valid doc with single sentence for matching
-					doc.Id = r.DocID
-					doc.Title = docNames[r.DocID]
-					doc.Tokens[0] = r.Tokens
-					matcher.Match(doc)
+
+					// Use MatchSentence directly to avoid "Tártaro" bug (overwrite due to missing SentenceId)
+					sm := matcher.MatchSentence(r.Tokens, r.DocID)
+					if sm != nil {
+						// Use the unique database RowID as the SentenceId to ensure identity
+						sm.SentenceId = int(r.RowID)
+						results = append(results, sm)
+					}
 					return nil
 				})
 				if err != nil {
@@ -136,8 +141,19 @@ func (h *Handler) Run() error {
 			}
 		}
 
-		result := matcher.Sentences()
-		h.Renderer.Match(result)
+		// Sort results to match previous behavior (Relevance > DocID > SentenceID)
+		// We implement the sort here since we bypassed matcher.Sentences()
+		sort.Slice(results, func(i, j int) bool {
+			if results[i].NumExprs != results[j].NumExprs {
+				return results[i].NumExprs > results[j].NumExprs
+			}
+			if results[i].DocId != results[j].DocId {
+				return results[i].DocId < results[j].DocId
+			}
+			return results[i].SentenceId < results[j].SentenceId
+		})
+
+		h.Renderer.Match(results)
 	}
 
 	return nil

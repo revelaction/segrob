@@ -24,8 +24,6 @@ func renderTopics(doc sent.Doc, sentId int, topicRepo storage.TopicRepository, o
 	}
 
 	s := doc.Tokens[sentId]
-	// Treat the single sentence as a document for matching
-	matchDoc := sent.Doc{Tokens: [][]sent.Token{s}}
 
 	r := render.NewRenderer()
 	r.HasColor = false
@@ -46,12 +44,13 @@ func renderTopics(doc sent.Doc, sentId int, topicRepo storage.TopicRepository, o
 
 	for _, tp := range allTopics {
 		matcher := match.NewMatcher(tp)
-		matcher.Match(matchDoc)
-		res := matcher.Sentences()
-
-		if len(res) == 0 {
+		sm := matcher.MatchSentence(s, doc.Id)
+		if sm == nil {
 			continue
 		}
+
+		sm.SentenceId = sentId
+		res := []*match.SentenceMatch{sm}
 
 		r.Match(res)
 	}
