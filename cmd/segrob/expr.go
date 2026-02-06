@@ -1,13 +1,12 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"strings"
 
 	"github.com/revelaction/segrob/match"
 	"github.com/revelaction/segrob/render"
-	sent "github.com/revelaction/segrob/sentence"
+	"github.com/revelaction/segrob/search"
 	"github.com/revelaction/segrob/storage"
 	"github.com/revelaction/segrob/topic"
 )
@@ -44,24 +43,34 @@ func exprCommand(dr storage.DocRepository, opts ExprOptions, args []string, ui U
 		return parseErr
 	}
 
-	matcher := match.NewMatcher(topic.Topic{})
-	matcher.AddTopicExpr(expr)
-	err := matchDocs(dr, matcher, opts, ui)
-	if err != nil {
-		return err
+	// Strategy Selection
+	s := search.New(topic.Topic{}, dr)
+	if opts.Doc != nil {
+		s.WithDocID(*opts.Doc)
 	}
 
-	return nil
-}
+	// Prepare results accumulator
+	var results []*match.SentenceMatch
+	onMatch := func(m *match.SentenceMatch) error {
+		results = append(results, m)
+		return nil
+	}
 
-func matchDocs(dr storage.DocRepository, matcher *match.Matcher, opts ExprOptions, ui UI) error {
-
-	if opts.Sent != nil {
-		if opts.Doc == nil {
-			return errors.New("--sent flag given but no --doc")
+	// Execute search with pagination
+	cursor := storage.Cursor(0)
+	limit := 1000
+	for {
+		newCursor, err := s.Sentences(expr, cursor, limit, onMatch)
+		if err != nil {
+			return err
 		}
+		if cursor == newCursor {
+			break
+		}
+		cursor = newCursor
 	}
 
+	// Render results
 	r := render.NewRenderer()
 	r.HasColor = !opts.NoColor
 	r.HasPrefix = !opts.NoPrefix
@@ -69,66 +78,19 @@ func matchDocs(dr storage.DocRepository, matcher *match.Matcher, opts ExprOption
 	r.Format = opts.Format
 	r.NumMatches = opts.NMatches
 
-	if opts.Doc != nil {
-		docId := *opts.Doc
-		doc, err := dr.Read(docId)
+	if opts.Doc == nil {
+		// Populate DocNames for indexed search
+		list, err := dr.List()
 		if err != nil {
 			return err
 		}
-
-		doc.Id = docId
-
-		if opts.Sent != nil {
-			doc = sent.Doc{Tokens: [][]sent.Token{doc.Tokens[*opts.Sent]}}
-		}
-
-		matcher.Match(doc)
-
-	} else {
-		// Optimized search using FindCandidates for SQLite performance.
-		// We extract positive lemmas to narrow down candidate sentences using the index.
-		// The Matcher then performs the full expression evaluation on these candidates.
-		lemmas := matcher.ArgExpr.Lemmas()
-		if len(lemmas) == 0 {
-			return errors.New("expression must contain at least one lemma for indexing")
-		}
-
-		// Fetch doc IDs and titles for metadata mapping
-		docs, err := dr.List()
-		if err != nil {
-			return err
-		}
-		docNames := make(map[int]string)
-		for _, d := range docs {
-			docNames[d.Id] = d.Title
+		for _, d := range list {
 			r.AddDocName(d.Id, d.Title)
-		}
-
-		cursor := storage.Cursor(0)
-		for {
-			newCursor, err := dr.FindCandidates(lemmas, cursor, 1000, func(res storage.SentenceResult) error {
-				// Construct a valid doc with single sentence for matching
-				doc := sent.Doc{
-					Id:     res.DocID,
-					Title:  docNames[res.DocID],
-					Tokens: [][]sent.Token{res.Tokens},
-				}
-				matcher.Match(doc)
-				return nil
-			})
-			if err != nil {
-				return err
-			}
-			if cursor == newCursor {
-				break // No more candidates
-			}
-			cursor = newCursor
 		}
 	}
 
-	result := matcher.Sentences()
+	r.Match(results)
 
-	r.Match(result)
 	return nil
 }
 
