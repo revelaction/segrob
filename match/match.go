@@ -180,81 +180,107 @@ func (sm *SentenceMatch) TopicName() string {
 //
 //   - If there is only a TopicExpr, a sentence match only happens if the TopicExpr
 //     matches.
+//
+// Match matches a posible Topic AND a possible TopicExpr for a given Doc.
+//
+// Consecutive calls to Match() are possible.
+//
+// The semantic is as follows:
+//
+//   - If there are both a Topic and a TopicExpr, a sentence match only happens
+//     if the TopicExpr matchs AND 'one or more' of the Topic expressions also match.
+//
+//   - If there is only a Topic, a sentence match only happens if 'one or more'
+//     of the Topic expressions match.
+//
+//   - If there is only a TopicExpr, a sentence match only happens if the TopicExpr
+//     matches.
 func (m *Matcher) Match(doc sent.Doc) {
-	hasTopic := len(m.Topic.Exprs) > 0
-	hasExpr := len(m.ArgExpr) > 0
 	for _, sentence := range doc.Tokens {
 
-		// HACK: We extract the true sentence ID from the tokens themselves because
-		// the current Doc structure (slice-of-slices) doesn't preserve sentence
-		// metadata when passed partially.
-		// that works for Findcandidates but not for a doc from Read(i)
-		// fndcandidates put there the rowid od the optimization table with is not the sentence id in the book
-		// for a doc file loaded with Read() we do not have sentences in there see tartaro bug
-		// main issue is all taht but mostly m.sentences[doc.Id][sentId] 
-		//    - is there mostly to allow calling Match many times. but we are leaing to streaming 
-	 	//		 see 
-		//    - is broken for findcandaytes with doc  
-		//     
-		//
-		//
-		// TODO: The proper fix is to introduce a 'Sentence' struct in the 'sentence'
-		// package and update the document serialization format to:
-		// type Sentence struct { Id int; Tokens []Token }
-		// type Doc struct { ...; Sentences []Sentence }
-		sentId := 0
-		if len(sentence) > 0 {
-			sentId = sentence[0].SentenceId
-		}
-
-
-		// We priorize the possible ArgExpr
-		// If there is a ArgExpr, the sentence must match it
-		argExprMap := itemTokenMap{}
-		if hasExpr {
-			// If the expr does not match, the sentence does not match
-			if argExprMap = sentenceExprMatch(sentence, m.ArgExpr); len(argExprMap) == 0 {
-				continue
-			}
-		}
-
-		// initialize
-		match := SentenceMatch{tokenMap: itemTokenMap{}}
-		for _, expr := range m.Topic.Exprs {
-
-			// OR semantic: one of the Topic expressions  must match
-			if topicMatchMap := sentenceExprMatch(sentence, expr); len(topicMatchMap) > 0 {
-				match.NumExprs++
-				for item, tokens := range topicMatchMap {
-					match.tokenMap[item] = tokens
-				}
-			}
-		}
-
-		if hasTopic {
-			if match.NumExprs == 0 {
-				continue
-			}
-		}
-
-		// If we are here, there is one or more topic expression matches and maybe expr matches
-		if hasExpr {
-			// we have also expr match, add to the match
-			for item, tokens := range argExprMap {
-				match.tokenMap[item] = tokens
-			}
+		match := m.MatchSentence(sentence, doc.Id)
+		if match == nil {
+			continue
 		}
 
 		if _, ok := m.sentences[doc.Id]; !ok {
 			m.sentences[doc.Id] = map[int]*SentenceMatch{}
 		}
 
-		match.DocId = doc.Id
-		match.SentenceId = sentId
-		match.topicName = m.Topic.Name
-		match.Sentence = sentence
-		m.sentences[doc.Id][sentId] = &match
+		m.sentences[doc.Id][match.SentenceId] = match
 	}
+}
+
+func (m *Matcher) MatchSentence(sentence []sent.Token, docId int) *SentenceMatch {
+
+	hasTopic := len(m.Topic.Exprs) > 0
+	hasExpr := len(m.ArgExpr) > 0
+
+	// HACK: We extract the true sentence ID from the tokens themselves because
+	// the current Doc structure (slice-of-slices) doesn't preserve sentence
+	// metadata when passed partially.
+	// that works for Findcandidates but not for a doc from Read(i)
+	// fndcandidates put there the rowid od the optimization table with is not the sentence id in the book
+	// for a doc file loaded with Read() we do not have sentences in there see tartaro bug
+	// main issue is all taht but mostly m.sentences[doc.Id][sentId]
+	//    - is there mostly to allow calling Match many times. but we are leaing to streaming
+	//		 see
+	//    - is broken for findcandaytes with doc
+	//
+	//
+	//
+	// TODO: The proper fix is to introduce a 'Sentence' struct in the 'sentence'
+	// package and update the document serialization format to:
+	// type Sentence struct { Id int; Tokens []Token }
+	// type Doc struct { ...; Sentences []Sentence }
+	sentId := 0
+	if len(sentence) > 0 {
+		sentId = sentence[0].SentenceId
+	}
+
+	// We priorize the possible ArgExpr
+	// If there is a ArgExpr, the sentence must match it
+	argExprMap := itemTokenMap{}
+	if hasExpr {
+		// If the expr does not match, the sentence does not match
+		if argExprMap = sentenceExprMatch(sentence, m.ArgExpr); len(argExprMap) == 0 {
+			return nil
+		}
+	}
+
+	// initialize
+	match := SentenceMatch{tokenMap: itemTokenMap{}}
+	for _, expr := range m.Topic.Exprs {
+
+		// OR semantic: one of the Topic expressions  must match
+		if topicMatchMap := sentenceExprMatch(sentence, expr); len(topicMatchMap) > 0 {
+			match.NumExprs++
+			for item, tokens := range topicMatchMap {
+				match.tokenMap[item] = tokens
+			}
+		}
+	}
+
+	if hasTopic {
+		if match.NumExprs == 0 {
+			return nil
+		}
+	}
+
+	// If we are here, there is one or more topic expression matches and maybe expr matches
+	if hasExpr {
+		// we have also expr match, add to the match
+		for item, tokens := range argExprMap {
+			match.tokenMap[item] = tokens
+		}
+	}
+
+	match.DocId = docId
+	match.SentenceId = sentId
+	match.topicName = m.Topic.Name
+	match.Sentence = sentence
+
+	return &match
 }
 
 func sentenceExprMatch(sentence []sent.Token, expr topic.TopicExpr) itemTokenMap {

@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/revelaction/segrob/match"
-	sent "github.com/revelaction/segrob/sentence"
 	"github.com/revelaction/segrob/storage"
 	"github.com/revelaction/segrob/topic"
 )
@@ -75,23 +74,17 @@ func (s *Search) Sentences(expr topic.TopicExpr, cursor storage.Cursor, limit in
 	}
 
 	return s.repo.FindCandidates(lemmas, cursor, limit, func(res storage.SentenceResult) error {
-		doc := sent.Doc{
-			Id:     res.DocID,
-			Title:  docMap[res.DocID],
-			Tokens: [][]sent.Token{res.Tokens},
-		}
 
 		// Use a fresh matcher for each sentence to be stateless and avoid accumulation
 		// TODO indefficient, make new match.MatchSentence with zero llocations,
 		// needs also sentenceExprMatch zero allocations for map
 		m := match.NewMatcher(s.topic)
 		m.AddTopicExpr(expr)
-		m.Match(doc)
+		match := m.MatchSentence(res.Tokens, res.DocID)
 
-		matches := m.Sentences()
-		if len(matches) > 0 {
+		if match != nil {
 			// Expecting at most one match per sentence
-			return onMatch(matches[0])
+			return onMatch(match)
 		}
 		return nil
 	})
