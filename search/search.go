@@ -73,13 +73,14 @@ func (s *Search) Sentences(expr topic.TopicExpr, cursor storage.Cursor, limit in
 		docMap[d.Id] = d.Title
 	}
 
+	m := match.NewMatcher(s.topic)
+	m.AddTopicExpr(expr)
+
 	return s.repo.FindCandidates(lemmas, cursor, limit, func(res storage.SentenceResult) error {
 
 		// Use a fresh matcher for each sentence to be stateless and avoid accumulation
 		// TODO indefficient, make new match.MatchSentence with zero llocations,
 		// needs also sentenceExprMatch zero allocations for map
-		m := match.NewMatcher(s.topic)
-		m.AddTopicExpr(expr)
 		match := m.MatchSentence(res.Tokens, res.DocID)
 
 		if match != nil {
