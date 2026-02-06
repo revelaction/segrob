@@ -44,13 +44,18 @@ func (s *Search) Sentences(expr topic.TopicExpr, cursor storage.Cursor, limit in
 		// Ensure doc has ID set (Read might return 0 if backend doesn't populate)
 		doc.Id = *s.docID
 
-		matcher := match.NewMatcher(s.topic)
-		matcher.AddTopicExpr(expr)
-		matcher.Match(doc)
+		m := match.NewMatcher(s.topic)
+		m.AddTopicExpr(expr)
 
-		for _, m := range matcher.Sentences() {
-			if err := onMatch(m); err != nil {
-				return cursor, err
+		for i, sentence := range doc.Tokens {
+			sm := m.MatchSentence(sentence, doc.Id)
+			if sm != nil {
+				// Use the loop index as the authoritative SentenceId for Strategy 1
+				// to avoid identity collisions (the "Tártaro" bug).
+				sm.SentenceId = i
+				if err := onMatch(sm); err != nil {
+					return cursor, err
+				}
 			}
 		}
 		return cursor, nil

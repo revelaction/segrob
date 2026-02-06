@@ -227,7 +227,13 @@ func (m *Matcher) MatchSentence(sentence []sent.Token, docId int) *SentenceMatch
 	//		 see
 	//    - is broken for findcandaytes with doc
 	//
+	// Identity Collisions (The "Tártaro" Bug):
+	// If tokens lack metadata (SentenceId: 0), multiple matches in the same doc
+	// overwrite each other in the Matcher's internal map.
 	//
+	// Strategy 1 (search.Sentences) now bypasses this by calling MatchSentence
+	// directly and providing an authoritative ID, but other callers (like the
+	// REPL) still suffer from this if they rely on Match() for aggregation.
 	//
 	// TODO: The proper fix is to introduce a 'Sentence' struct in the 'sentence'
 	// package and update the document serialization format to:
