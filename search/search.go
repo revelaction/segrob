@@ -82,6 +82,8 @@ func (s *Search) Sentences(expr topic.TopicExpr, cursor storage.Cursor, limit in
 		}
 
 		// Use a fresh matcher for each sentence to be stateless and avoid accumulation
+		// TODO indefficient, make new match.MatchSentence with zero llocations,
+		// needs also sentenceExprMatch zero allocations for map
 		m := match.NewMatcher(s.topic)
 		m.AddTopicExpr(expr)
 		m.Match(doc)
