@@ -1,7 +1,6 @@
 package match
 
 import (
-	"sort"
 	"strings"
 
 	sent "github.com/revelaction/segrob/sentence"
@@ -21,12 +20,6 @@ type Matcher struct {
 	// So if this is not empty, the match is: sentences that match one of the
 	// Topic expr AND this expr.
 	ArgExpr topic.TopicExpr
-
-	// sentences contains the results of the match for each matched sentence
-	// The first int is the doc Id, the second int is the sentence Id.
-	//
-	// Must be pointer https://stackoverflow.com/questions/32751537/why-do-i-get-a-cannot-assign-error-when-setting-value-to-a-struct-as-a-value-i
-	sentences map[int]map[int]*SentenceMatch
 }
 
 // MatchedTokens is a ordered set of sentence tokens
@@ -166,9 +159,7 @@ func (sm *SentenceMatch) TopicName() string {
 	return sm.topicName
 }
 
-// Match matches a posible Topic AND a possible TopicExpr for a given Doc.
-//
-// Consecutive calls to Match() are possible.
+// MatchSentence matches a posible Topic AND a possible TopicExpr for a given sentence.
 //
 // The semantic is as follows:
 //
@@ -180,37 +171,6 @@ func (sm *SentenceMatch) TopicName() string {
 //
 //   - If there is only a TopicExpr, a sentence match only happens if the TopicExpr
 //     matches.
-//
-// Match matches a posible Topic AND a possible TopicExpr for a given Doc.
-//
-// Consecutive calls to Match() are possible.
-//
-// The semantic is as follows:
-//
-//   - If there are both a Topic and a TopicExpr, a sentence match only happens
-//     if the TopicExpr matchs AND 'one or more' of the Topic expressions also match.
-//
-//   - If there is only a Topic, a sentence match only happens if 'one or more'
-//     of the Topic expressions match.
-//
-//   - If there is only a TopicExpr, a sentence match only happens if the TopicExpr
-//     matches.
-func (m *Matcher) Match(doc sent.Doc) {
-	for _, sentence := range doc.Tokens {
-
-		match := m.MatchSentence(sentence, doc.Id)
-		if match == nil {
-			continue
-		}
-
-		if _, ok := m.sentences[doc.Id]; !ok {
-			m.sentences[doc.Id] = map[int]*SentenceMatch{}
-		}
-
-		m.sentences[doc.Id][match.SentenceId] = match
-	}
-}
-
 func (m *Matcher) MatchSentence(sentence []sent.Token, docId int) *SentenceMatch {
 
 	hasTopic := len(m.Topic.Exprs) > 0
@@ -219,13 +179,6 @@ func (m *Matcher) MatchSentence(sentence []sent.Token, docId int) *SentenceMatch
 	// HACK: We extract the true sentence ID from the tokens themselves because
 	// the current Doc structure (slice-of-slices) doesn't preserve sentence
 	// metadata when passed partially.
-	// that works for Findcandidates but not for a doc from Read(i)
-	// fndcandidates put there the rowid od the optimization table with is not the sentence id in the book
-	// for a doc file loaded with Read() we do not have sentences in there see tartaro bug
-	// main issue is all taht but mostly m.sentences[doc.Id][sentId]
-	//    - is there mostly to allow calling Match many times. but we are leaing to streaming
-	//		 see
-	//    - is broken for findcandaytes with doc
 	//
 	// Identity Collisions (The "Tártaro" Bug):
 	// If tokens lack metadata (SentenceId: 0), multiple matches in the same doc
@@ -326,26 +279,9 @@ func (m *Matcher) AddTopicExpr(expr topic.TopicExpr) {
 	m.ArgExpr = expr
 }
 
-// Sentences is the slice of matched sentences SentenceMatch.
-// The SentenceMatch's are ordered (sentences with more expr matches of the
-// topics comes first)
-func (m *Matcher) Sentences() []*SentenceMatch {
-	// flatten the results
-	resultSlice := []*SentenceMatch{}
-	for _, docResults := range m.sentences {
-		for _, sent := range docResults {
-			resultSlice = append(resultSlice, sent)
-		}
-	}
-
-	// Sort by Counter
-	return sortByNumMatches(resultSlice)
-}
-
 func NewMatcher(topic topic.Topic) *Matcher {
 	return &Matcher{
-		Topic:     topic,
-		sentences: map[int]map[int]*SentenceMatch{},
+		Topic: topic,
 	}
 }
 
@@ -488,35 +424,4 @@ func separator(field string) string {
 	}
 
 	return ""
-}
-
-func sortByNumMatches(resultSlice []*SentenceMatch) []*SentenceMatch {
-	sort.Slice(resultSlice, func(i, j int) bool {
-
-		// Counter sorting
-		if resultSlice[i].NumExprs > resultSlice[j].NumExprs {
-			return true
-		}
-
-		if resultSlice[i].NumExprs < resultSlice[j].NumExprs {
-			return false
-		}
-
-		// docId sorting
-		if resultSlice[i].DocId < resultSlice[j].DocId {
-			return true
-		}
-		if resultSlice[i].DocId > resultSlice[j].DocId {
-			return false
-		}
-
-		//sentenceId sorting
-		if resultSlice[i].SentenceId < resultSlice[j].SentenceId {
-			return true
-		}
-
-		return false
-	})
-
-	return resultSlice
 }
