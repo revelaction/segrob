@@ -34,7 +34,7 @@ func (s *Search) WithDocID(id int) *Search {
 }
 
 // Sentences returns matched sentences for the given expression, handling pagination.
-func (s *Search) Sentences(expr topic.TopicExpr, cursor storage.Cursor, limit int, onMatch func(*match.SentenceMatch) error) (storage.Cursor, error) {
+func (s *Search) Sentences(expr topic.TopicExpr, cursor storage.Cursor, limit int, onMatch func(match.SentenceMatch) error) (storage.Cursor, error) {
 	// Strategy 1: Single Document (No Index)
 	if s.docID != nil {
 		doc, err := s.repo.Read(*s.docID)
@@ -47,15 +47,17 @@ func (s *Search) Sentences(expr topic.TopicExpr, cursor storage.Cursor, limit in
 		m := match.NewMatcher(s.topic)
 		m.AddTopicExpr(expr)
 
+		var reuse *match.SentenceMatch
 		for i, sentence := range doc.Tokens {
-			sm := m.MatchSentence(sentence, doc.Id)
+			sm := m.MatchSentence(sentence, doc.Id, reuse)
 			if sm != nil {
 				// Use the loop index as the authoritative SentenceId for Strategy 1
-				// to avoid identity collisions (the "Tártaro" bug).
+				// to avoid identity collisions (the "Tártaro" bug). TODO fix properly with Sentence Struct
 				sm.SentenceId = i
-				if err := onMatch(sm); err != nil {
+				if err := onMatch(*sm); err != nil {  // Dereference here
 					return cursor, err
 				}
+				reuse = sm
 			}
 		}
 		return cursor, nil
@@ -70,16 +72,19 @@ func (s *Search) Sentences(expr topic.TopicExpr, cursor storage.Cursor, limit in
 	m := match.NewMatcher(s.topic)
 	m.AddTopicExpr(expr)
 
+	// Do we need it, check if nil enough
+	var reuse *match.SentenceMatch
+
 	return s.repo.FindCandidates(lemmas, cursor, limit, func(res storage.SentenceResult) error {
 
-		// Use a fresh matcher for each sentence to be stateless and avoid accumulation
-		// TODO indefficient, make new match.MatchSentence with zero llocations,
-		// needs also sentenceExprMatch zero allocations for map
-		match := m.MatchSentence(res.Tokens, res.DocID)
+		sm := m.MatchSentence(res.Tokens, res.DocID, reuse)
 
-		if match != nil {
-			// Expecting at most one match per sentence
-			return onMatch(match)
+		if sm != nil {
+			if err := onMatch(*sm); err != nil {  // Dereference here
+				return err
+			}
+			reuse = sm
+			return onMatch(*sm)
 		}
 		return nil
 	})
