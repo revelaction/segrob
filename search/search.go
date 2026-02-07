@@ -74,10 +74,9 @@ func (s *Search) Sentences(expr topic.TopicExpr, cursor storage.Cursor, limit in
 
 		sm := m.MatchSentence(res.Tokens, res.DocID)
 
-		if sm != nil {
-			if err := onMatch(sm); err != nil {  
-				return err
-			}
+		if match != nil {
+			// Expecting at most one match per sentence
+			return onMatch(match)
 		}
 		return nil
 	})
