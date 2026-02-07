@@ -88,27 +88,6 @@ func (sm *SentenceMatch) AllTokens() []sent.Token {
 	return sentTokens
 }
 
-
-// Reset clears the SentenceMatch for reuse while preserving allocated memory.
-// It resets all fields to their zero values but keeps the underlying tokenMap
-// capacity to avoid reallocation.
-func (sm *SentenceMatch) Reset() {
-	// Clear the map without setting it to nil - preserves allocated capacity
-	clear(sm.tokenMap)
-	
-	// Reset all other fields to zero values
-	sm.topicName = ""
-	// Keep capacity, reset length to 0
-	// But since MatchSentence does match.Sentence = sentence 
-	// TODO pointer and reuse 
-	// sm.Sentence = sm.Sentence[:0]  
-	sm.Sentence = nil
-	sm.NumExprs = 0
-	sm.DocId = 0
-	sm.SentenceId = 0
-}
-
-
 // Exprs returns the ExprId (string representation) of the unique TopicExpr's
 // matched by the sentences.
 func (sm *SentenceMatch) Exprs() []string {
@@ -195,7 +174,7 @@ func (sm *SentenceMatch) TopicName() string {
 //
 //   - If there is only a TopicExpr, a sentence match only happens if the TopicExpr
 //     matches.
-func (m *Matcher) MatchSentence(sentence []sent.Token, docId int, reuse *SentenceMatch) *SentenceMatch {
+func (m *Matcher) MatchSentence(sentence []sent.Token, docId int) *SentenceMatch {
     hasTopic := len(m.Topic.Exprs) > 0
     hasExpr := len(m.ArgExpr) > 0
     
@@ -220,13 +199,9 @@ func (m *Matcher) MatchSentence(sentence []sent.Token, docId int, reuse *Sentenc
         sentId = sentence[0].SentenceId
     }
     
-    // Prepare the SentenceMatch (reuse or allocate)
-    var match *SentenceMatch
-    if reuse != nil {
-        reuse.Reset()
-        match = reuse
-    } else {
-        match = &SentenceMatch{tokenMap: make(itemTokenMap)}
+    // Create fresh SentenceMatch for this call
+    match := &SentenceMatch{
+        tokenMap: make(itemTokenMap),
     }
     
     // ArgExpr check
@@ -236,7 +211,7 @@ func (m *Matcher) MatchSentence(sentence []sent.Token, docId int, reuse *Sentenc
         if !sentenceExprMatch(sentence, m.ArgExpr, m.scratchMap) {
             return nil
         }
-        // Copy directly to match.tokenMap
+        // Copy from scratch to match
         for item, tokens := range m.scratchMap {
             match.tokenMap[item] = tokens
         }
@@ -247,7 +222,7 @@ func (m *Matcher) MatchSentence(sentence []sent.Token, docId int, reuse *Sentenc
         clear(m.scratchMap)
         if sentenceExprMatch(sentence, expr, m.scratchMap) {
             match.NumExprs++
-            // Copy directly to match.tokenMap
+            // Copy from scratch to match
             for item, tokens := range m.scratchMap {
                 match.tokenMap[item] = tokens
             }
@@ -302,7 +277,8 @@ func (m *Matcher) AddTopicExpr(expr topic.TopicExpr) {
 
 func NewMatcher(topic topic.Topic) *Matcher {
 	return &Matcher{
-		Topic: topic,
+		Topic:      topic,
+		scratchMap: make(itemTokenMap),
 	}
 }
 
