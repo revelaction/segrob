@@ -85,6 +85,27 @@ func (sm *SentenceMatch) AllTokens() []sent.Token {
 	return sentTokens
 }
 
+
+// Reset clears the SentenceMatch for reuse while preserving allocated memory.
+// It resets all fields to their zero values but keeps the underlying tokenMap
+// capacity to avoid reallocation.
+func (sm *SentenceMatch) Reset() {
+	// Clear the map without setting it to nil - preserves allocated capacity
+	clear(sm.tokenMap)
+	
+	// Reset all other fields to zero values
+	sm.topicName = ""
+	// Keep capacity, reset length to 0
+	// But since MatchSentence does match.Sentence = sentence 
+	// TODO pointer and reuse 
+	// sm.Sentence = sm.Sentence[:0]  
+	sm.Sentence = nil
+	sm.NumExprs = 0
+	sm.DocId = 0
+	sm.SentenceId = 0
+}
+
+
 // Exprs returns the ExprId (string representation) of the unique TopicExpr's
 // matched by the sentences.
 func (sm *SentenceMatch) Exprs() []string {
