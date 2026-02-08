@@ -1,12 +1,20 @@
 package sentence
 
+// Sentence represents a distinct syntactic unit.
+// Identity = (DocId, Id)
+type Sentence struct {
+	Id     int     `json:"id"`     // Sequential index in Doc (0, 1, ...)
+	DocId  int     `json:"doc_id"`
+	Tokens []Token `json:"tokens"`
+}
+
 type Doc struct {
 	Id int
 
 	Title string
 
 	Labels []string
-	Tokens [][]Token `json:"tokens"`
+	Sentences []Sentence `json:"sentences"`
 }
 
 // Library is a collection of Doc
