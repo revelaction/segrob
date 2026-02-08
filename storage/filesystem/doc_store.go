@@ -72,7 +72,7 @@ func (h *DocStore) Preload(cb func(current, total int, name string)) error {
 		}
 
 		// Copy loaded content into existing metadata struct
-		doc.Tokens = fullDoc.Tokens
+		doc.Sentences = fullDoc.Sentences
 		doc.Labels = fullDoc.Labels
 		// Title and Id are already set
 	}
@@ -111,20 +111,15 @@ func (h *DocStore) Read(id int) (sent.Doc, error) {
 }
 
 // FindCandidates returns ALL sentences from memory.
-func (h *DocStore) FindCandidates(lemmas []string, after storage.Cursor, limit int, onCandidate func(storage.SentenceResult) error) (storage.Cursor, error) {
+func (h *DocStore) FindCandidates(lemmas []string, after storage.Cursor, limit int, onCandidate func(sent.Sentence) error) (storage.Cursor, error) {
 	// If cursor > 0, we already returned everything (EOF).
 	if after > 0 {
 		return after, nil
 	}
 
-	for i, doc := range h.docs {
-		for _, tokens := range doc.Tokens {
-			res := storage.SentenceResult{
-				RowID:  0,
-				DocID:  i,
-				Tokens: tokens,
-			}
-			if err := onCandidate(res); err != nil {
+	for _, doc := range h.docs {
+		for _, s := range doc.Sentences {
+			if err := onCandidate(s); err != nil {
 				return after, err
 			}
 		}
