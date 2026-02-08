@@ -23,11 +23,11 @@ func renderDoc(doc sent.Doc, opts DocOptions, ui UI) {
 	if start < 0 {
 		start = 0
 	}
-	if start >= len(doc.Tokens) {
+	if start >= len(doc.Sentences) {
 		return
 	}
 
-	sentences := doc.Tokens[start:]
+	sentences := doc.Sentences[start:]
 	if opts.Count != nil {
 		limit := *opts.Count
 		if limit < len(sentences) {
@@ -39,6 +39,6 @@ func renderDoc(doc sent.Doc, opts DocOptions, ui UI) {
 	r.HasColor = false
 	for i, sentence := range sentences {
 		prefix := fmt.Sprintf("✍  %d ", start+i)
-		r.Sentence(sentence, prefix)
+		r.Sentence(sentence.Tokens, prefix)
 	}
 }

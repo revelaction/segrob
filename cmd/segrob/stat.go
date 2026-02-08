@@ -15,10 +15,10 @@ func statCommand(repo storage.DocRepository, opts StatOptions, docId int, sentId
 	}
 
 	if sentId != nil {
-		if *sentId < 0 || *sentId >= len(doc.Tokens) {
-			return fmt.Errorf("sentence index %d out of bounds (doc has %d sentences)", *sentId, len(doc.Tokens))
+		if *sentId < 0 || *sentId >= len(doc.Sentences) {
+			return fmt.Errorf("sentence index %d out of bounds (doc has %d sentences)", *sentId, len(doc.Sentences))
 		}
-		doc = sent.Doc{Tokens: [][]sent.Token{doc.Tokens[*sentId]}}
+		doc = sent.Doc{Sentences: []sent.Sentence{doc.Sentences[*sentId]}}
 	}
 
 	hdl := stat.NewHandler()

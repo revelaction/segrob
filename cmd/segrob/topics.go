@@ -19,17 +19,17 @@ func topicsCommand(docRepo storage.DocRepository, topicRepo storage.TopicReposit
 }
 
 func renderTopics(doc sent.Doc, sentId int, topicRepo storage.TopicRepository, opts TopicsOptions, ui UI) error {
-	if sentId < 0 || sentId >= len(doc.Tokens) {
-		return fmt.Errorf("sentence index %d out of range (0-%d)", sentId, len(doc.Tokens)-1)
+	if sentId < 0 || sentId >= len(doc.Sentences) {
+		return fmt.Errorf("sentence index %d out of range (0-%d)", sentId, len(doc.Sentences)-1)
 	}
 
-	s := doc.Tokens[sentId]
+	s := doc.Sentences[sentId]
 
 	r := render.NewRenderer()
 	r.HasColor = false
 
 	prefix := fmt.Sprintf("%54s", render.Yellow256+render.Off) + "✍  "
-	r.Sentence(s, prefix)
+	r.Sentence(s.Tokens, prefix)
 	fmt.Fprintln(ui.Out)
 
 	allTopics, err := topicRepo.ReadAll()
@@ -44,12 +44,11 @@ func renderTopics(doc sent.Doc, sentId int, topicRepo storage.TopicRepository, o
 
 	for _, tp := range allTopics {
 		matcher := match.NewMatcher(tp)
-		sm := matcher.MatchSentence(s, doc.Id)
+		sm := matcher.MatchSentence(s)
 		if sm == nil {
 			continue
 		}
 
-		sm.SentenceId = sentId
 		res := []*match.SentenceMatch{sm}
 
 		r.Match(res)
