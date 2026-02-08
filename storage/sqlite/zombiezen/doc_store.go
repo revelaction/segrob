@@ -89,7 +89,7 @@ func (h *DocStore) Read(id int) (sent.Doc, error) {
 	return doc, nil
 }
 
-func (h *DocStore) FindCandidates(lemmas []string, after storage.Cursor, limit int, onCandidate func(storage.SentenceResult) error) (storage.Cursor, error) {
+func (h *DocStore) FindCandidates(lemmas []string, after storage.Cursor, limit int, onCandidate func(sent.Sentence) error) (storage.Cursor, error) {
 	if len(lemmas) == 0 {
 		return after, nil
 	}
@@ -141,7 +141,7 @@ func (h *DocStore) FindCandidates(lemmas []string, after storage.Cursor, limit i
 	}
 	idList := strings.Join(idStrings, ",")
 
-	query := fmt.Sprintf("SELECT rowid, doc_id, data FROM sentences WHERE rowid IN (%s) ORDER BY rowid", idList)
+	query := fmt.Sprintf("SELECT rowid, doc_id, sentence_id, data FROM sentences WHERE rowid IN (%s) ORDER BY rowid", idList)
 
 	newCursor := after
 	err = sqlitex.Execute(conn, query, &sqlitex.ExecOptions{
@@ -151,16 +151,16 @@ func (h *DocStore) FindCandidates(lemmas []string, after storage.Cursor, limit i
 				newCursor = storage.Cursor(rowID)
 			}
 
-			res := storage.SentenceResult{
-				RowID: rowID,
-				DocID: stmt.ColumnInt(1),
+			s := sent.Sentence{
+				DocId: stmt.ColumnInt(1),
+				Id:    stmt.ColumnInt(2),
 			}
-			data := stmt.ColumnText(2)
-			if err := json.Unmarshal([]byte(data), &res.Tokens); err != nil {
+			data := stmt.ColumnText(3)
+			if err := json.Unmarshal([]byte(data), &s.Tokens); err != nil {
 				return err
 			}
 
-			return onCandidate(res)
+			return onCandidate(s)
 		},
 	})
 	if err != nil {
@@ -190,14 +190,14 @@ func (h *DocStore) Write(doc sent.Doc) error {
 	}
 	docID := conn.LastInsertRowID()
 
-	for _, sentence := range doc.Tokens {
-		data, marshalErr := json.Marshal(sentence)
+	for _, sentence := range doc.Sentences {
+		data, marshalErr := json.Marshal(sentence.Tokens)
 		if marshalErr != nil {
 			return marshalErr
 		}
 
-		err = sqlitex.Execute(conn, "INSERT INTO sentences (doc_id, data) VALUES (?, ?)", &sqlitex.ExecOptions{
-			Args: []interface{}{docID, string(data)},
+		err = sqlitex.Execute(conn, "INSERT INTO sentences (doc_id, sentence_id, data) VALUES (?, ?, ?)", &sqlitex.ExecOptions{
+			Args: []interface{}{docID, sentence.Id, string(data)},
 		})
 		if err != nil {
 			return fmt.Errorf("failed to insert sentence: %w", err)
@@ -206,7 +206,7 @@ func (h *DocStore) Write(doc sent.Doc) error {
 
 		// Extract unique lemmas
 		uniqueLemmas := make(map[string]bool)
-		for _, token := range sentence {
+		for _, token := range sentence.Tokens {
 			if token.Lemma != "" {
 				uniqueLemmas[token.Lemma] = true
 			}
