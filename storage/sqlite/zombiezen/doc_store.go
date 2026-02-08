@@ -61,16 +61,21 @@ func (h *DocStore) Read(id int) (sent.Doc, error) {
 	doc := sent.Doc{Id: id}
 	found := false
 
-	err = sqlitex.Execute(conn, "SELECT data FROM sentences WHERE doc_id = ? ORDER BY rowid", &sqlitex.ExecOptions{
+	err = sqlitex.Execute(conn, "SELECT sentence_id, data FROM sentences WHERE doc_id = ? ORDER BY sentence_id", &sqlitex.ExecOptions{
 		Args: []interface{}{id},
 		ResultFunc: func(stmt *sqlite.Stmt) error {
 			found = true
-			data := stmt.ColumnText(0)
+			sentenceID := stmt.ColumnInt(0)
+			data := stmt.ColumnText(1)
 			var tokens []sent.Token
 			if err := json.Unmarshal([]byte(data), &tokens); err != nil {
 				return err
 			}
-			doc.Tokens = append(doc.Tokens, tokens)
+			doc.Sentences = append(doc.Sentences, sent.Sentence{
+				Id:     sentenceID,
+				DocId:  id,
+				Tokens: tokens,
+			})
 			return nil
 		},
 	})

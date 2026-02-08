@@ -29,13 +29,6 @@ type TopicRepository interface {
 // Cursor for paginated lemma-based queries
 type Cursor int64
 
-// SentenceResult represents a sentence candidate with metadata
-type SentenceResult struct {
-	RowID  int64
-	DocID  int
-	Tokens []sent.Token
-}
-
 // DocReader defines read operations for document storage
 type DocReader interface {
 	// List returns the metadata (Id, Title, Labels) of all documents.
@@ -48,7 +41,7 @@ type DocReader interface {
 	// FindCandidates returns sentence candidates matching ALL given lemmas,
 	// resuming after the given cursor. It calls onCandidate for each result.
 	// Returns the new cursor and any error.
-	FindCandidates(lemmas []string, after Cursor, limit int, onCandidate func(SentenceResult) error) (Cursor, error)
+	FindCandidates(lemmas []string, after Cursor, limit int, onCandidate func(sent.Sentence) error) (Cursor, error)
 }
 
 // DocWriter defines write operations for document storage
