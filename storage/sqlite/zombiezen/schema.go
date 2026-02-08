@@ -2,88 +2,40 @@ package zombiezen
 
 import (
 	"context"
+	"embed"
 	"fmt"
+	"path"
 
 	"zombiezen.com/go/sqlite/sqlitex"
 )
 
-const schemaTopics = `
-CREATE TABLE IF NOT EXISTS topics (
-    id        INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id   TEXT,
-    name      TEXT NOT NULL,
-    exprs     TEXT NOT NULL,
-    created   TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
-    updated   TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
-    UNIQUE(user_id, name)
-);`
+// sqlFiles embeds all SQL scripts from the sql/ subdirectory.
+//go:embed sql/*.sql
+var sqlFiles embed.FS
 
-const schemaIndex = `CREATE INDEX IF NOT EXISTS idx_topics_user_id ON topics(user_id);`
+// CreateSchemas reads a SQL script from the embedded filesystem (e.g., "docs.sql" or "topics.sql")
+// and executes it using the provided connection pool.
+// It uses context.TODO() for connection acquisition, following local package conventions.
+func CreateSchemas(pool *sqlitex.Pool, schemaName string) error {
+	// Construct the path within the embedded FS.
+	scriptPath := path.Join("sql", schemaName)
 
-const schemaDocs = `
-CREATE TABLE IF NOT EXISTS docs (
-    id      INTEGER PRIMARY KEY,
-    title   TEXT NOT NULL UNIQUE,
-    labels  TEXT
-);`
+	// Call the embed FS to retrieve the script content.
+	script, err := sqlFiles.ReadFile(scriptPath)
+	if err != nil {
+		return fmt.Errorf("failed to read embedded sql file %s: %w", scriptPath, err)
+	}
 
-const schemaSentences = `
-CREATE TABLE IF NOT EXISTS sentences (
-    rowid       INTEGER PRIMARY KEY,
-    doc_id      INTEGER NOT NULL,
-    sentence_id INTEGER NOT NULL, -- New Column: Sequential index (0, 1, ...)
-    data        TEXT NOT NULL,    -- Full JSON content (tokens)
-    FOREIGN KEY (doc_id) REFERENCES docs(id)
-);`
-
-const schemaSentenceLemmas = `
-CREATE TABLE IF NOT EXISTS sentence_lemmas (
-    lemma           TEXT NOT NULL,
-    sentence_rowid  INTEGER NOT NULL,
-    FOREIGN KEY (sentence_rowid) REFERENCES sentences(rowid)
-);`
-
-const schemaLemmaIndex = `
-CREATE INDEX IF NOT EXISTS idx_lemma_rowid ON sentence_lemmas(lemma, sentence_rowid);`
-
-const schemaDocsSentencesIndex = `
-CREATE INDEX IF NOT EXISTS idx_sentences_doc_id ON sentences(doc_id);`
-
-func CreateTopicTables(pool *sqlitex.Pool) error {
+	// Acquire a connection from the pool using context.TODO().
 	conn, err := pool.Take(context.TODO())
 	if err != nil {
 		return err
 	}
 	defer pool.Put(conn)
 
-	if err := sqlitex.ExecuteTransient(conn, schemaTopics, nil); err != nil {
-		return fmt.Errorf("failed to create topics table: %w", err)
-	}
-	if err := sqlitex.ExecuteTransient(conn, schemaIndex, nil); err != nil {
-		return fmt.Errorf("failed to create user_id index: %w", err)
-	}
-	return nil
-}
-
-func CreateDocTables(pool *sqlitex.Pool) error {
-	conn, err := pool.Take(context.TODO())
-	if err != nil {
-		return err
-	}
-	defer pool.Put(conn)
-
-	schemas := []string{
-		schemaDocs,
-		schemaSentences,
-		schemaSentenceLemmas,
-		schemaLemmaIndex,
-		schemaDocsSentencesIndex,
-	}
-
-	for _, schema := range schemas {
-		if err := sqlitex.ExecuteTransient(conn, schema, nil); err != nil {
-			return fmt.Errorf("failed to execute schema: %w\n%s", err, schema)
-		}
+	// Execute the entire script. ExecuteScript handles multi-statement strings.
+	if err := sqlitex.ExecuteScript(conn, string(script), nil); err != nil {
+		return fmt.Errorf("failed to execute script %s: %w", schemaName, err)
 	}
 
 	return nil

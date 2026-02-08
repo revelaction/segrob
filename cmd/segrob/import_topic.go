@@ -21,9 +21,9 @@ func importTopicCommand(opts ImportTopicOptions, ui UI) error {
 
 	defer pool.Close()
 
-	if err := zombiezen.CreateTopicTables(pool); err != nil {
+	if err := zombiezen.CreateSchemas(pool, "topics.sql"); err != nil {
 
-		return fmt.Errorf("failed to create topics table: %w", err)
+		return fmt.Errorf("failed to setup topic tables: %w", err)
 
 	}
 

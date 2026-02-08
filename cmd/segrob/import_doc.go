@@ -19,8 +19,8 @@ func importDocCommand(opts ImportDocOptions, ui UI) error {
 	}
 	defer pool.Close()
 
-	if err := zombiezen.CreateDocTables(pool); err != nil {
-		return fmt.Errorf("failed to create docs table: %w", err)
+	if err := zombiezen.CreateSchemas(pool, "docs.sql"); err != nil {
+		return fmt.Errorf("failed to setup doc tables: %w", err)
 	}
 
 	dst := zombiezen.NewDocStore(pool)
