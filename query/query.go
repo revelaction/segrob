@@ -8,6 +8,7 @@ import (
 
 	"github.com/revelaction/segrob/match"
 	"github.com/revelaction/segrob/render"
+	sent "github.com/revelaction/segrob/sentence"
 	"github.com/revelaction/segrob/topic"
 
 	"github.com/c-bata/go-prompt"
@@ -113,15 +114,13 @@ func (h *Handler) Run() error {
 			// doc := sent.Doc{Tokens: make([][]sent.Token, 1)} // No longer needed
 			for {
 				// Fetch batch
-				newCursor, err := h.DocRepo.FindCandidates(lemmas, cursor, 500, func(r storage.SentenceResult) error {
+				newCursor, err := h.DocRepo.FindCandidates(lemmas, cursor, 500, func(s sent.Sentence) error {
 					fetched++
-					h.Renderer.AddDocName(r.DocID, docNames[r.DocID])
+					h.Renderer.AddDocName(s.DocId, docNames[s.DocId])
 
 					// Use MatchSentence directly to avoid "Tártaro" bug (overwrite due to missing SentenceId)
-					sm := matcher.MatchSentence(r.Tokens, r.DocID)
+					sm := matcher.MatchSentence(s)
 					if sm != nil {
-						// Use the unique database RowID as the SentenceId to ensure identity
-						sm.SentenceId = int(r.RowID)
 						results = append(results, sm)
 					}
 					return nil
@@ -147,10 +146,10 @@ func (h *Handler) Run() error {
 			if results[i].NumExprs != results[j].NumExprs {
 				return results[i].NumExprs > results[j].NumExprs
 			}
-			if results[i].DocId != results[j].DocId {
-				return results[i].DocId < results[j].DocId
+			if results[i].Sentence.DocId != results[j].Sentence.DocId {
+				return results[i].Sentence.DocId < results[j].Sentence.DocId
 			}
-			return results[i].SentenceId < results[j].SentenceId
+			return results[i].Sentence.Id < results[j].Sentence.Id
 		})
 
 		h.Renderer.Match(results)
