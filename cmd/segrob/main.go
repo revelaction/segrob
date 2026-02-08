@@ -264,6 +264,16 @@ func runCommand(cmd string, args []string, ui UI) error {
 			return err
 		}
 		return exportDocCommand(opts, ui)
+
+	case "migrate":
+		opts, err := parseMigrateArgs(args, ui)
+		if err != nil {
+			if errors.Is(err, flag.ErrHelp) {
+				return nil
+			}
+			return err
+		}
+		return migrateCommand(opts, ui)
 	}
 
 	return fmt.Errorf("unknown command: %s", cmd)
