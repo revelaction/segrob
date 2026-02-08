@@ -64,17 +64,10 @@ type SentenceMatch struct {
 	tokenMap itemTokenMap
 
 	// Sentence is a slice of the sentence tokens. The output sentence is created using this.
-	Sentence []sent.Token
+	Sentence sent.Sentence
 
 	// NumExprs is the number of topicExpr that were matched. Used to sort the sentences
 	NumExprs int
-
-	// The doc id
-	DocId int
-
-	// SentenceId is the index of the sentence inside of the doc.
-	// filled and used only to sorting and verbose output
-	SentenceId int
 }
 
 func (sm *SentenceMatch) AllTokens() []sent.Token {
@@ -174,30 +167,9 @@ func (sm *SentenceMatch) TopicName() string {
 //
 //   - If there is only a TopicExpr, a sentence match only happens if the TopicExpr
 //     matches.
-func (m *Matcher) MatchSentence(sentence []sent.Token, docId int) *SentenceMatch {
+func (m *Matcher) MatchSentence(sentence sent.Sentence) *SentenceMatch {
     hasTopic := len(m.Topic.Exprs) > 0
     hasExpr := len(m.ArgExpr) > 0
-    
-	// HACK: We extract the true sentence ID from the tokens themselves because
-	// the current Doc structure (slice-of-slices) doesn't preserve sentence
-	// metadata when passed partially.
-	//
-	// Identity Collisions (The "Tártaro" Bug):
-	// If tokens lack metadata (SentenceId: 0), multiple matches in the same doc
-	// overwrite each other in the Matcher's internal map.
-	//
-	// Strategy 1 (search.Sentences) now bypasses this by calling MatchSentence
-	// directly and providing an authoritative ID, but other callers (like the
-	// REPL) still suffer from this if they rely on Match() for aggregation.
-	//
-	// TODO: The proper fix is to introduce a 'Sentence' struct in the 'sentence'
-	// package and update the document serialization format to:
-	// type Sentence struct { Id int; Tokens []Token }
-	// type Doc struct { ...; Sentences []Sentence }
-    sentId := 0
-    if len(sentence) > 0 {
-        sentId = sentence[0].SentenceId
-    }
     
     // Create fresh SentenceMatch for this call
     match := &SentenceMatch{
@@ -208,7 +180,7 @@ func (m *Matcher) MatchSentence(sentence []sent.Token, docId int) *SentenceMatch
     if hasExpr {
         clear(m.scratchMap)
 		// If the expr does not match, the sentence does not match
-        if !sentenceExprMatch(sentence, m.ArgExpr, m.scratchMap) {
+        if !sentenceExprMatch(sentence.Tokens, m.ArgExpr, m.scratchMap) {
             return nil
         }
         // Copy from scratch to match
@@ -220,7 +192,7 @@ func (m *Matcher) MatchSentence(sentence []sent.Token, docId int) *SentenceMatch
     // Topic expressions
     for _, expr := range m.Topic.Exprs {
         clear(m.scratchMap)
-        if sentenceExprMatch(sentence, expr, m.scratchMap) {
+        if sentenceExprMatch(sentence.Tokens, expr, m.scratchMap) {
             match.NumExprs++
             // Copy from scratch to match
             for item, tokens := range m.scratchMap {
@@ -233,8 +205,6 @@ func (m *Matcher) MatchSentence(sentence []sent.Token, docId int) *SentenceMatch
         return nil
     }
     
-    match.DocId = docId
-    match.SentenceId = sentId
     match.topicName = m.Topic.Name
     match.Sentence = sentence
     
