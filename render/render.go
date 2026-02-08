@@ -81,9 +81,9 @@ func (r *Renderer) Match(resultsSorted []*match.SentenceMatch) {
 		var text string
 		switch r.Format {
 		case "all":
-			text = r.sentence(sentenceMatch.Sentence, sentTokens)
+			text = r.sentence(sentenceMatch.Sentence.Tokens, sentTokens)
 		case "part":
-			text = r.syntagma(sentenceMatch.Sentence, sentTokens)
+			text = r.syntagma(sentenceMatch.Sentence.Tokens, sentTokens)
 
 		case "lemma":
 			text = r.lemma(sentTokens)

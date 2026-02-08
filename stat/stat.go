@@ -27,11 +27,11 @@ func NewHandler() *Handler {
 }
 
 func (h *Handler) Aggregate(doc sent.Doc) {
-	h.stats.NumSentences = len(doc.Tokens)
+	h.stats.NumSentences = len(doc.Sentences)
 	//
-	for _, sentence := range doc.Tokens {
-		h.stats.NumTokens += len(sentence)
-		h.stats.TokensPerSentenceDis[len(sentence)]++
+	for _, sentence := range doc.Sentences {
+		h.stats.NumTokens += len(sentence.Tokens)
+		h.stats.TokensPerSentenceDis[len(sentence.Tokens)]++
 	}
 
 	h.stats.TokensPerSentenceMean = h.stats.NumTokens / h.stats.NumSentences
