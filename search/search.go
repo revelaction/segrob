@@ -4,6 +4,7 @@ import (
 	"errors"
 
 	"github.com/revelaction/segrob/match"
+	sent "github.com/revelaction/segrob/sentence"
 	"github.com/revelaction/segrob/storage"
 	"github.com/revelaction/segrob/topic"
 )
@@ -47,13 +48,10 @@ func (s *Search) Sentences(expr topic.TopicExpr, cursor storage.Cursor, limit in
 		m := match.NewMatcher(s.topic)
 		m.AddTopicExpr(expr)
 
-		for i, sentence := range doc.Tokens {
-			sm := m.MatchSentence(sentence, doc.Id)
+		for _, sentence := range doc.Sentences {
+			sm := m.MatchSentence(sentence)
 			if sm != nil {
-				// Use the loop index as the authoritative SentenceId for Strategy 1
-				// to avoid identity collisions (the "Tártaro" bug). TODO fix properly with Sentence Struct
-				sm.SentenceId = i
-				if err := onMatch(sm); err != nil {  // Dereference here
+				if err := onMatch(sm); err != nil {
 					return cursor, err
 				}
 			}
@@ -70,13 +68,11 @@ func (s *Search) Sentences(expr topic.TopicExpr, cursor storage.Cursor, limit in
 	m := match.NewMatcher(s.topic)
 	m.AddTopicExpr(expr)
 
-	return s.repo.FindCandidates(lemmas, cursor, limit, func(res storage.SentenceResult) error {
-
-		sm := m.MatchSentence(res.Tokens, res.DocID)
-
-		if match != nil {
+	return s.repo.FindCandidates(lemmas, cursor, limit, func(sentence sent.Sentence) error {
+		sm := m.MatchSentence(sentence)
+		if sm != nil {
 			// Expecting at most one match per sentence
-			return onMatch(match)
+			return onMatch(sm)
 		}
 		return nil
 	})

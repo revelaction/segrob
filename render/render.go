@@ -341,7 +341,7 @@ func (r *Renderer) buildPrefixDoc(sentenceMatch *match.SentenceMatch) string {
 	}
 
 	// Default
-	return fmt.Sprintf("[%37s %2d %5d:%2d] ✍  ", r.title(sentenceMatch.DocId), sentenceMatch.DocId, sentenceMatch.SentenceId, sentenceMatch.NumExprs)
+	return fmt.Sprintf("[%37s %2d %5d:%2d] ✍  ", r.title(sentenceMatch.Sentence.DocId), sentenceMatch.Sentence.DocId, sentenceMatch.Sentence.Id, sentenceMatch.NumExprs)
 }
 
 func PrefixFuncEmpty(sentenceMatch *match.SentenceMatch) string {
@@ -349,11 +349,11 @@ func PrefixFuncEmpty(sentenceMatch *match.SentenceMatch) string {
 }
 
 func PrefixFuncIconHand(sentenceMatch *match.SentenceMatch) string {
-	return fmt.Sprintf("%2d ✍  ", sentenceMatch.SentenceId)
+	return fmt.Sprintf("%2d ✍  ", sentenceMatch.Sentence.Id)
 }
 
 func PrefixFuncIconLabel(sentenceMatch *match.SentenceMatch) string {
-	return fmt.Sprintf("%2d 🔖 ", sentenceMatch.SentenceId)
+	return fmt.Sprintf("%2d 🔖 ", sentenceMatch.Sentence.Id)
 
 }
 
