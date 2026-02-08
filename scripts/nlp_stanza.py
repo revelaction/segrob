@@ -60,10 +60,11 @@ def main():
 
     res = {
         "labels": add_labels(args.label, file_name),
-        "tokens": []
+        "sentences": []
     }
     
     token_index = 0
+    sentence_id = 0
 
     for sentence in doc.sentences:
         sent_dict = []
@@ -157,7 +158,8 @@ def main():
                 #
                 # we add here for simplicity and compatibility.
                 if word.feats is None:
-                    # sometime feats is not existant in stanza: repeat pos
+                # sometime feats is not existant in stanza: repeat pos
+                if word.feats is None:
                     t['tag'] = word.upos 
                 else:
                     t['tag'] = word.upos + "__" + word.feats
@@ -185,7 +187,11 @@ def main():
                 sent_dict.append(t)
                 token_index += 1
 
-        res['tokens'].append(sent_dict)
+        res['sentences'].append({
+            "id": sentence_id,
+            "tokens": sent_dict
+        })
+        sentence_id += 1
 
     print(json.dumps(res))
 

@@ -64,10 +64,11 @@ def main():
     # Build result structure
     res = {
         "labels": add_labels(args.label, file_name),
-        "tokens": [],
+        "sentences": [],
     }
 
     token_index = 0
+    sentence_id = 0
 
     for sentence in doc.sents:
         sent_tokens = []
@@ -103,7 +104,11 @@ def main():
                 token_index += 1
                 sentence_index += 1
 
-        res["tokens"].append(sent_tokens)
+        res["sentences"].append({
+            "id": sentence_id,
+            "tokens": sent_tokens
+        })
+        sentence_id += 1
 
     print(json.dumps(res))
 
