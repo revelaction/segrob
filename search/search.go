@@ -12,9 +12,10 @@ import (
 // Search orchestrates the strategy selection for finding sentences
 // that match a topic expression against a document repository.
 type Search struct {
-	topic topic.Topic
-	repo  storage.DocRepository
-	docID *int
+	topic  topic.Topic
+	repo   storage.DocRepository
+	docID  *int
+	labels []string
 }
 
 // New creates a new Search instance with the given topic and repository.
@@ -31,6 +32,12 @@ func New(t topic.Topic, dr storage.DocRepository) *Search {
 // the indexed strategy (FindCandidates).
 func (s *Search) WithDocID(id int) *Search {
 	s.docID = &id
+	return s
+}
+
+// WithLabels restricts the search to documents matching ALL given labels.
+func (s *Search) WithLabels(labels []string) *Search {
+	s.labels = labels
 	return s
 }
 
@@ -68,7 +75,7 @@ func (s *Search) Sentences(expr topic.TopicExpr, cursor storage.Cursor, limit in
 	m := match.NewMatcher(s.topic)
 	m.AddTopicExpr(expr)
 
-	return s.repo.FindCandidates(lemmas, cursor, limit, func(sentence sent.Sentence) error {
+	return s.repo.FindCandidates(lemmas, s.labels, cursor, limit, func(sentence sent.Sentence) error {
 		sm := m.MatchSentence(sentence)
 		if sm != nil {
 			// Expecting at most one match per sentence

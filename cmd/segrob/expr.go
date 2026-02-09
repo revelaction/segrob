@@ -48,6 +48,9 @@ func exprCommand(dr storage.DocRepository, opts ExprOptions, args []string, ui U
 	if opts.Doc != nil {
 		s.WithDocID(*opts.Doc)
 	}
+	if len(opts.Labels) > 0 {
+		s.WithLabels(opts.Labels)
+	}
 
 	// Prepare results accumulator
 	var results []*match.SentenceMatch
@@ -92,27 +95,4 @@ func exprCommand(dr storage.DocRepository, opts ExprOptions, args []string, ui U
 	r.Match(results)
 
 	return nil
-}
-
-func hasLabels(fileLabels, cmdLabels []string) bool {
-	// No command line labels to match
-	if nil == cmdLabels {
-		return true
-	}
-
-	for _, label := range cmdLabels {
-
-		isLabel := false
-		for _, l := range fileLabels {
-			if strings.Contains(l, label) {
-				isLabel = true
-			}
-		}
-
-		if !isLabel {
-			return false
-		}
-	}
-
-	return true
 }
