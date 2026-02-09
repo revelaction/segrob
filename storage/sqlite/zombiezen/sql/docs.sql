@@ -18,5 +18,12 @@ CREATE TABLE IF NOT EXISTS sentence_lemmas (
     FOREIGN KEY (sentence_rowid) REFERENCES sentences(rowid)
 );
 
+CREATE TABLE IF NOT EXISTS sentence_labels (
+    label           TEXT NOT NULL,
+    sentence_rowid  INTEGER NOT NULL,
+    FOREIGN KEY (sentence_rowid) REFERENCES sentences(rowid)
+);
+
 CREATE INDEX IF NOT EXISTS idx_lemma_rowid ON sentence_lemmas(lemma, sentence_rowid);
+CREATE INDEX IF NOT EXISTS idx_label_rowid ON sentence_labels(label, sentence_rowid);
 CREATE INDEX IF NOT EXISTS idx_sentences_doc_id ON sentences(doc_id);

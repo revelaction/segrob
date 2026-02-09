@@ -89,7 +89,7 @@ func (h *DocStore) Read(id int) (sent.Doc, error) {
 	return doc, nil
 }
 
-func (h *DocStore) FindCandidates(lemmas []string, after storage.Cursor, limit int, onCandidate func(sent.Sentence) error) (storage.Cursor, error) {
+func (h *DocStore) FindCandidates(lemmas []string, labels []string, after storage.Cursor, limit int, onCandidate func(sent.Sentence) error) (storage.Cursor, error) {
 	if len(lemmas) == 0 {
 		return after, nil
 	}
@@ -100,25 +100,11 @@ func (h *DocStore) FindCandidates(lemmas []string, after storage.Cursor, limit i
 	}
 	defer h.pool.Put(conn)
 
-	// Build query dynamically based on number of lemmas.
-	// We use INTERSECT to ensure that we only get sentence_rowids that contain ALL lemmas.
-	// Note: INTERSECT also guarantees that the resulting set of rowIDs is unique.
-	var queryBuilder strings.Builder
-	var args []interface{}
-
-	for i, lemma := range lemmas {
-		if i > 0 {
-			queryBuilder.WriteString(" INTERSECT ")
-		}
-		queryBuilder.WriteString("SELECT sentence_rowid FROM sentence_lemmas WHERE lemma = ? AND sentence_rowid > ?")
-		args = append(args, lemma, after)
-	}
-	queryBuilder.WriteString(" LIMIT ?")
-	args = append(args, limit)
+	query, args := h.buildCandidateQuery(lemmas, labels, after, limit)
 
 	// We need to fetch the rowIDs first
 	var rowIDs []int64
-	err = sqlitex.Execute(conn, queryBuilder.String(), &sqlitex.ExecOptions{
+	err = sqlitex.Execute(conn, query, &sqlitex.ExecOptions{
 		Args: args,
 		ResultFunc: func(stmt *sqlite.Stmt) error {
 			rowIDs = append(rowIDs, stmt.ColumnInt64(0))
@@ -141,10 +127,10 @@ func (h *DocStore) FindCandidates(lemmas []string, after storage.Cursor, limit i
 	}
 	idList := strings.Join(idStrings, ",")
 
-	query := fmt.Sprintf("SELECT rowid, doc_id, sentence_id, data FROM sentences WHERE rowid IN (%s) ORDER BY rowid", idList)
+	bulkQuery := fmt.Sprintf("SELECT rowid, doc_id, sentence_id, data FROM sentences WHERE rowid IN (%s) ORDER BY rowid", idList)
 
 	newCursor := after
-	err = sqlitex.Execute(conn, query, &sqlitex.ExecOptions{
+	err = sqlitex.Execute(conn, bulkQuery, &sqlitex.ExecOptions{
 		ResultFunc: func(stmt *sqlite.Stmt) error {
 			rowID := stmt.ColumnInt64(0)
 			if storage.Cursor(rowID) > newCursor {
@@ -168,6 +154,32 @@ func (h *DocStore) FindCandidates(lemmas []string, after storage.Cursor, limit i
 	}
 
 	return newCursor, nil
+}
+
+func (h *DocStore) buildCandidateQuery(lemmas []string, labels []string, after storage.Cursor, limit int) (string, []interface{}) {
+	var queryBuilder strings.Builder
+	var args []interface{}
+
+	// Handle Lemmas (mandatory)
+	for i, lemma := range lemmas {
+		if i > 0 {
+			queryBuilder.WriteString(" INTERSECT ")
+		}
+		queryBuilder.WriteString("SELECT sentence_rowid FROM sentence_lemmas WHERE lemma = ? AND sentence_rowid > ?")
+		args = append(args, lemma, after)
+	}
+
+	// Handle Labels (optional)
+	for _, label := range labels {
+		queryBuilder.WriteString(" INTERSECT ")
+		queryBuilder.WriteString("SELECT sentence_rowid FROM sentence_labels WHERE label = ? AND sentence_rowid > ?")
+		args = append(args, label, after)
+	}
+
+	queryBuilder.WriteString(" LIMIT ?")
+	args = append(args, limit)
+
+	return queryBuilder.String(), args
 }
 
 func (h *DocStore) Write(doc sent.Doc) error {
@@ -218,6 +230,16 @@ func (h *DocStore) Write(doc sent.Doc) error {
 			})
 			if err != nil {
 				return fmt.Errorf("failed to insert lemma: %w", err)
+			}
+		}
+
+		// Insert labels
+		for _, label := range doc.Labels {
+			err = sqlitex.Execute(conn, "INSERT INTO sentence_labels (label, sentence_rowid) VALUES (?, ?)", &sqlitex.ExecOptions{
+				Args: []interface{}{label, sentRowID},
+			})
+			if err != nil {
+				return fmt.Errorf("failed to insert label: %w", err)
 			}
 		}
 	}

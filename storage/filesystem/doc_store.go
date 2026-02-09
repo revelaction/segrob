@@ -110,14 +110,23 @@ func (h *DocStore) Read(id int) (sent.Doc, error) {
 	return doc, nil
 }
 
-// FindCandidates returns ALL sentences from memory.
-func (h *DocStore) FindCandidates(lemmas []string, after storage.Cursor, limit int, onCandidate func(sent.Sentence) error) (storage.Cursor, error) {
+// FindCandidates returns ALL sentences from memory if they match the labels.
+func (h *DocStore) FindCandidates(lemmas []string, labels []string, after storage.Cursor, limit int, onCandidate func(sent.Sentence) error) (storage.Cursor, error) {
+	if len(lemmas) == 0 {
+		return after, nil
+	}
+
 	// If cursor > 0, we already returned everything (EOF).
 	if after > 0 {
 		return after, nil
 	}
 
 	for _, doc := range h.docs {
+		// Skip if document doesn't match all required labels
+		if !matchLabels(doc.Labels, labels) {
+			continue
+		}
+
 		for _, s := range doc.Sentences {
 			if err := onCandidate(s); err != nil {
 				return after, err
@@ -126,6 +135,26 @@ func (h *DocStore) FindCandidates(lemmas []string, after storage.Cursor, limit i
 	}
 
 	return 1, nil
+}
+
+// Helper to check if docLabels contains all requiredLabels
+func matchLabels(docLabels, requiredLabels []string) bool {
+	if len(requiredLabels) == 0 {
+		return true
+	}
+	for _, req := range requiredLabels {
+		found := false
+		for _, doc := range docLabels {
+			if doc == req { // Exact match for storage consistency
+				found = true
+				break
+			}
+		}
+		if !found {
+			return false
+		}
+	}
+	return true
 }
 
 func (h *DocStore) Write(doc sent.Doc) error {
