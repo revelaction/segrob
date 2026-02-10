@@ -14,7 +14,7 @@ import (
 func exprCommand(dr storage.DocRepository, opts ExprOptions, args []string, ui UI) error {
 
 	if p, ok := dr.(storage.Preloader); ok {
-		err := p.Preload(func(current, total int, name string) {
+		err := p.Preload(opts.Labels, func(current, total int, name string) {
 			fmt.Fprintf(ui.Err, "\r📖 Loading docs: %d/%d (%s)...%s", current, total, name, render.ClearLine)
 		})
 		fmt.Fprint(ui.Err, "\n")

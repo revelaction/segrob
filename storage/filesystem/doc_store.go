@@ -58,29 +58,27 @@ func NewDocStore(path string) (*DocStore, error) {
 	return &DocStore{docsPath: docsPath, docs: docs}, nil
 }
 
-// Preload preloads all docs into memory.
-func (h *DocStore) Preload(cb func(current, total int, name string)) error {
-	if h.docs == nil {
-		return fmt.Errorf("docs not initialized")
-	}
-
+// Preload preloads docs into memory.
+// If labels is not empty, only docs matching ALL labels are loaded.
+func (h *DocStore) Preload(labels []string, cb func(current, total int, name string)) error {
 	total := len(h.docs)
 	for i := range h.docs {
-		doc := &h.docs[i] // pointer to modify in place
+		doc := &h.docs[i]
+
+		if len(labels) > 0 && !matchLabels(doc.Labels, labels) {
+			continue
+		}
 
 		if cb != nil {
 			cb(i+1, total, doc.Title)
 		}
 
-		fullDoc, err := h.Read(i)
+		fullDoc, err := h.Read(doc.Id)
 		if err != nil {
 			return err
 		}
 
-		// Copy loaded content into existing metadata struct
 		doc.Sentences = fullDoc.Sentences
-		doc.Labels = fullDoc.Labels
-		// Title and Id are already set
 	}
 
 	return nil
