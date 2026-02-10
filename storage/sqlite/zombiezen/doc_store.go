@@ -183,7 +183,7 @@ func (h *DocStore) buildCandidateQuery(lemmas []string, labels []string, after s
 	return queryBuilder.String(), args
 }
 
-func (h *DocStore) Labels() ([]string, error) {
+func (h *DocStore) Labels(pattern string) ([]string, error) {
 	conn, err := h.pool.Take(context.TODO())
 	if err != nil {
 		return nil, err
@@ -197,7 +197,9 @@ func (h *DocStore) Labels() ([]string, error) {
 			if labelsStr != "" {
 				for _, label := range strings.Split(labelsStr, ",") {
 					if label != "" {
-						labelMap[label] = true
+						if pattern == "" || strings.Contains(label, pattern) {
+							labelMap[label] = true
+						}
 					}
 				}
 			}

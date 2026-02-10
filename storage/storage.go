@@ -44,7 +44,8 @@ type DocReader interface {
 	FindCandidates(lemmas []string, labels []string, after Cursor, limit int, onCandidate func(sent.Sentence) error) (Cursor, error)
 
 	// Labels returns all unique labels found across all documents, sorted alphabetically.
-	Labels() ([]string, error)
+	// If pattern is not empty, it returns labels that contain the pattern.
+	Labels(pattern string) ([]string, error)
 }
 
 // DocWriter defines write operations for document storage

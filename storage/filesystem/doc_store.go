@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 
 	sent "github.com/revelaction/segrob/sentence"
 
@@ -161,11 +162,13 @@ func matchLabels(docLabels, requiredLabels []string) bool {
 	return true
 }
 
-func (h *DocStore) Labels() ([]string, error) {
+func (h *DocStore) Labels(pattern string) ([]string, error) {
 	labelMap := make(map[string]bool)
 	for _, doc := range h.docs {
 		for _, label := range doc.Labels {
-			labelMap[label] = true
+			if pattern == "" || strings.Contains(label, pattern) {
+				labelMap[label] = true
+			}
 		}
 	}
 
