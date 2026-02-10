@@ -40,10 +40,14 @@ func NewDocStore(path string) (*DocStore, error) {
 	idx := 0
 	for _, file := range files {
 		if filepath.Ext(file.Name()) == ".json" {
-			// TODO: maybe load labels here?
+			labels, err := readLabels(filepath.Join(docsPath, file.Name()))
+			if err != nil {
+				// handle or skip
+			}
 			docs = append(docs, sent.Doc{
-				Id:    idx,
-				Title: file.Name(),
+				Id:     idx,
+				Title:  file.Name(),
+				Labels: labels,
 			})
 			idx++
 		}
@@ -159,4 +163,29 @@ func matchLabels(docLabels, requiredLabels []string) bool {
 
 func (h *DocStore) Write(doc sent.Doc) error {
 	return fmt.Errorf("read-only storage")
+}
+
+
+func readLabels(path string) ([]string, error) {
+    f, err := os.Open(path)
+    if err != nil {
+        return nil, err
+    }
+    defer f.Close()
+
+    dec := json.NewDecoder(f)
+    for {
+        tok, err := dec.Token()
+        if err != nil {
+            return nil, err // or break
+        }
+        key, ok := tok.(string)
+        if ok && key == "Labels" {
+            var labels []string
+            if err := dec.Decode(&labels); err != nil {
+                return nil, err
+            }
+            return labels, nil
+        }
+    }
 }
