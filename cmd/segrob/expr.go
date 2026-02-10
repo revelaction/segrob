@@ -83,7 +83,7 @@ func exprCommand(dr storage.DocRepository, opts ExprOptions, args []string, ui U
 
 	if opts.Doc == nil {
 		// Populate DocNames for indexed search
-		list, err := dr.List()
+		list, err := dr.List("")
 		if err != nil {
 			return err
 		}

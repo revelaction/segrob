@@ -31,9 +31,10 @@ type Cursor int64
 
 // DocReader defines read operations for document storage
 type DocReader interface {
-	// List returns the metadata (Id, Title, Labels) of all documents.
+	// List returns the metadata (Id, Title, Labels) of documents.
+	// If labelMatch is not empty, only documents with at least one label containing the string are returned.
 	// Content (Tokens) is not loaded.
-	List() ([]sent.Doc, error)
+	List(labelMatch string) ([]sent.Doc, error)
 
 	// Read returns a document by ID
 	Read(id int) (sent.Doc, error)

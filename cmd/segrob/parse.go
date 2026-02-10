@@ -53,6 +53,7 @@ type DocOptions struct {
 
 type LsDocOptions struct {
 	DocPath string
+	Match   string
 }
 
 type LsLabelsOptions struct {
@@ -234,6 +235,8 @@ func parseLsDocArgs(args []string, ui UI) (LsDocOptions, bool, error) {
 	var opts LsDocOptions
 	fs.StringVar(&opts.DocPath, "doc-path", os.Getenv("SEGROB_DOC_PATH"), "Path to docs directory or SQLite file")
 	fs.StringVar(&opts.DocPath, "d", os.Getenv("SEGROB_DOC_PATH"), "alias for -doc-path")
+	fs.StringVar(&opts.Match, "match", "", "Retrieve only documents with at least one label containing this string")
+	fs.StringVar(&opts.Match, "m", "", "alias for -match")
 
 	fs.Usage = func() {
 		_, _ = fmt.Fprintf(fs.Output(), "Usage: %s ls-doc [options]\n", os.Args[0])

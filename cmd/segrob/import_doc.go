@@ -25,7 +25,7 @@ func importDocCommand(opts ImportDocOptions, ui UI) error {
 
 	dst := zombiezen.NewDocStore(pool)
 
-	docs, err := src.List()
+	docs, err := src.List("")
 	if err != nil {
 		return err
 	}

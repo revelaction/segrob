@@ -24,7 +24,7 @@ func NewDocStore(pool *sqlitex.Pool) *DocStore {
 	return &DocStore{pool: pool}
 }
 
-func (h *DocStore) List() ([]sent.Doc, error) {
+func (h *DocStore) List(labelMatch string) ([]sent.Doc, error) {
 	conn, err := h.pool.Take(context.TODO())
 	if err != nil {
 		return nil, err
@@ -34,13 +34,29 @@ func (h *DocStore) List() ([]sent.Doc, error) {
 	var docs []sent.Doc
 	err = sqlitex.Execute(conn, "SELECT id, title, labels FROM docs ORDER BY title", &sqlitex.ExecOptions{
 		ResultFunc: func(stmt *sqlite.Stmt) error {
-			doc := sent.Doc{
-				Id:    stmt.ColumnInt(0),
-				Title: stmt.ColumnText(1),
-			}
 			labelsStr := stmt.ColumnText(2)
+			var labels []string
 			if labelsStr != "" {
-				doc.Labels = strings.Split(labelsStr, ",")
+				labels = strings.Split(labelsStr, ",")
+			}
+
+			if labelMatch != "" {
+				matched := false
+				for _, label := range labels {
+					if strings.Contains(label, labelMatch) {
+						matched = true
+						break
+					}
+				}
+				if !matched {
+					return nil
+				}
+			}
+
+			doc := sent.Doc{
+				Id:     stmt.ColumnInt(0),
+				Title:  stmt.ColumnText(1),
+				Labels: labels,
 			}
 			docs = append(docs, doc)
 			return nil

@@ -8,7 +8,7 @@ import (
 )
 
 func lsDocCommand(repo storage.DocRepository, opts LsDocOptions, ui UI) error {
-	docs, err := repo.List()
+	docs, err := repo.List(opts.Match)
 	if err != nil {
 		return err
 	}

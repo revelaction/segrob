@@ -85,8 +85,21 @@ func (h *DocStore) Preload(labels []string, cb func(current, total int, name str
 	return nil
 }
 
-func (h *DocStore) List() ([]sent.Doc, error) {
-	return h.docs, nil
+func (h *DocStore) List(labelMatch string) ([]sent.Doc, error) {
+	if labelMatch == "" {
+		return h.docs, nil
+	}
+
+	var filtered []sent.Doc
+	for _, doc := range h.docs {
+		for _, label := range doc.Labels {
+			if strings.Contains(label, labelMatch) {
+				filtered = append(filtered, doc)
+				break
+			}
+		}
+	}
+	return filtered, nil
 }
 
 func (h *DocStore) Read(id int) (sent.Doc, error) {

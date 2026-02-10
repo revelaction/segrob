@@ -22,7 +22,7 @@ func exportDocCommand(opts ExportDocOptions, ui UI) error {
 		return fmt.Errorf("failed to create target directory: %w", err)
 	}
 
-	docs, err := src.List()
+	docs, err := src.List("")
 	if err != nil {
 		return err
 	}

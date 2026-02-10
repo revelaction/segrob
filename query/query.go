@@ -84,7 +84,7 @@ func (h *Handler) Run() error {
 		matcher.AddTopicExpr(expr)
 
 		// Fetch doc names for rendering
-		docList, err := h.DocRepo.List()
+		docList, err := h.DocRepo.List("")
 		if err != nil {
 			fmt.Printf("Error listing docs: %v\n", err)
 			continue
