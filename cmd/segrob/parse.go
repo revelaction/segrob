@@ -55,6 +55,11 @@ type LsDocOptions struct {
 	DocPath string
 }
 
+type LsLabelsOptions struct {
+	DocPath string
+	Match   string
+}
+
 type SentenceOptions struct {
 	DocPath string
 }
@@ -260,6 +265,43 @@ func parseLsDocArgs(args []string, ui UI) (LsDocOptions, bool, error) {
 	}
 
 	return opts, info.IsDir(), nil
+}
+
+func parseLsLabelsArgs(args []string, ui UI) (LsLabelsOptions, error) {
+	fs := flag.NewFlagSet("ls-labels", flag.ContinueOnError)
+	fs.SetOutput(io.Discard)
+
+	var opts LsLabelsOptions
+	fs.StringVar(&opts.DocPath, "doc-path", os.Getenv("SEGROB_DOC_PATH"), "Path to docs directory or SQLite file")
+	fs.StringVar(&opts.DocPath, "d", os.Getenv("SEGROB_DOC_PATH"), "alias for -doc-path")
+	fs.StringVar(&opts.Match, "match", "", "Retrieve only labels containing this string")
+	fs.StringVar(&opts.Match, "m", "", "alias for -match")
+
+	fs.Usage = func() {
+		_, _ = fmt.Fprintf(fs.Output(), "Usage: %s ls-labels [options]\n", os.Args[0])
+		_, _ = fmt.Fprintf(fs.Output(), "\nDescription:\n")
+		_, _ = fmt.Fprintf(fs.Output(), "  List all unique labels in the repository.\n")
+		_, _ = fmt.Fprintf(fs.Output(), "\nOptions:\n")
+		fs.PrintDefaults()
+	}
+
+	if err := fs.Parse(args); err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			fs.SetOutput(ui.Out)
+			fs.Usage()
+			return opts, err
+		}
+		fs.SetOutput(ui.Err)
+		fprintErr(ui.Err, err)
+		fs.Usage()
+		return opts, err
+	}
+
+	if opts.DocPath == "" {
+		return opts, errors.New("no document source specified (use -d or SEGROB_DOC_PATH)")
+	}
+
+	return opts, nil
 }
 
 func parseSentenceArgs(args []string, ui UI) (SentenceOptions, int, int, error) {
@@ -811,6 +853,7 @@ func setupUsage(fs *flag.FlagSet) {
 		_, _ = fmt.Fprintf(output, "\nCommands:\n")
 		_, _ = fmt.Fprintf(output, "  doc       Show contents of a document file or DB entry.\n")
 		_, _ = fmt.Fprintf(output, "  ls-doc    List all documents in the repository.\n")
+		_, _ = fmt.Fprintf(output, "  ls-labels List all unique labels in the repository.\n")
 		_, _ = fmt.Fprintf(output, "  sentence  Show a specific sentence details.\n")
 		_, _ = fmt.Fprintf(output, "  topics    Show topics for a specific sentence.\n")
 		_, _ = fmt.Fprintf(output, "  expr      Evaluate a topic expression.\n")

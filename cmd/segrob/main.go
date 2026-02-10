@@ -103,6 +103,20 @@ func runCommand(cmd string, args []string, ui UI) error {
 		}
 		return lsDocCommand(repo, opts, ui)
 
+	case "ls-labels":
+		opts, err := parseLsLabelsArgs(args, ui)
+		if err != nil {
+			if errors.Is(err, flag.ErrHelp) {
+				return nil
+			}
+			return err
+		}
+		repo, err := NewDocRepository(p, opts.DocPath)
+		if err != nil {
+			return err
+		}
+		return lsLabelsCommand(repo, opts, ui)
+
 	case "sentence":
 		opts, docId, sentId, err := parseSentenceArgs(args, ui)
 		if err != nil {
@@ -278,4 +292,3 @@ func runCommand(cmd string, args []string, ui UI) error {
 
 	return fmt.Errorf("unknown command: %s", cmd)
 }
-
