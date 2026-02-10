@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -182,7 +183,41 @@ func (h *DocStore) buildCandidateQuery(lemmas []string, labels []string, after s
 	return queryBuilder.String(), args
 }
 
+func (h *DocStore) Labels() ([]string, error) {
+	conn, err := h.pool.Take(context.TODO())
+	if err != nil {
+		return nil, err
+	}
+	defer h.pool.Put(conn)
+
+	labelMap := make(map[string]bool)
+	err = sqlitex.Execute(conn, "SELECT labels FROM docs", &sqlitex.ExecOptions{
+		ResultFunc: func(stmt *sqlite.Stmt) error {
+			labelsStr := stmt.ColumnText(0)
+			if labelsStr != "" {
+				for _, label := range strings.Split(labelsStr, ",") {
+					if label != "" {
+						labelMap[label] = true
+					}
+				}
+			}
+			return nil
+		},
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	labels := make([]string, 0, len(labelMap))
+	for label := range labelMap {
+		labels = append(labels, label)
+	}
+	sort.Strings(labels)
+	return labels, nil
+}
+
 func (h *DocStore) Write(doc sent.Doc) error {
+
 	conn, err := h.pool.Take(context.TODO())
 	if err != nil {
 		return err

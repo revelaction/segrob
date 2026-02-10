@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 
 	sent "github.com/revelaction/segrob/sentence"
+
 	"github.com/revelaction/segrob/storage"
 )
 
@@ -161,31 +163,46 @@ func matchLabels(docLabels, requiredLabels []string) bool {
 	return true
 }
 
+func (h *DocStore) Labels() ([]string, error) {
+	labelMap := make(map[string]bool)
+	for _, doc := range h.docs {
+		for _, label := range doc.Labels {
+			labelMap[label] = true
+		}
+	}
+
+	labels := make([]string, 0, len(labelMap))
+	for label := range labelMap {
+		labels = append(labels, label)
+	}
+	sort.Strings(labels)
+	return labels, nil
+}
+
 func (h *DocStore) Write(doc sent.Doc) error {
 	return fmt.Errorf("read-only storage")
 }
 
-
 func readLabels(path string) ([]string, error) {
-    f, err := os.Open(path)
-    if err != nil {
-        return nil, err
-    }
-    defer f.Close()
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
 
-    dec := json.NewDecoder(f)
-    for {
-        tok, err := dec.Token()
-        if err != nil {
-            return nil, err // or break
-        }
-        key, ok := tok.(string)
-        if ok && key == "Labels" {
-            var labels []string
-            if err := dec.Decode(&labels); err != nil {
-                return nil, err
-            }
-            return labels, nil
-        }
-    }
+	dec := json.NewDecoder(f)
+	for {
+		tok, err := dec.Token()
+		if err != nil {
+			return nil, err // or break
+		}
+		key, ok := tok.(string)
+		if ok && key == "Labels" {
+			var labels []string
+			if err := dec.Decode(&labels); err != nil {
+				return nil, err
+			}
+			return labels, nil
+		}
+	}
 }

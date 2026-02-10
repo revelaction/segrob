@@ -42,6 +42,9 @@ type DocReader interface {
 	// resuming after the given cursor. It calls onCandidate for each result.
 	// Returns the new cursor and any error.
 	FindCandidates(lemmas []string, labels []string, after Cursor, limit int, onCandidate func(sent.Sentence) error) (Cursor, error)
+
+	// Labels returns all unique labels found across all documents, sorted alphabetically.
+	Labels() ([]string, error)
 }
 
 // DocWriter defines write operations for document storage
