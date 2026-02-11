@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 
@@ -63,11 +64,14 @@ func NewDocStore(path string) (*DocStore, error) {
 // If labels is not empty, only docs matching ALL labels are loaded.
 func (h *DocStore) Preload(labels []string, cb func(current, total int, name string)) error {
 	total := len(h.docs)
+outer:
 	for i := range h.docs {
 		doc := &h.docs[i]
 
-		if len(labels) > 0 && !matchLabels(doc.Labels, labels) {
-			continue
+		for _, req := range labels {
+			if !slices.Contains(doc.Labels, req) {
+				continue outer
+			}
 		}
 
 		if cb != nil {
@@ -139,9 +143,6 @@ func (h *DocStore) Read(id int) (sent.Doc, error) {
 
 // FindCandidates returns ALL sentences from memory if they match the labels.
 func (h *DocStore) FindCandidates(lemmas []string, labels []string, after storage.Cursor, limit int, onCandidate func(sent.Sentence) error) (storage.Cursor, error) {
-	if len(lemmas) == 0 {
-		return after, nil
-	}
 
 	// If cursor > 0, we already returned everything (EOF).
 	if after > 0 {
@@ -149,8 +150,7 @@ func (h *DocStore) FindCandidates(lemmas []string, labels []string, after storag
 	}
 
 	for _, doc := range h.docs {
-		// Skip if document doesn't match all required labels
-		if !matchLabels(doc.Labels, labels) {
+		if len(doc.Sentences) == 0 {
 			continue
 		}
 
@@ -162,26 +162,6 @@ func (h *DocStore) FindCandidates(lemmas []string, labels []string, after storag
 	}
 
 	return 1, nil
-}
-
-// Helper to check if docLabels contains all requiredLabels
-func matchLabels(docLabels, requiredLabels []string) bool {
-	if len(requiredLabels) == 0 {
-		return true
-	}
-	for _, req := range requiredLabels {
-		found := false
-		for _, doc := range docLabels {
-			if doc == req { // Exact match for storage consistency
-				found = true
-				break
-			}
-		}
-		if !found {
-			return false
-		}
-	}
-	return true
 }
 
 func (h *DocStore) Labels(pattern string) ([]string, error) {
