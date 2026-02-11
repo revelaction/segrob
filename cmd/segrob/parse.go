@@ -421,7 +421,7 @@ func parseExprArgs(args []string, ui UI) (ExprOptions, []string, bool, error) {
 
 	var opts ExprOptions
 	labels := (*stringSliceFlag)(&opts.Labels)
-	fs.Var(labels, "label", "Only scan those token files that match the labels (contains)")
+	fs.Var(labels, "label", "Only scan those token files that match the labels (EXACT match, ALL labels required)")
 	fs.Var(labels, "l", "alias for -label")
 
 	fs.BoolVar(&opts.NoColor, "no-color", false, "Show matched sentences without formatting (color)")

@@ -34,7 +34,7 @@ type DocReader interface {
 	// List returns the metadata (Id, Title, Labels) of documents.
 	// If labelMatch is not empty, only documents with at least one label matching the string are returned.
 	// Content (Tokens) is not loaded.
-	List(labelMatch string) ([]sent.Doc, error)
+	List(labelSubStr string) ([]sent.Doc, error)
 
 	// Read returns a document by ID
 	Read(id int) (sent.Doc, error)
@@ -45,8 +45,8 @@ type DocReader interface {
 	FindCandidates(lemmas []string, labels []string, after Cursor, limit int, onCandidate func(sent.Sentence) error) (Cursor, error)
 
 	// Labels returns all unique labels found across all documents, sorted alphabetically.
-	// If pattern is not empty, it returns labels that contain the pattern.
-	Labels(pattern string) ([]string, error)
+	// If labelSubStr is not empty, it returns labels that contain the labelSubStr.
+	Labels(labelSubStr string) ([]string, error)
 }
 
 // DocWriter defines write operations for document storage

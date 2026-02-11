@@ -61,7 +61,7 @@ func NewDocStore(path string) (*DocStore, error) {
 }
 
 // Preload preloads docs into memory.
-// If labels is not empty, only docs matching ALL labels are loaded.
+// If labels is not empty, only docs matching (EXACT match) ALL labels are loaded.
 func (h *DocStore) Preload(labels []string, cb func(current, total int, name string)) error {
 	total := len(h.docs)
 outer:
@@ -89,15 +89,17 @@ outer:
 	return nil
 }
 
-func (h *DocStore) List(labelMatch string) ([]sent.Doc, error) {
-	if labelMatch == "" {
+// List returns the metadata of documents.
+// Discovery mode: returns docs where at least one label contains the labelMatch substring.
+func (h *DocStore) List(labelSubStr string) ([]sent.Doc, error) {
+	if labelSubStr == "" {
 		return h.docs, nil
 	}
 
 	var filtered []sent.Doc
 	for _, doc := range h.docs {
-		if labelMatch != "" {
-			if !SliceElementsContains(doc.Labels, labelMatch) {
+		if labelSubStr != "" {
+			if !SliceElementsContains(doc.Labels, labelSubStr) {
 				continue
 			}
 		}
@@ -160,12 +162,14 @@ func (h *DocStore) FindCandidates(lemmas []string, labels []string, after storag
 	return 1, nil
 }
 
-func (h *DocStore) Labels(pattern string) ([]string, error) {
+// Labels returns all unique labels found across all documents, sorted alphabetically.
+// Discovery mode: if labelSubStr is not empty, returns labels that contain the labelSubStr substring.
+func (h *DocStore) Labels(labelSubStr string) ([]string, error) {
 	labelMap := make(map[string]bool)
 	for _, doc := range h.docs {
 		for _, label := range doc.Labels {
-			if pattern != "" {
-				if !strings.Contains(label, pattern) {
+			if labelSubStr != "" {
+				if !strings.Contains(label, labelSubStr) {
 					continue
 				}
 			}

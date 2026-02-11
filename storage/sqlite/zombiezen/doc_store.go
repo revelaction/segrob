@@ -24,7 +24,7 @@ func NewDocStore(pool *sqlitex.Pool) *DocStore {
 	return &DocStore{pool: pool}
 }
 
-func (h *DocStore) List(labelMatch string) ([]sent.Doc, error) {
+func (h *DocStore) List(labelSubStr string) ([]sent.Doc, error) {
 	conn, err := h.pool.Take(context.TODO())
 	if err != nil {
 		return nil, err
@@ -36,8 +36,8 @@ func (h *DocStore) List(labelMatch string) ([]sent.Doc, error) {
 		ResultFunc: func(stmt *sqlite.Stmt) error {
 			labels := Labels(stmt.ColumnText(2))
 
-			if labelMatch != "" {
-				if !SliceElementsContains(labels, labelMatch) {
+			if labelSubStr != "" {
+				if !SliceElementsContains(labels, labelSubStr) {
 					return nil
 				}
 			}
@@ -196,7 +196,7 @@ func (h *DocStore) buildCandidateQuery(lemmas []string, labels []string, after s
 	return queryBuilder.String(), args
 }
 
-func (h *DocStore) Labels(pattern string) ([]string, error) {
+func (h *DocStore) Labels(labelSubStr string) ([]string, error) {
 	conn, err := h.pool.Take(context.TODO())
 	if err != nil {
 		return nil, err
@@ -207,8 +207,8 @@ func (h *DocStore) Labels(pattern string) ([]string, error) {
 	err = sqlitex.Execute(conn, "SELECT labels FROM docs", &sqlitex.ExecOptions{
 		ResultFunc: func(stmt *sqlite.Stmt) error {
 			for _, label := range Labels(stmt.ColumnText(0)) {
-				if pattern != "" {
-					if !strings.Contains(label, pattern) {
+				if labelSubStr != "" {
+					if !strings.Contains(label, labelSubStr) {
 						continue
 					}
 				}
