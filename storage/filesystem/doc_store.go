@@ -150,10 +150,6 @@ func (h *DocStore) FindCandidates(lemmas []string, labels []string, after storag
 	}
 
 	for _, doc := range h.docs {
-		if len(doc.Sentences) == 0 {
-			continue
-		}
-
 		for _, s := range doc.Sentences {
 			if err := onCandidate(s); err != nil {
 				return after, err
