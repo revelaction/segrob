@@ -34,31 +34,19 @@ func (h *DocStore) List(labelMatch string) ([]sent.Doc, error) {
 	var docs []sent.Doc
 	err = sqlitex.Execute(conn, "SELECT id, title, labels FROM docs ORDER BY title", &sqlitex.ExecOptions{
 		ResultFunc: func(stmt *sqlite.Stmt) error {
-			labelsStr := stmt.ColumnText(2)
-			var labels []string
-			if labelsStr != "" {
-				labels = strings.Split(labelsStr, ",")
-			}
+			labels := Labels(stmt.ColumnText(2))
 
 			if labelMatch != "" {
-				matched := false
-				for _, label := range labels {
-					if strings.Contains(label, labelMatch) {
-						matched = true
-						break
-					}
-				}
-				if !matched {
+				if !SliceElementsContains(labels, labelMatch) {
 					return nil
 				}
 			}
 
-			doc := sent.Doc{
+			docs = append(docs, sent.Doc{
 				Id:     stmt.ColumnInt(0),
 				Title:  stmt.ColumnText(1),
 				Labels: labels,
-			}
-			docs = append(docs, doc)
+			})
 			return nil
 		},
 	})
@@ -66,6 +54,15 @@ func (h *DocStore) List(labelMatch string) ([]sent.Doc, error) {
 		return nil, err
 	}
 	return docs, nil
+}
+
+func SliceElementsContains(slice []string, substr string) bool {
+	for _, s := range slice {
+		if strings.Contains(s, substr) {
+			return true
+		}
+	}
+	return false
 }
 
 func (h *DocStore) Read(id int) (sent.Doc, error) {
@@ -209,15 +206,13 @@ func (h *DocStore) Labels(pattern string) ([]string, error) {
 	labelMap := make(map[string]bool)
 	err = sqlitex.Execute(conn, "SELECT labels FROM docs", &sqlitex.ExecOptions{
 		ResultFunc: func(stmt *sqlite.Stmt) error {
-			labelsStr := stmt.ColumnText(0)
-			if labelsStr != "" {
-				for _, label := range strings.Split(labelsStr, ",") {
-					if label != "" {
-						if pattern == "" || strings.Contains(label, pattern) {
-							labelMap[label] = true
-						}
+			for _, label := range Labels(stmt.ColumnText(0)) {
+				if pattern != "" {
+					if !strings.Contains(label, pattern) {
+						continue
 					}
 				}
+				labelMap[label] = true
 			}
 			return nil
 		},
@@ -298,4 +293,17 @@ func (h *DocStore) Write(doc sent.Doc) error {
 	}
 
 	return nil
+}
+
+func Labels(s string) []string {
+	if s == "" {
+		return nil
+	}
+	var res []string
+	for _, part := range strings.Split(s, ",") {
+		if part != "" {
+			res = append(res, part)
+		}
+	}
+	return res
 }

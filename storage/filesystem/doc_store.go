@@ -92,14 +92,23 @@ func (h *DocStore) List(labelMatch string) ([]sent.Doc, error) {
 
 	var filtered []sent.Doc
 	for _, doc := range h.docs {
-		for _, label := range doc.Labels {
-			if strings.Contains(label, labelMatch) {
-				filtered = append(filtered, doc)
-				break
+		if labelMatch != "" {
+			if !SliceElementsContains(doc.Labels, labelMatch) {
+				continue
 			}
 		}
+		filtered = append(filtered, doc)
 	}
 	return filtered, nil
+}
+
+func SliceElementsContains(slice []string, substr string) bool {
+	for _, s := range slice {
+		if strings.Contains(s, substr) {
+			return true
+		}
+	}
+	return false
 }
 
 func (h *DocStore) Read(id int) (sent.Doc, error) {
@@ -179,9 +188,12 @@ func (h *DocStore) Labels(pattern string) ([]string, error) {
 	labelMap := make(map[string]bool)
 	for _, doc := range h.docs {
 		for _, label := range doc.Labels {
-			if pattern == "" || strings.Contains(label, pattern) {
-				labelMap[label] = true
+			if pattern != "" {
+				if !strings.Contains(label, pattern) {
+					continue
+				}
 			}
+			labelMap[label] = true
 		}
 	}
 
