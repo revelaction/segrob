@@ -174,23 +174,23 @@ func (h *DocStore) buildCandidateQuery(lemmas []string, labels []string, after s
 	var queryBuilder strings.Builder
 	var args []interface{}
 
-	// Handle Lemmas (mandatory)
-	for i, lemma := range lemmas {
-		if i > 0 {
-			queryBuilder.WriteString(" INTERSECT ")
-		}
-		queryBuilder.WriteString("SELECT sentence_rowid FROM sentence_lemmas WHERE lemma = ? AND sentence_rowid > ?")
-		args = append(args, lemma, after)
+	// Outer scan: first lemma drives the query
+	queryBuilder.WriteString("SELECT sentence_rowid FROM sentence_lemmas AS s_outer WHERE lemma = ? AND sentence_rowid > ?")
+	args = append(args, lemmas[0], after)
+
+	// Remaining lemmas: EXISTS probes using reverse index (sentence_rowid, lemma)
+	for _, lemma := range lemmas[1:] {
+		queryBuilder.WriteString(" AND EXISTS (SELECT 1 FROM sentence_lemmas WHERE sentence_rowid = s_outer.sentence_rowid AND lemma = ?)")
+		args = append(args, lemma)
 	}
 
-	// Handle Labels (optional)
+	// Labels: EXISTS probes using reverse index (sentence_rowid, label)
 	for _, label := range labels {
-		queryBuilder.WriteString(" INTERSECT ")
-		queryBuilder.WriteString("SELECT sentence_rowid FROM sentence_labels WHERE label = ? AND sentence_rowid > ?")
-		args = append(args, label, after)
+		queryBuilder.WriteString(" AND EXISTS (SELECT 1 FROM sentence_labels WHERE sentence_rowid = s_outer.sentence_rowid AND label = ?)")
+		args = append(args, label)
 	}
 
-	queryBuilder.WriteString(" LIMIT ?")
+	queryBuilder.WriteString(" ORDER BY sentence_rowid ASC LIMIT ?")
 	args = append(args, limit)
 
 	return queryBuilder.String(), args
