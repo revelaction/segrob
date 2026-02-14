@@ -10,7 +10,6 @@ import (
 const (
 	RequiresOne = iota
 	RequiresSome
-	RequiresAll
 )
 
 type Topic struct {
@@ -44,14 +43,12 @@ func (m TopicExpr) String() string {
 	return strings.Join(sl, " ")
 }
 
-// Lemmas returns all unique non-negative lemmas present in the TopicExpr.
-// Negative lemmas (starting with '!') are excluded because they cannot be used
-// for indexed candidate retrieval in storage; they are handled later by the Matcher.
+// Lemmas returns all unique lemmas present in the TopicExpr.
 func (m TopicExpr) Lemmas() []string {
 	seen := make(map[string]bool)
 	var lemmas []string
 	for _, item := range m {
-		if item.Lemma != "" && !strings.HasPrefix(item.Lemma, "!") {
+		if item.Lemma != "" {
 			if !seen[item.Lemma] {
 				seen[item.Lemma] = true
 				lemmas = append(lemmas, item.Lemma)
@@ -76,12 +73,11 @@ func (t Topic) LemmaSets() [][]string {
 
 type TopicExprItem struct {
 
-	// The Expr index.
+	// ExprIndex is the position of the parent expression in the Topic.Exprs slice.
 	ExprIndex int `json:"-"`
 
-	// ExprId is the Expresion String(). It should be unique as two identical expresions can
-	// not be in the same topic file.
-	ExprId string `json:"-"`
+	// ItemIndex is the position of this item within its parent TopicExpr.
+	ItemIndex int `json:"-"`
 
 	// TopicName references the Topic of the Item
 	TopicName string `json:"-"`
@@ -103,18 +99,6 @@ func (l Library) Names() []string {
 		names = append(names, t.Name)
 	}
 	return names
-}
-
-func (m TopicExprItem) Requirement() int {
-	if m.Near > 0 {
-		return RequiresSome
-	}
-
-	if strings.HasPrefix(m.Lemma, "!") {
-		return RequiresSome
-	}
-
-	return RequiresOne
 }
 
 // Parse parses the user input and converts to a TopicExpr.
