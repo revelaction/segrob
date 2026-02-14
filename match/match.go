@@ -8,7 +8,6 @@ import (
 )
 
 // Matcher matchs a Doc (or a set of Docs) against a Topic (+ ArgExpr)
-// A set of `Docs` can be matched by repeated `Match` calls to the Matcher.
 type Matcher struct {
 	Topic topic.Topic
 
@@ -16,137 +15,41 @@ type Matcher struct {
 	// command line
 	// ArgExpr have an AND semantic, they must match the sentence in addition
 	// to one or more TopicExpr of the Topic.
-	//
-	// So if this is not empty, the match is: sentences that match one of the
-	// Topic expr AND this expr.
 	ArgExpr topic.TopicExpr
-
-	// Single scratch map for expression matching to avoid allocations
-    scratchMap itemTokenMap  
 }
 
-// MatchedTokens is a ordered set of sentence tokens
-// that are matched by a Topic Expr
-//
-// the following topic  expr:
-//
-// [{"lemma":"cuando"},{"near":3,"tag":"VERB"}],
-//
-// will match the following sentence:
-//
-// # Cuando me vio abrir los ojos, sus exclamaciones de gratitud y de júbilo provocaron tanto las risas como la
-//
-// the expr match two MatchedTokens:
-// MatchedTokens 1) [cuando, vio]
-// MatchedTokens 2) [cuando, abrir]
-type matchedTokens []sent.Token
+// ExprMatch is the result of matching one TopicExpr against one Sentence.
+// Tokens contains the list of match occurrences. Each []sent.Token is one
+// complete match with tokens ordered by item position in the expression.
+type ExprMatch struct {
+	ExprIndex int            // position of the expression in Topic.Exprs
+	Tokens    [][]sent.Token // each element is one full match occurrence
+}
 
-// ItemTokenMap contains the map between a topic expr token and the matched
-// tokens of a sentence MatchedTokens
-//
-//   - The value is a slice of n 1-dimensional tokens (for unlinked
-//     items), where n is the number of match ocurrences.
-//   - for compound items (m items) , the values is an slice of n m-dimensional
-//     slices.
-type itemTokenMap map[topic.TopicExprItem][]matchedTokens
-
-// SentenceMatch represents a sentence match of "one or more" topicExpr with a
-// sentence.
-// After the sentence is matched against all TopicExpr, this struct contains
-// all the token matches along with the responsible Topic Items.
+// SentenceMatch represents a sentence matched by one or more TopicExpr.
 type SentenceMatch struct {
-
-	// topicName is the topic that has some topic Expr which match this setence
+	// topicName is the topic that matched this sentence
 	topicName string
 
-	// tokenMap contains the map between the exprs items that match a sentence
-	// Used mostly to highlight the words (token) that wher matched
-	tokenMap itemTokenMap
+	// matches contains one ExprMatch per matched expression
+	matches []ExprMatch
 
-	// Sentence is a slice of the sentence tokens. The output sentence is created using this.
+	// Sentence is the matched sentence
 	Sentence sent.Sentence
 
-	// NumExprs is the number of topicExpr that were matched. Used to sort the sentences
+	// NumExprs is the number of topicExpr that matched. Used to sort results.
 	NumExprs int
 }
 
+// AllTokens returns all matched tokens from all expressions, flattened.
 func (sm *SentenceMatch) AllTokens() []sent.Token {
-	sentTokens := []sent.Token{}
-	for _, tokens := range sm.tokenMap {
-		for _, tks := range tokens {
-			sentTokens = append(sentTokens, tks...)
+	var all []sent.Token
+	for _, em := range sm.matches {
+		for _, tks := range em.Tokens {
+			all = append(all, tks...)
 		}
 	}
-
-	return sentTokens
-}
-
-// Exprs returns the ExprId (string representation) of the unique TopicExpr's
-// matched by the sentences.
-func (sm *SentenceMatch) Exprs() []string {
-
-	exprIds := []string{}
-
-MATCH_TOKEN:
-	for item := range sm.tokenMap {
-		for _, id := range exprIds {
-			if item.ExprId == id {
-				continue MATCH_TOKEN
-			}
-		}
-
-		exprIds = append(exprIds, item.ExprId)
-	}
-
-	return exprIds
-}
-
-func (sm *SentenceMatch) TokensForExpr(exprStr string) [][]sent.Token {
-
-	expr2Tokens := [][]matchedTokens{}
-
-	for item := range sm.tokenMap {
-		if item.ExprId == exprStr {
-			expr2Tokens = append(expr2Tokens, sm.tokenMap[item])
-		}
-	}
-
-	// after each iteration of all items this provides the cartesian product
-	// till now, Only the last one has the solution.
-	partialResult := make([][]matchedTokens, len(expr2Tokens))
-
-	for idx := range expr2Tokens {
-		if idx == 0 {
-			partialResult[idx] = expr2Tokens[0]
-			continue
-		}
-
-		for _, tokens := range expr2Tokens[idx] {
-			// the previous
-			for _, ptTokens := range partialResult[idx-1] {
-				// make new slice
-				cp := matchedTokens{}
-				cp = append(cp, tokens...)
-				cp = append(cp, ptTokens...)
-
-				// This is still unordered
-				partialResult[idx] = append(partialResult[idx], cp)
-			}
-		}
-	}
-
-	res := [][]sent.Token{}
-	// Convert the internal matchedTokens to external sent.Token
-	for _, tokenCp := range partialResult[len(partialResult)-1] {
-		c := []sent.Token{}
-		for _, t := range tokenCp {
-			c = append(c, t)
-		}
-
-		res = append(res, c)
-	}
-
-	return res
+	return all
 }
 
 // TopicName return the topic name of the sentence match
@@ -156,89 +59,94 @@ func (sm *SentenceMatch) TopicName() string {
 }
 
 // MatchSentence matches a posible Topic AND a possible TopicExpr for a given sentence.
-//
-// The semantic is as follows:
-//
-//   - If there are both a Topic and a TopicExpr, a sentence match only happens
-//     if the TopicExpr matchs AND 'one or more' of the Topic expressions also match.
-//
-//   - If there is only a Topic, a sentence match only happens if 'one or more'
-//     of the Topic expressions match.
-//
-//   - If there is only a TopicExpr, a sentence match only happens if the TopicExpr
-//     matches.
 func (m *Matcher) MatchSentence(sentence sent.Sentence) *SentenceMatch {
-    hasTopic := len(m.Topic.Exprs) > 0
-    hasExpr := len(m.ArgExpr) > 0
-    
-    // Create fresh SentenceMatch for this call
-    match := &SentenceMatch{
-        tokenMap: make(itemTokenMap),
-    }
-    
-    // ArgExpr check
-    if hasExpr {
-        clear(m.scratchMap)
-		// If the expr does not match, the sentence does not match
-        if !sentenceExprMatch(sentence.Tokens, m.ArgExpr, m.scratchMap) {
-            return nil
-        }
-        // Copy from scratch to match
-        for item, tokens := range m.scratchMap {
-            match.tokenMap[item] = tokens
-        }
-    }
-    
-    // Topic expressions
-    for _, expr := range m.Topic.Exprs {
-        clear(m.scratchMap)
-        if sentenceExprMatch(sentence.Tokens, expr, m.scratchMap) {
-            match.NumExprs++
-            // Copy from scratch to match
-            for item, tokens := range m.scratchMap {
-                match.tokenMap[item] = tokens
-            }
-        }
-    }
-    
-    if hasTopic && match.NumExprs == 0 {
-        return nil
-    }
-    
-    match.topicName = m.Topic.Name
-    match.Sentence = sentence
-    
-    return match
+	hasTopic := len(m.Topic.Exprs) > 0
+	hasExpr := len(m.ArgExpr) > 0
+
+	sm := &SentenceMatch{}
+
+	// ArgExpr check (AND gate)
+	if hasExpr {
+		tokens := matchExpr(sentence.Tokens, m.ArgExpr)
+		if tokens == nil {
+			return nil
+		}
+		sm.matches = append(sm.matches, ExprMatch{ExprIndex: -1, Tokens: tokens})
+	}
+
+	// Topic expressions (OR)
+	for i, expr := range m.Topic.Exprs {
+		tokens := matchExpr(sentence.Tokens, expr)
+		if tokens != nil {
+			sm.NumExprs++
+			sm.matches = append(sm.matches, ExprMatch{ExprIndex: i, Tokens: tokens})
+		}
+	}
+
+	if hasTopic && sm.NumExprs == 0 {
+		return nil
+	}
+
+	sm.topicName = m.Topic.Name
+	sm.Sentence = sentence
+
+	return sm
 }
 
-func sentenceExprMatch(sentence []sent.Token, expr topic.TopicExpr, mt itemTokenMap) bool {
-    // mt is the scratchMap, already cleared by caller
-    
-    for itemIdx, item := range expr {
-        switch item.Requirement() {
-        case topic.RequiresOne:
-            if t := matchOne(sentence, item); len(t) > 0 {
-                mt[item] = t
-                continue
-            }
-        case topic.RequiresAll:
-            if matchAll(sentence, item) {
-                continue
-            }
-        case topic.RequiresSome:
-            previousItem := expr[itemIdx-1]
-            if t := matchSome(sentence, mt, item, previousItem); len(t) > 0 {
-                mt[item] = t
-                delete(mt, previousItem)
-                continue
-            }
-        }
-        
-        // Match failed
-        return false
-    }
-    
-    return true
+// matchExpr matches a single TopicExpr against a sentence.
+// Returns the list of match occurrences (each is a chain of tokens in item order).
+// Returns nil if the expression does not match.
+func matchExpr(sentence []sent.Token, expr topic.TopicExpr) [][]sent.Token {
+	// candidates tracks the current set of partial match chains.
+	// After processing item i, each chain contains i+1 tokens.
+	var candidates [][]sent.Token
+
+	for i, item := range expr {
+		if i == 0 {
+			// First item: independent match, each hit starts a new chain
+			for _, t := range sentence {
+				if isTokenMatch(t, item) {
+					candidates = append(candidates, []sent.Token{t})
+				}
+			}
+			if len(candidates) == 0 {
+				return nil
+			}
+			continue
+		}
+
+		// Items 1..n: must have Near > 0, extend existing candidates
+		var extended [][]sent.Token
+		sentenceEnd := len(sentence) - 1
+
+		for _, chain := range candidates {
+			lastToken := chain[len(chain)-1]
+			if lastToken.Index >= sentenceEnd {
+				continue
+			}
+
+			end := lastToken.Index + item.Near
+			if end > sentenceEnd {
+				end = sentenceEnd
+			}
+
+			for _, t := range sentence[lastToken.Index+1 : end+1] {
+				if isTokenMatch(t, item) {
+					newChain := make([]sent.Token, len(chain), len(chain)+1)
+					copy(newChain, chain)
+					newChain = append(newChain, t)
+					extended = append(extended, newChain)
+				}
+			}
+		}
+
+		if len(extended) == 0 {
+			return nil
+		}
+		candidates = extended
+	}
+
+	return candidates
 }
 
 func (m *Matcher) AddTopicExpr(expr topic.TopicExpr) {
@@ -247,66 +155,8 @@ func (m *Matcher) AddTopicExpr(expr topic.TopicExpr) {
 
 func NewMatcher(topic topic.Topic) *Matcher {
 	return &Matcher{
-		Topic:      topic,
-		scratchMap: make(itemTokenMap),
+		Topic: topic,
 	}
-}
-
-func matchOne(sentence []sent.Token, item topic.TopicExprItem) (matched []matchedTokens) {
-	for _, t := range sentence {
-		if isTokenMatch(t, item) {
-			matched = append(matched, matchedTokens{t})
-		}
-	}
-
-	return matched
-}
-
-func matchAll(sentence []sent.Token, item topic.TopicExprItem) bool {
-	for _, t := range sentence {
-		if isTokenMatch(t, item) {
-			continue
-		}
-
-		return false
-	}
-
-	return true
-}
-
-func matchSome(sentence []sent.Token, mt itemTokenMap, item, previousItem topic.TopicExprItem) (matched []matchedTokens) {
-
-	previousItemCandidates := mt[previousItem]
-
-	sentenceEnd := len(sentence) - 1
-
-	for _, tc := range previousItemCandidates {
-		var subSentence []sent.Token
-		previousTokenIndex := tc[len(tc)-1].Index
-		// Check If previous is the last token of sentence, there is no
-		// possibility of a near match
-		if sentenceEnd == previousTokenIndex {
-			continue
-		}
-
-		requiredEnd := previousTokenIndex + int(item.Near)
-		if requiredEnd > sentenceEnd {
-			requiredEnd = sentenceEnd
-		}
-
-		subSentence = sentence[previousTokenIndex+1 : requiredEnd+1]
-		for _, t := range subSentence {
-			if isTokenMatch(t, item) {
-				newCandidate := []sent.Token{}
-				newCandidate = append(newCandidate, tc...)
-				newCandidate = append(newCandidate, t)
-				matched = append(matched, newCandidate)
-			}
-		}
-	}
-
-	// no new candidate
-	return
 }
 
 func isTokenMatch(t sent.Token, item topic.TopicExprItem) bool {
@@ -314,33 +164,24 @@ func isTokenMatch(t sent.Token, item topic.TopicExprItem) bool {
 	// Lemma field
 	//
 	if len(item.Lemma) > 0 {
-		if strings.HasPrefix(item.Lemma, "!") {
-			if strings.TrimPrefix(item.Lemma, "!") == t.Lemma {
-				return false
+		// optimistically try to split possible OR values
+		// If no "|" just one value
+		isOrValue := false
+		for _, orValue := range strings.Split(item.Lemma, "|") {
+			if orValue == t.Lemma {
+				isOrValue = true
+				break
 			}
-		} else {
-			// optimistically try to split possible OR values
-			// If no "|" just one value
-			isOrValue := false
-			for _, orValue := range strings.Split(item.Lemma, "|") {
-				if orValue == t.Lemma {
-					isOrValue = true
-					break
-				}
-			}
+		}
 
-			if !isOrValue {
-				return false
-			}
+		if !isOrValue {
+			return false
 		}
 	}
 
 	//
 	// Tag field
 	//
-	// A Tag string from spacy contains substring seaprated with '|':
-	//      DET__Definite=Def|Gender=Fem|Number=Sing|PronType=Art
-	// Do not mistake with our | operator.
 	if len(item.Tag) > 0 {
 		switch separator(item.Tag) {
 		case "|":
@@ -371,7 +212,6 @@ func isTokenMatch(t sent.Token, item topic.TopicExprItem) bool {
 		}
 	}
 
-	// remove use Tag instead
 	if len(item.Pos) > 0 {
 		if item.Pos != t.Pos {
 			return false
