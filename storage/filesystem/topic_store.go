@@ -79,7 +79,7 @@ func (th *TopicStore) Read(name string) (tpc.Topic, error) {
 		for idx := range exprs[index] {
 			exprs[index][idx].TopicName = name
 			exprs[index][idx].ExprIndex = index
-			exprs[index][idx].ExprId = exprs[index].String()
+			exprs[index][idx].ItemIndex = idx
 		}
 	}
 

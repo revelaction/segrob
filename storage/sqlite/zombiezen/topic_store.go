@@ -114,13 +114,13 @@ func (h *TopicStore) Write(tp topic.Topic) error {
 	return err
 }
 
-// assembleTopic sets TopicName, ExprIndex and ExprId for each item
+// assembleTopic sets TopicName, ExprIndex and ItemIndex for each item
 func (h *TopicStore) assembleTopic(name string, exprs []topic.TopicExpr) topic.Topic {
 	for index := range exprs {
 		for idx := range exprs[index] {
 			exprs[index][idx].TopicName = name
 			exprs[index][idx].ExprIndex = index
-			exprs[index][idx].ExprId = exprs[index].String()
+			exprs[index][idx].ItemIndex = idx
 		}
 	}
 	return topic.Topic{
