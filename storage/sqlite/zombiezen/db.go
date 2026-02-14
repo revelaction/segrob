@@ -20,7 +20,7 @@ func NewPool(dbPath string) (*sqlitex.Pool, error) {
 		"_busy_timeout=200",   // Wait up to 200ms for a write lock before returning SQLITE_BUSY; in ms
 		"_foreign_keys=on",    // Enforce foreign key constraints; otherwise they are decorative.
 		"_cache_size=-64000",  // Set page cache size (2MB).
-        "_txlock=immediate"    // Acquire write lock immediately, don't wait until first write. This prevents the common pattern where transactions start optimistically and then fail when they try to write.
+        "_txlock=immediate",    // Acquire write lock immediately, don't wait until first write. This prevents the common pattern where transactions start optimistically and then fail when they try to write.
 	}
 
 	initString := fmt.Sprintf("file:%s?%s", dbPath, strings.Join(params, "&"))
