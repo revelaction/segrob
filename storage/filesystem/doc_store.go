@@ -60,19 +60,35 @@ func NewDocStore(path string) (*DocStore, error) {
 	return &DocStore{docsPath: docsPath, docs: docs}, nil
 }
 
-func (h *DocStore) loadJSON(path string) (*sent.Doc, error) {
+func (h *DocStore) loadJSON(path string, doc *sent.Doc) error {
 	f, err := os.ReadFile(path)
 	if err != nil {
-		return nil, fmt.Errorf("IO error: %w", err)
+		return fmt.Errorf("IO error: %w", err)
 	}
 
-	var doc sent.Doc
-	err = json.Unmarshal(f, &doc)
+	err = json.Unmarshal(f, doc)
 	if err != nil {
-		return nil, fmt.Errorf("JSON decoding error: %w", err)
+		return fmt.Errorf("JSON decoding error: %w", err)
 	}
 
-	return &doc, nil
+	return nil
+}
+
+func (h *DocStore) loadFullDoc(i int) error {
+	doc := &h.docs[i]
+
+	fullPath := filepath.Join(h.docsPath, doc.Title)
+	if err := h.loadJSON(fullPath, doc); err != nil {
+		return err
+	}
+
+	// Metadata Injection
+	doc.Id = i
+	for j := range doc.Sentences {
+		doc.Sentences[j].DocId = i
+	}
+
+	return nil
 }
 
 // LoadNLP preloads docs into memory and injects metadata.
@@ -84,30 +100,14 @@ outer:
 	for i := range h.docs {
 		doc := &h.docs[i]
 
-		if docID != nil  {
-		    if *docID == i {
-
-                fullPath := filepath.Join(h.docsPath, doc.Title)
-                fullDoc, err := h.loadJSON(fullPath)
-                if err != nil {
-                    return err
-                }
-
-                // Metadata Injection
-                fullDoc.Id = i
-                fullDoc.Title = doc.Title
-                for j := range fullDoc.Sentences {
-                    fullDoc.Sentences[j].DocId = i
-                }
-
-                doc.Sentences = fullDoc.Sentences
-                return nil
-            } 
-
-            continue
+		if docID != nil {
+			if *docID == i {
+				return h.loadFullDoc(i)
+			}
+			continue
 		}
 
-        // labels and docid filter are exclusive
+		// labels and docid filter are exclusive
 		for _, req := range labels {
 			if !slices.Contains(doc.Labels, req) {
 				continue outer
@@ -118,20 +118,9 @@ outer:
 			cb(i+1, total, doc.Title)
 		}
 
-		fullPath := filepath.Join(h.docsPath, doc.Title)
-		fullDoc, err := h.loadJSON(fullPath)
-		if err != nil {
+		if err := h.loadFullDoc(i); err != nil {
 			return err
 		}
-
-		// Metadata Injection
-		fullDoc.Id = i
-		fullDoc.Title = doc.Title
-		for j := range fullDoc.Sentences {
-			fullDoc.Sentences[j].DocId = i
-		}
-
-		doc.Sentences = fullDoc.Sentences
 	}
 
 	return nil
