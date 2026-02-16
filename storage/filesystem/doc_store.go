@@ -60,14 +60,53 @@ func NewDocStore(path string) (*DocStore, error) {
 	return &DocStore{docsPath: docsPath, docs: docs}, nil
 }
 
-// Preload preloads docs into memory.
-// If labels is not empty, only docs matching (EXACT match) ALL labels are loaded.
-func (h *DocStore) Preload(labels []string, cb func(current, total int, name string)) error {
+func (h *DocStore) loadJSON(path string) (*sent.Doc, error) {
+	f, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("IO error: %w", err)
+	}
+
+	var doc sent.Doc
+	err = json.Unmarshal(f, &doc)
+	if err != nil {
+		return nil, fmt.Errorf("JSON decoding error: %w", err)
+	}
+
+	return &doc, nil
+}
+
+// LoadNLP preloads docs into memory and injects metadata.
+// If docID is provided, only that specific doc is loaded.
+// If labels is not empty, only docs matching ALL labels are loaded.
+func (h *DocStore) LoadNLP(labels []string, docID *int, cb func(current, total int, name string)) error {
 	total := len(h.docs)
 outer:
 	for i := range h.docs {
 		doc := &h.docs[i]
 
+		if docID != nil  {
+		    if *docID == i {
+
+                fullPath := filepath.Join(h.docsPath, doc.Title)
+                fullDoc, err := h.loadJSON(fullPath)
+                if err != nil {
+                    return err
+                }
+
+                // Metadata Injection
+                fullDoc.Id = i
+                fullDoc.Title = doc.Title
+                for j := range fullDoc.Sentences {
+                    fullDoc.Sentences[j].DocId = i
+                }
+
+                return nil
+            } 
+
+            continue
+		}
+
+        // labels and docid filter are exclusive
 		for _, req := range labels {
 			if !slices.Contains(doc.Labels, req) {
 				continue outer
@@ -78,9 +117,17 @@ outer:
 			cb(i+1, total, doc.Title)
 		}
 
-		fullDoc, err := h.Read(doc.Id)
+		fullPath := filepath.Join(h.docsPath, doc.Title)
+		fullDoc, err := h.loadJSON(fullPath)
 		if err != nil {
 			return err
+		}
+
+		// Metadata Injection
+		fullDoc.Id = i
+		fullDoc.Title = doc.Title
+		for j := range fullDoc.Sentences {
+			fullDoc.Sentences[j].DocId = i
 		}
 
 		doc.Sentences = fullDoc.Sentences
@@ -122,25 +169,7 @@ func (h *DocStore) Read(id int) (sent.Doc, error) {
 		return sent.Doc{}, fmt.Errorf("doc id out of range: %d", id)
 	}
 
-	meta := h.docs[id]
-	fullPath := filepath.Join(h.docsPath, meta.Title)
-
-	f, err := os.ReadFile(fullPath)
-	if err != nil {
-		return sent.Doc{}, fmt.Errorf("IO error: %w", err)
-	}
-
-	var doc sent.Doc
-	err = json.Unmarshal(f, &doc)
-	if err != nil {
-		return sent.Doc{}, fmt.Errorf("JSON decoding error: %w", err)
-	}
-
-	// Ensure metadata consistency
-	doc.Id = meta.Id
-	doc.Title = meta.Title
-
-	return doc, nil
+	return h.docs[id], nil
 }
 
 // FindCandidates returns ALL sentences from memory if they match the labels.

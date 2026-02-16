@@ -9,6 +9,11 @@ import (
 )
 
 func docCommand(repo storage.DocRepository, opts DocOptions, id int, ui UI) error {
+	if p, ok := repo.(storage.Preloader); ok {
+		if err := p.LoadNLP(nil, &id, nil); err != nil {
+			return err
+		}
+	}
 	doc, err := repo.Read(id)
 	if err != nil {
 		return err

@@ -34,6 +34,9 @@ func importDocCommand(opts ImportDocOptions, ui UI) error {
 
 	count := 0
 	for _, docMeta := range docs {
+		if err := src.LoadNLP(nil, &docMeta.Id, nil); err != nil {
+			return fmt.Errorf("failed to load doc %s: %w", docMeta.Title, err)
+		}
 		doc, err := src.Read(docMeta.Id)
 		if err != nil {
 			return fmt.Errorf("failed to read doc %s: %w", docMeta.Title, err)

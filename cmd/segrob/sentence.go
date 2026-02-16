@@ -8,6 +8,11 @@ import (
 )
 
 func sentenceCommand(repo storage.DocRepository, opts SentenceOptions, docId int, sentId int, ui UI) error {
+	if p, ok := repo.(storage.Preloader); ok {
+		if err := p.LoadNLP(nil, &docId, nil); err != nil {
+			return err
+		}
+	}
 	doc, err := repo.Read(docId)
 	if err != nil {
 		return err

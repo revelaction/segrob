@@ -12,7 +12,7 @@ import (
 func queryCommand(dr storage.DocRepository, tr storage.TopicRepository, opts QueryOptions, ui UI) error {
 
 	if p, ok := dr.(storage.Preloader); ok {
-		err := p.Preload(nil, func(current, total int, name string) {
+		err := p.LoadNLP(nil, nil, func(current, total int, name string) {
 			fmt.Fprintf(ui.Err, "\r📖 Loading docs: %d/%d (%s)...%s", current, total, name, render.ClearLine)
 		})
 		fmt.Fprint(ui.Err, "\n")

@@ -10,6 +10,11 @@ import (
 )
 
 func topicsCommand(docRepo storage.DocRepository, topicRepo storage.TopicRepository, opts TopicsOptions, docId int, sentId int, ui UI) error {
+	if p, ok := docRepo.(storage.Preloader); ok {
+		if err := p.LoadNLP(nil, &docId, nil); err != nil {
+			return err
+		}
+	}
 	doc, err := docRepo.Read(docId)
 	if err != nil {
 		return err
