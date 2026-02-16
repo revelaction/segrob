@@ -100,6 +100,7 @@ outer:
                     fullDoc.Sentences[j].DocId = i
                 }
 
+                doc.Sentences = fullDoc.Sentences
                 return nil
             } 
 
