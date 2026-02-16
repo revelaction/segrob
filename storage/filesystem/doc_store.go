@@ -96,6 +96,7 @@ func (h *DocStore) loadFullDoc(i int) error {
 // If labels is not empty, only docs matching ALL labels are loaded.
 func (h *DocStore) LoadNLP(labels []string, docID *int, cb func(current, total int, name string)) error {
 	total := len(h.docs)
+	matchedCount := 0
 outer:
 	for i := range h.docs {
 		doc := &h.docs[i]
@@ -114,8 +115,9 @@ outer:
 			}
 		}
 
+		matchedCount++
 		if cb != nil {
-			cb(i+1, total, doc.Title)
+			cb(matchedCount, total, doc.Title)
 		}
 
 		if err := h.loadFullDoc(i); err != nil {
