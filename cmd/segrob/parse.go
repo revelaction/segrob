@@ -25,6 +25,7 @@ type ExprOptions struct {
 }
 
 type QueryOptions struct {
+	Labels    []string
 	NoColor   bool
 	NoPrefix  bool
 	NMatches  int
@@ -485,6 +486,10 @@ func parseQueryArgs(args []string, ui UI) (QueryOptions, bool, bool, error) {
 	fs.SetOutput(io.Discard)
 
 	var opts QueryOptions
+	labels := (*stringSliceFlag)(&opts.Labels)
+	fs.Var(labels, "label", "Only scan those token files that match the labels (EXACT match, ALL labels required)")
+	fs.Var(labels, "l", "alias for -label")
+
 	fs.BoolVar(&opts.NoColor, "no-color", false, "Show matched sentences without formatting (color)")
 	fs.BoolVar(&opts.NoColor, "c", false, "alias for -no-color")
 

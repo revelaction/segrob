@@ -12,7 +12,7 @@ import (
 func queryCommand(dr storage.DocRepository, tr storage.TopicRepository, opts QueryOptions, ui UI) error {
 
 	if p, ok := dr.(storage.Preloader); ok {
-		err := p.LoadNLP(nil, nil, func(current, total int, name string) {
+		err := p.LoadNLP(opts.Labels, nil, func(current, total int, name string) {
 			fmt.Fprintf(ui.Err, "\r📖 Loading docs: %d/%d (%s)...%s", current, total, name, render.ClearLine)
 		})
 		fmt.Fprint(ui.Err, "\n")
@@ -35,6 +35,6 @@ func queryCommand(dr storage.DocRepository, tr storage.TopicRepository, opts Que
 	r.NumMatches = opts.NMatches
 
 	// now present the REPL and prepare for topic in the REPL
-	t := query.NewHandler(dr, topicLib, r)
+	t := query.NewHandler(dr, topicLib, r, opts.Labels)
 	return t.Run()
 }

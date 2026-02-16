@@ -26,13 +26,15 @@ type Handler struct {
 	DocRepo      storage.DocReader
 	TopicLibrary topic.Library
 	Renderer     *render.Renderer
+	Labels       []string
 }
 
-func NewHandler(dr storage.DocReader, tl topic.Library, r *render.Renderer) *Handler {
+func NewHandler(dr storage.DocReader, tl topic.Library, r *render.Renderer, labels []string) *Handler {
 	return &Handler{
 		DocRepo:      dr,
 		TopicLibrary: tl,
 		Renderer:     r,
+		Labels:       labels,
 	}
 }
 
@@ -114,7 +116,7 @@ func (h *Handler) Run() error {
 			// doc := sent.Doc{Tokens: make([][]sent.Token, 1)} // No longer needed
 			for {
 				// Fetch batch
-				newCursor, err := h.DocRepo.FindCandidates(lemmas, []string{}, cursor, 500, func(s sent.Sentence) error {
+				newCursor, err := h.DocRepo.FindCandidates(lemmas, h.Labels, cursor, 500, func(s sent.Sentence) error {
 					fetched++
 					h.Renderer.AddDocName(s.DocId, docNames[s.DocId])
 
