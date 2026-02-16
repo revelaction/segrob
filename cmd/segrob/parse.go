@@ -437,7 +437,7 @@ func parseExprArgs(args []string, ui UI) (ExprOptions, []string, bool, error) {
 	fs.Var(formatFlag, "f", "alias for -format")
 
 	fs.StringVar(&opts.DocPath, "doc-path", os.Getenv("SEGROB_DOC_PATH"), "Path to docs directory or SQLite file")
-	fs.StringVar(&opts.DocPath, "dp", os.Getenv("SEGROB_DOC_PATH"), "alias for -doc-path")
+	fs.StringVar(&opts.DocPath, "d", os.Getenv("SEGROB_DOC_PATH"), "alias for -doc-path")
 
 	fs.StringVar(&opts.TopicPath, "topic-path", os.Getenv("SEGROB_TOPIC_PATH"), "Path to topics directory or SQLite file")
 	fs.StringVar(&opts.TopicPath, "t", os.Getenv("SEGROB_TOPIC_PATH"), "alias for -topic-path")
@@ -469,7 +469,7 @@ func parseExprArgs(args []string, ui UI) (ExprOptions, []string, bool, error) {
 	}
 
 	if opts.DocPath == "" {
-		return opts, nil, false, errors.New("Doc path must be specified via -dp or SEGROB_DOC_PATH")
+		return opts, nil, false, errors.New("Doc path must be specified via -d or SEGROB_DOC_PATH")
 	}
 
 	info, err := os.Stat(opts.DocPath)
