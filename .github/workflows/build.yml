@@ -2,48 +2,58 @@ name: Build
 on:
   release:
     types: [published]
-  push:
-  pull_request:
 permissions:
   contents: read
 jobs:
   build:
     name: Build binaries
-    runs-on: ubuntu-latest
-    environment: "Build, release binaries"
     strategy:
       matrix:
         include:
           - {GOOS: linux, GOARCH: amd64}
-          - {GOOS: linux, GOARCH: arm, GOARM: 6}
           - {GOOS: linux, GOARCH: arm64}
           - {GOOS: darwin, GOARCH: amd64}
+          - {GOOS: darwin, GOARCH: arm64}
+          - {GOOS: linux, GOARCH: arm, GOARM: 6}
+          - {GOOS: freebsd, GOARCH: amd64}
+          - {GOOS: windows, GOARCH: amd64}
+    runs-on: ubuntu-latest
+    environment: "Build, release binaries"
     steps:
-      - name: Install Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: 1.x
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      - name: Install Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: 1.x
       - name: Build binary
         run: |        
-          VERSION="$(git describe --tags)"
-          DIR="$(mktemp -d)"
-          mkdir "$DIR/segrob"
-          go build -o "$DIR/segrob" -ldflags "-X main.BuildTag=$VERSION" -trimpath ./cmd/...
-          tar -cvzf "segrob-$VERSION-$GOOS-$GOARCH.tar.gz" -C "$DIR" segrob
+          VERSION="$(git describe --tags --always)"
+          DIR="dist"
+          mkdir -p "$DIR"
+          EXTENSION=""
+          [ "$GOOS" = "windows" ] && EXTENSION=".exe"
+          
+          CGO_ENABLED=0 go build -o "$DIR/segrob$EXTENSION" -trimpath ./cmd/segrob
+          
+          if [ "$GOOS" = "windows" ]; then
+            zip -j "segrob-$VERSION-$GOOS-$GOARCH.zip" "$DIR/segrob$EXTENSION"
+          else
+            tar -cvzf "segrob-$VERSION-$GOOS-$GOARCH.tar.gz" -C "$DIR" "segrob$EXTENSION"
+          fi
         env:
-          CGO_ENABLED: 0
           GOOS: ${{ matrix.GOOS }}
           GOARCH: ${{ matrix.GOARCH }}
           GOARM: ${{ matrix.GOARM }}
       - name: Upload workflow artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: segrob-binaries-${{ matrix.GOOS }}-${{ matrix.GOARCH }}
-          path: segrob-*
+          name: segrob-${{ github.ref_name }}-${{ matrix.GOOS }}-${{ matrix.GOARCH }}
+          path: |
+            segrob-*.tar.gz
+            segrob-*.zip
   upload:
     name: Upload release binaries
     if: github.event_name == 'release'
@@ -55,7 +65,7 @@ jobs:
       - name: Download workflow artifacts
         uses: actions/download-artifact@v4
         with:
-          pattern: segrob-binaries-*
+          pattern: segrob-${{ github.ref_name }}-*
           merge-multiple: true
       - name: Upload release artifacts
         run: gh release upload "$GITHUB_REF_NAME" segrob-*
