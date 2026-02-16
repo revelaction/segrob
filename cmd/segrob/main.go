@@ -10,6 +10,11 @@ import (
 	"golang.org/x/term"
 )
 
+var (
+	BuildTag    string
+	BuildCommit string
+)
+
 // UI contains the output streams for the application.
 // Used for injecting buffers during testing.
 type UI struct {
@@ -65,6 +70,9 @@ func runCommand(cmd string, args []string, ui UI) error {
 	defer p.Close()
 
 	switch cmd {
+	case "version":
+		return versionCommand(ui)
+
 	case "help":
 		if len(args) > 0 {
 			return runCommand(args[0], []string{"--help"}, ui)

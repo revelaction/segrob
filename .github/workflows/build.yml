@@ -31,12 +31,14 @@ jobs:
       - name: Build binary
         run: |        
           VERSION="$(git describe --tags --always)"
+          COMMIT="$(git rev-parse --short HEAD)"
+          LDFLAGS="-X main.BuildTag=$VERSION -X main.BuildCommit=$COMMIT"
           DIR="dist"
           mkdir -p "$DIR"
           EXTENSION=""
           [ "$GOOS" = "windows" ] && EXTENSION=".exe"
           
-          CGO_ENABLED=0 go build -o "$DIR/segrob$EXTENSION" -trimpath ./cmd/segrob
+          CGO_ENABLED=0 go build -o "$DIR/segrob$EXTENSION" -ldflags "$LDFLAGS" -trimpath ./cmd/segrob
           
           if [ "$GOOS" = "windows" ]; then
             zip -j "segrob-$VERSION-$GOOS-$GOARCH.zip" "$DIR/segrob$EXTENSION"

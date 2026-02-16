@@ -858,7 +858,9 @@ func setupUsage(fs *flag.FlagSet) {
 		_, _ = fmt.Fprintf(output, "  export-doc    Export docs from SQLite to filesystem.\n")
 		_, _ = fmt.Fprintf(output, "  migrate       Migrate legacy JSON docs to new JSON format.\n")
 		_, _ = fmt.Fprintf(output, "  bash      Output bash completion script.\n")
+		_, _ = fmt.Fprintf(output, "  version   Show version information\n")
 		_, _ = fmt.Fprintf(output, "  help      Show help for a command.\n")
+		_, _ = fmt.Fprintf(output, "\nVersion: %s, commit %s\n", BuildTag, BuildCommit)
 	}
 }
 
