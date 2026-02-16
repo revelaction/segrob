@@ -18,8 +18,6 @@ type ExprOptions struct {
 	Labels    []string
 	NoColor   bool
 	NoPrefix  bool
-	Doc       *int // nil = not set
-	Sent      *int // nil = not set
 	NMatches  int
 	Format    string
 	DocPath   string
@@ -430,13 +428,6 @@ func parseExprArgs(args []string, ui UI) (ExprOptions, []string, bool, error) {
 	fs.BoolVar(&opts.NoPrefix, "no-prefix", false, "Show matched sentences without prefixes with metadata")
 	fs.BoolVar(&opts.NoPrefix, "x", false, "alias for -no-prefix")
 
-	var docOpt, sentOpt optionalInt
-	fs.Var(&docOpt, "doc", "Limit searched to the doc specified by this number")
-	fs.Var(&docOpt, "d", "alias for -doc")
-
-	fs.Var(&sentOpt, "sent", "Limit searched to the sentence specified by this number. Needs --doc")
-	fs.Var(&sentOpt, "s", "alias for -sent")
-
 	fs.IntVar(&opts.NMatches, "nmatches", 0, "Only show matched sentences with score greater than this number")
 	fs.IntVar(&opts.NMatches, "n", 0, "alias for -nmatches")
 
@@ -470,9 +461,6 @@ func parseExprArgs(args []string, ui UI) (ExprOptions, []string, bool, error) {
 		fs.Usage()
 		return opts, nil, false, err
 	}
-
-	opts.Doc = docOpt.value
-	opts.Sent = sentOpt.value
 
 	if fs.NArg() < 1 {
 		fs.SetOutput(ui.Err)

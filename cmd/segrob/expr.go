@@ -6,7 +6,7 @@ import (
 
 	"github.com/revelaction/segrob/match"
 	"github.com/revelaction/segrob/render"
-	"github.com/revelaction/segrob/search"
+	sent "github.com/revelaction/segrob/sentence"
 	"github.com/revelaction/segrob/storage"
 	"github.com/revelaction/segrob/topic"
 )
@@ -43,14 +43,9 @@ func exprCommand(dr storage.DocRepository, opts ExprOptions, args []string, ui U
 		return parseErr
 	}
 
-	// Strategy Selection
-	s := search.New(topic.Topic{}, dr)
-	if opts.Doc != nil {
-		s.WithDocID(*opts.Doc)
-	}
-	if len(opts.Labels) > 0 {
-		s.WithLabels(opts.Labels)
-	}
+	// Prepare Matcher
+	matcher := match.NewMatcher(topic.Topic{})
+	matcher.AddTopicExpr(expr)
 
 	// Prepare results accumulator
 	var results []*match.SentenceMatch
@@ -62,8 +57,16 @@ func exprCommand(dr storage.DocRepository, opts ExprOptions, args []string, ui U
 	// Execute search with pagination
 	cursor := storage.Cursor(0)
 	limit := 1000
+	lemmas := expr.Lemmas()
+
 	for {
-		newCursor, err := s.Sentences(expr, cursor, limit, onMatch)
+		newCursor, err := dr.FindCandidates(lemmas, opts.Labels, cursor, limit, func(s sent.Sentence) error {
+			if m := matcher.MatchSentence(s); m != nil {
+				return onMatch(m)
+			}
+			return nil
+		})
+
 		if err != nil {
 			return err
 		}
@@ -81,15 +84,13 @@ func exprCommand(dr storage.DocRepository, opts ExprOptions, args []string, ui U
 	r.Format = opts.Format
 	r.NumMatches = opts.NMatches
 
-	if opts.Doc == nil {
-		// Populate DocNames for indexed search
-		list, err := dr.List("")
-		if err != nil {
-			return err
-		}
-		for _, d := range list {
-			r.AddDocName(d.Id, d.Title)
-		}
+	// Populate DocNames for indexed search
+	list, err := dr.List("")
+	if err != nil {
+		return err
+	}
+	for _, d := range list {
+		r.AddDocName(d.Id, d.Title)
 	}
 
 	r.Match(results)
