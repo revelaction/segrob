@@ -30,7 +30,7 @@ func renderTopics(doc sent.Doc, sentId int, topicRepo storage.TopicRepository, o
 
 	s := doc.Sentences[sentId]
 
-	r := render.NewRenderer()
+	r := render.NewCLIRenderer()
 	r.HasColor = false
 
 	prefix := fmt.Sprintf("%54s", render.Yellow256+render.Off) + "✍  "
@@ -56,7 +56,7 @@ func renderTopics(doc sent.Doc, sentId int, topicRepo storage.TopicRepository, o
 
 		res := []*match.SentenceMatch{sm}
 
-		r.Match(res)
+		r.Render(res)
 	}
 
 	return nil

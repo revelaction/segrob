@@ -40,7 +40,7 @@ func renderDoc(doc sent.Doc, opts DocOptions, ui UI) {
 		}
 	}
 
-	r := render.NewRenderer()
+	r := render.NewCLIRenderer()
 	r.HasColor = false
 	for i, sentence := range sentences {
 		prefix := fmt.Sprintf("✍  %d ", start+i)

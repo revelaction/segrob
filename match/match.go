@@ -22,40 +22,34 @@ type Matcher struct {
 // Tokens contains the list of match occurrences. Each []sent.Token is one
 // complete match with tokens ordered by item position in the expression.
 type ExprMatch struct {
-	ExprIndex int            // position of the expression in Topic.Exprs
-	Tokens    [][]sent.Token // each element is one full match occurrence
+	ExprIndex int            `json:"expr_index"` // position of the expression in Topic.Exprs
+	Tokens    [][]sent.Token `json:"tokens"`     // each element is one full match occurrence
 }
 
 // SentenceMatch represents a sentence matched by one or more TopicExpr.
 type SentenceMatch struct {
-	// topicName is the topic that matched this sentence
-	topicName string
+	// TopicName is the topic that matched this sentence
+	TopicName string `json:"topic_name,omitempty"`
 
-	// matches contains one ExprMatch per matched expression
-	matches []ExprMatch
+	// Matches contains one ExprMatch per matched expression
+	Matches []ExprMatch `json:"matches"`
 
 	// Sentence is the matched sentence
-	Sentence sent.Sentence
+	Sentence sent.Sentence `json:"sentence"`
 
 	// NumExprs is the number of topicExpr that matched. Used to sort results.
-	NumExprs int
+	NumExprs int `json:"num_exprs"`
 }
 
 // AllTokens returns all matched tokens from all expressions, flattened.
 func (sm *SentenceMatch) AllTokens() []sent.Token {
 	var all []sent.Token
-	for _, em := range sm.matches {
+	for _, em := range sm.Matches {
 		for _, tks := range em.Tokens {
 			all = append(all, tks...)
 		}
 	}
 	return all
-}
-
-// TopicName return the topic name of the sentence match
-// used by the render to prefix the topic in the `topics` command.
-func (sm *SentenceMatch) TopicName() string {
-	return sm.topicName
 }
 
 // MatchSentence matches a posible Topic AND a possible TopicExpr for a given sentence.
@@ -66,12 +60,13 @@ func (m *Matcher) MatchSentence(sentence sent.Sentence) *SentenceMatch {
 	sm := &SentenceMatch{}
 
 	// ArgExpr check (AND gate)
+	// ArgExpr check (AND gate)
 	if hasExpr {
 		tokens := matchExpr(sentence.Tokens, m.ArgExpr)
 		if tokens == nil {
 			return nil
 		}
-		sm.matches = append(sm.matches, ExprMatch{ExprIndex: -1, Tokens: tokens})
+		sm.Matches = append(sm.Matches, ExprMatch{ExprIndex: -1, Tokens: tokens})
 	}
 
 	// Topic expressions (OR)
@@ -79,7 +74,7 @@ func (m *Matcher) MatchSentence(sentence sent.Sentence) *SentenceMatch {
 		tokens := matchExpr(sentence.Tokens, expr)
 		if tokens != nil {
 			sm.NumExprs++
-			sm.matches = append(sm.matches, ExprMatch{ExprIndex: i, Tokens: tokens})
+			sm.Matches = append(sm.Matches, ExprMatch{ExprIndex: i, Tokens: tokens})
 		}
 	}
 
@@ -87,7 +82,7 @@ func (m *Matcher) MatchSentence(sentence sent.Sentence) *SentenceMatch {
 		return nil
 	}
 
-	sm.topicName = m.Topic.Name
+	sm.TopicName = m.Topic.Name
 	sm.Sentence = sentence
 
 	return sm

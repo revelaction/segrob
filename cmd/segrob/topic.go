@@ -29,7 +29,7 @@ func topicCommand(tr storage.TopicRepository, opts TopicOptions, name string, ui
 		return err
 	}
 
-	r := render.NewRenderer()
+	r := render.NewCLIRenderer()
 	r.Topic(tp.Exprs)
 	return nil
 }

@@ -77,7 +77,7 @@ func exprCommand(dr storage.DocRepository, opts ExprOptions, args []string, ui U
 	}
 
 	// Render results
-	r := render.NewRenderer()
+	r := render.NewCLIRenderer()
 	r.HasColor = !opts.NoColor
 	r.HasPrefix = !opts.NoPrefix
 	r.PrefixTopicFunc = render.PrefixFuncEmpty
@@ -93,7 +93,7 @@ func exprCommand(dr storage.DocRepository, opts ExprOptions, args []string, ui U
 		r.AddDocName(d.Id, d.Title)
 	}
 
-	r.Match(results)
+	r.Render(results)
 
 	return nil
 }

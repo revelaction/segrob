@@ -25,11 +25,11 @@ const (
 type Handler struct {
 	DocRepo      storage.DocReader
 	TopicLibrary topic.Library
-	Renderer     *render.Renderer
+	Renderer     *render.CLIRenderer
 	Labels       []string
 }
 
-func NewHandler(dr storage.DocReader, tl topic.Library, r *render.Renderer, labels []string) *Handler {
+func NewHandler(dr storage.DocReader, tl topic.Library, r *render.CLIRenderer, labels []string) *Handler {
 	return &Handler{
 		DocRepo:      dr,
 		TopicLibrary: tl,
@@ -154,7 +154,7 @@ func (h *Handler) Run() error {
 			return results[i].Sentence.Id < results[j].Sentence.Id
 		})
 
-		h.Renderer.Match(results)
+		h.Renderer.Render(results)
 	}
 
 	return nil

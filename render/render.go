@@ -40,7 +40,12 @@ func SupportedFormats() []string {
 	return []string{"all", "part", "lemma", "aggr"}
 }
 
-type Renderer struct {
+// Renderer defines the contract for rendering sentence match results.
+type Renderer interface {
+	Render(results []*match.SentenceMatch)
+}
+
+type CLIRenderer struct {
 	HasColor bool
 
 	HasPrefix bool
@@ -61,9 +66,9 @@ type Renderer struct {
 	DocNames map[int]string
 }
 
-// Match matches the doc with the current TopicExpr and fills the Matches
+// Render matches the doc with the current TopicExpr and fills the Matches
 // property with the matched sentences.
-func (r *Renderer) Match(resultsSorted []*match.SentenceMatch) {
+func (r *CLIRenderer) Render(resultsSorted []*match.SentenceMatch) {
 
 	// if aggr format, we collect the aggr lemmas here
 	aggregatedLemmas := map[string]int{}
@@ -101,27 +106,27 @@ func (r *Renderer) Match(resultsSorted []*match.SentenceMatch) {
 	}
 }
 
-func (r *Renderer) AddDocName(docId int, name string) {
+func (r *CLIRenderer) AddDocName(docId int, name string) {
 	r.DocNames[docId] = name
 }
 
-func NewRenderer() *Renderer {
-	return &Renderer{DocNames: map[int]string{}}
+func NewCLIRenderer() *CLIRenderer {
+	return &CLIRenderer{DocNames: map[int]string{}}
 }
 
-func (r *Renderer) Sentence(s []sent.Token, prefix string) {
+func (r *CLIRenderer) Sentence(s []sent.Token, prefix string) {
 	text := r.sentence(s, []sent.Token{})
 	fmt.Fprintf(os.Stdout, "%s%s\n", prefix, strings.ReplaceAll(text, "\n", " "))
 }
 
-func (r *Renderer) SentenceString(s []sent.Token, matches []sent.Token) string {
+func (r *CLIRenderer) SentenceString(s []sent.Token, matches []sent.Token) string {
 	text := r.sentence(s, matches)
 	return strings.ReplaceAll(text, "\n", " ")
 }
 
 // SentenceBlindedString returns the original text of the sentence s with the
 // words in matches substituted by a mask (f.ex. XXX)
-func (r *Renderer) SentenceBlindedString(s []sent.Token, matches []sent.Token) string {
+func (r *CLIRenderer) SentenceBlindedString(s []sent.Token, matches []sent.Token) string {
 
 	blinded := []sent.Token{}
 	for _, t := range s {
@@ -143,7 +148,7 @@ func (r *Renderer) SentenceBlindedString(s []sent.Token, matches []sent.Token) s
 	return re.ReplaceAllLiteralString(rText, "###")
 }
 
-func (r *Renderer) sentence(sentence, matches []sent.Token) string {
+func (r *CLIRenderer) sentence(sentence, matches []sent.Token) string {
 	var str strings.Builder
 	var lastIdx, lastLen int
 	for _, token := range sentence {
@@ -199,7 +204,7 @@ func (r *Renderer) sentence(sentence, matches []sent.Token) string {
 	return str.String()
 }
 
-func (r *Renderer) syntagma(sentence, matches []sent.Token) string {
+func (r *CLIRenderer) syntagma(sentence, matches []sent.Token) string {
 	// if not matches, we print the whole sentence
 	if len(matches) == 0 {
 		return r.sentence(sentence, matches)
@@ -253,7 +258,7 @@ func (r *Renderer) syntagma(sentence, matches []sent.Token) string {
 //	tomar 2 mano
 //
 // thus priorizing lemma to Tag fields.
-func (r *Renderer) Topic(exprs []topic.TopicExpr) {
+func (r *CLIRenderer) Topic(exprs []topic.TopicExpr) {
 	prefix := ""
 	for _, expr := range exprs {
 		exprSlice := []string{}
@@ -278,12 +283,12 @@ func (r *Renderer) Topic(exprs []topic.TopicExpr) {
 	}
 }
 
-func (r *Renderer) LemmaString(s []sent.Token, matches []sent.Token) string {
+func (r *CLIRenderer) LemmaString(s []sent.Token, matches []sent.Token) string {
 	return r.lemma(matches)
 }
 
 // lemma renders only the matched tokens (the lemma field)
-func (r *Renderer) lemma(matches []sent.Token) string {
+func (r *CLIRenderer) lemma(matches []sent.Token) string {
 	matchedWords := []string{}
 	for _, t := range matches {
 		matchedWords = append(matchedWords, t.Lemma)
@@ -292,7 +297,7 @@ func (r *Renderer) lemma(matches []sent.Token) string {
 	return strings.Join(matchedWords, " ")
 }
 
-func (r *Renderer) aggregateLemma(matches []sent.Token, aggrLemmas map[string]int) {
+func (r *CLIRenderer) aggregateLemma(matches []sent.Token, aggrLemmas map[string]int) {
 	matchedTokens := []sent.Token{}
 
 OUTER:
@@ -330,7 +335,7 @@ func colorToken(token sent.Token, matches []sent.Token, hasColor bool) string {
 	return token.Text
 }
 
-func (r *Renderer) buildPrefixDoc(sentenceMatch *match.SentenceMatch) string {
+func (r *CLIRenderer) buildPrefixDoc(sentenceMatch *match.SentenceMatch) string {
 
 	if !r.HasPrefix {
 		return PrefixFuncEmpty(sentenceMatch)
@@ -357,7 +362,7 @@ func PrefixFuncIconLabel(sentenceMatch *match.SentenceMatch) string {
 
 }
 
-func (r *Renderer) buildPrefixTopic(sm *match.SentenceMatch) string {
+func (r *CLIRenderer) buildPrefixTopic(sm *match.SentenceMatch) string {
 
 	if !r.HasPrefix {
 		return PrefixFuncEmpty(sm)
@@ -367,13 +372,13 @@ func (r *Renderer) buildPrefixTopic(sm *match.SentenceMatch) string {
 		return r.PrefixTopicFunc(sm)
 	}
 
-	topicName := sm.TopicName()
+	topicName := sm.TopicName
 
 	topicPrefix := "🏷  " + Yellow256 + topicName + Off
 	return fmt.Sprintf("[%-50s] ✍  ", topicPrefix)
 }
 
-func (r *Renderer) title(docId int) string {
+func (r *CLIRenderer) title(docId int) string {
 	title := r.DocNames[docId]
 	l := len(title)
 	var part string
@@ -388,7 +393,7 @@ func (r *Renderer) title(docId int) string {
 
 // NextFormat sets the Renderer Format option to a different one, following
 // the SupportedFormats() order.
-func (r *Renderer) NextFormat() {
+func (r *CLIRenderer) NextFormat() {
 
 	supported := SupportedFormats()
 	for i, format := range supported {
@@ -405,13 +410,13 @@ func (r *Renderer) NextFormat() {
 	}
 }
 
-func (r *Renderer) NextPrefix() {
+func (r *CLIRenderer) NextPrefix() {
 
 	// toggle
 	r.HasPrefix = !r.HasPrefix
 }
 
-func (r *Renderer) aggrLemmas(agls map[string]int) {
+func (r *CLIRenderer) aggrLemmas(agls map[string]int) {
 	// flatten map to use sortSlice
 	sl := []struct {
 		NumSent  int

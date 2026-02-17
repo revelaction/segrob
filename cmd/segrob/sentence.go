@@ -23,7 +23,7 @@ func sentenceCommand(repo storage.DocRepository, opts SentenceOptions, docId int
 	}
 
 	s := doc.Sentences[sentId]
-	r := render.NewRenderer()
+	r := render.NewCLIRenderer()
 	r.HasColor = false
 	prefix := fmt.Sprintf("✍  %d ", sentId)
 	r.Sentence(s.Tokens, prefix)

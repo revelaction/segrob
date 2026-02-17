@@ -27,7 +27,7 @@ func queryCommand(dr storage.DocRepository, tr storage.TopicRepository, opts Que
 		return err
 	}
 
-	r := render.NewRenderer()
+	r := render.NewCLIRenderer()
 	r.HasColor = !opts.NoColor
 	r.HasPrefix = !opts.NoPrefix
 	r.PrefixTopicFunc = render.PrefixFuncEmpty
