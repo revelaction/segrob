@@ -22,6 +22,8 @@ type ExprOptions struct {
 	Format    string
 	DocPath   string
 	TopicPath string
+	JSON      bool // output results as JSON
+	Limit     int  // max matched results (0 = unlimited)
 }
 
 type QueryOptions struct {
@@ -442,6 +444,11 @@ func parseExprArgs(args []string, ui UI) (ExprOptions, []string, bool, error) {
 
 	fs.StringVar(&opts.TopicPath, "topic-path", os.Getenv("SEGROB_TOPIC_PATH"), "Path to topics directory or SQLite file")
 	fs.StringVar(&opts.TopicPath, "t", os.Getenv("SEGROB_TOPIC_PATH"), "alias for -topic-path")
+
+	fs.BoolVar(&opts.JSON, "json", false, "Output results as JSON")
+	fs.BoolVar(&opts.JSON, "j", false, "alias for -json")
+
+	fs.IntVar(&opts.Limit, "limit", 0, "Maximum number of matched results to return (0 = unlimited)")
 
 	fs.Usage = func() {
 		_, _ = fmt.Fprintf(fs.Output(), "Usage: %s expr [options] <topic expr item> ...\n", os.Args[0])

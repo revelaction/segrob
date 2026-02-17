@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/revelaction/segrob/match"
@@ -49,8 +50,12 @@ func exprCommand(dr storage.DocRepository, opts ExprOptions, args []string, ui U
 
 	// Prepare results accumulator
 	var results []*match.SentenceMatch
+	limitReached := false
 	onMatch := func(m *match.SentenceMatch) error {
 		results = append(results, m)
+		if opts.Limit > 0 && len(results) >= opts.Limit {
+			limitReached = true
+		}
 		return nil
 	}
 
@@ -73,10 +78,19 @@ func exprCommand(dr storage.DocRepository, opts ExprOptions, args []string, ui U
 		if cursor == newCursor {
 			break
 		}
+		if limitReached {
+			break
+		}
 		cursor = newCursor
 	}
 
 	// Render results
+	if opts.JSON {
+		jr := render.NewJSONRenderer(os.Stdout)
+		jr.Render(results)
+		return nil
+	}
+
 	r := render.NewCLIRenderer()
 	r.HasColor = !opts.NoColor
 	r.HasPrefix = !opts.NoPrefix
