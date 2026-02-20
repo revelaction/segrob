@@ -15,13 +15,14 @@ import (
 )
 
 type DocStore struct {
-	pool *sqlitex.Pool
+	pool     *sqlitex.Pool
+	optimize bool
 }
 
 var _ storage.DocRepository = (*DocStore)(nil)
 
-func NewDocStore(pool *sqlitex.Pool) *DocStore {
-	return &DocStore{pool: pool}
+func NewDocStore(pool *sqlitex.Pool, optimize bool) *DocStore {
+	return &DocStore{pool: pool, optimize: optimize}
 }
 
 func (h *DocStore) List(labelSubStr string) ([]sent.Doc, error) {

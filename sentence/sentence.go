@@ -9,12 +9,10 @@ type Sentence struct {
 }
 
 type Doc struct {
-	Id int
-
-	Title string
-
-	Labels []string
-	Sentences []Sentence `json:"sentences"`
+	Id        int        `json:"id" toml:"-"`
+	Title     string     `json:"title" toml:"title"`
+	Labels    []string   `json:"labels" toml:"labels"`
+	Sentences []Sentence `json:"sentences" toml:"-"`
 }
 
 // Library is a collection of Doc

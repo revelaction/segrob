@@ -51,8 +51,18 @@ type DocReader interface {
 
 // DocWriter defines write operations for document storage
 type DocWriter interface {
-	// Write persists a document and its sentences/lemmas to storage
-	Write(doc sent.Doc) error
+	// WriteMeta persists document metadata (Title, Labels).
+	// If the document exists (by Title), it returns an error.
+	WriteMeta(doc sent.Doc) error
+
+	// WriteNLP persists sentences and updates lookup tables for the given docID.
+	WriteNLP(docID int, sentences []sent.Sentence) error
+
+	// AddLabel adds labels to a document and updates optimization tables.
+	AddLabel(docID int, labels ...string) error
+
+	// RemoveLabel removes labels from a document and updates optimization tables.
+	RemoveLabel(docID int, labels ...string) error
 }
 
 // DocRepository combines read and write operations
