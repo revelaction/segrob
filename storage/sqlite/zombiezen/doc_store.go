@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"sort"
 	"strconv"
 	"strings"
 
@@ -213,37 +212,55 @@ func (h *DocStore) buildCandidateQuery(lemmas []string, labelIDs []int, after st
 	return queryBuilder.String(), args
 }
 
-func (h *DocStore) Labels(labelSubStr string) ([]string, error) {
+func (h *DocStore) ListLabels(labelSubStr string) ([]sent.Label, error) {
 	conn, err := h.pool.Take(context.TODO())
 	if err != nil {
 		return nil, err
 	}
 	defer h.pool.Put(conn)
 
-	labelMap := make(map[string]bool)
-	err = sqlitex.Execute(conn, "SELECT labels FROM docs", &sqlitex.ExecOptions{
+	query, args := h.buildListLabelsQuery(labelSubStr)
+
+	var labels []sent.Label
+	err = sqlitex.Execute(conn, query, &sqlitex.ExecOptions{
+		Args: args,
 		ResultFunc: func(stmt *sqlite.Stmt) error {
-			for _, label := range Labels(stmt.ColumnText(0)) {
-				if labelSubStr != "" {
-					if !strings.Contains(label, labelSubStr) {
-						continue
-					}
-				}
-				labelMap[label] = true
-			}
+			labels = append(labels, sent.Label{
+				ID:   stmt.ColumnInt(0),
+				Name: stmt.ColumnText(1),
+			})
 			return nil
 		},
 	})
 	if err != nil {
 		return nil, err
 	}
-
-	labels := make([]string, 0, len(labelMap))
-	for label := range labelMap {
-		labels = append(labels, label)
-	}
-	sort.Strings(labels)
 	return labels, nil
+}
+
+// buildListLabelsQuery constructs the SQL query for listing labels.
+//
+// Without labelSubStr:
+//
+//	SELECT id, name FROM labels ORDER BY name
+//
+// With labelSubStr:
+//
+//	SELECT id, name FROM labels WHERE name LIKE ? ORDER BY name
+func (h *DocStore) buildListLabelsQuery(labelSubStr string) (string, []interface{}) {
+	var queryBuilder strings.Builder
+	var args []interface{}
+
+	queryBuilder.WriteString("SELECT id, name FROM labels")
+
+	if labelSubStr != "" {
+		queryBuilder.WriteString(" WHERE name LIKE ?")
+		args = append(args, "%"+labelSubStr+"%")
+	}
+
+	queryBuilder.WriteString(" ORDER BY name")
+
+	return queryBuilder.String(), args
 }
 
 func (h *DocStore) Write(doc sent.Doc) error {
