@@ -306,6 +306,16 @@ func runCommand(cmd string, args []string, ui UI) error {
 			return err
 		}
 		return initDbCommand(p, opts, ui)
+
+	case "import-meta":
+		opts, err := parseImportMetaArgs(args, ui)
+		if err != nil {
+			if errors.Is(err, flag.ErrHelp) {
+				return nil
+			}
+			return err
+		}
+		return importMetaCommand(p, opts, ui)
 	}
 
 	return fmt.Errorf("unknown command: %s", cmd)

@@ -98,6 +98,11 @@ type InitDbOptions struct {
 	DbPath string
 }
 
+type ImportMetaOptions struct {
+	Filename string
+	DbPath   string
+}
+
 // stringSliceFlag implements flag.Value for multi-value strings
 type stringSliceFlag []string
 
@@ -879,6 +884,35 @@ func parseInitDbArgs(args []string, ui UI) (InitDbOptions, error) {
 	return opts, nil
 }
 
+func parseImportMetaArgs(args []string, ui UI) (ImportMetaOptions, error) {
+	fs := flag.NewFlagSet("import-meta", flag.ContinueOnError)
+	fs.SetOutput(io.Discard)
+
+	var opts ImportMetaOptions
+	fs.Usage = func() {
+		_, _ = fmt.Fprintf(fs.Output(), "Usage: %s import-meta <filename> <db>\n", os.Args[0])
+		_, _ = fmt.Fprintf(fs.Output(), "\nDescription:\n")
+		_, _ = fmt.Fprintf(fs.Output(), "  Import document metadata from a TOML file.\n")
+	}
+
+	if err := fs.Parse(args); err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			fs.SetOutput(ui.Out)
+			fs.Usage()
+			return opts, err
+		}
+		return opts, err
+	}
+
+	if fs.NArg() != 2 {
+		return opts, errors.New("import-meta requires exactly two arguments: <filename> <db>")
+	}
+
+	opts.Filename = fs.Arg(0)
+	opts.DbPath = fs.Arg(1)
+	return opts, nil
+}
+
 func setupUsage(fs *flag.FlagSet) {
 	fs.Usage = func() {
 		output := fs.Output()
@@ -902,6 +936,7 @@ func setupUsage(fs *flag.FlagSet) {
 		_, _ = fmt.Fprintf(output, "  export-doc    Export docs from SQLite to filesystem.\n")
 		_, _ = fmt.Fprintf(output, "  migrate       Migrate legacy JSON docs to new JSON format.\n")
 		_, _ = fmt.Fprintf(output, "  init-db       Initialize a new SQLite database with the required schema\n")
+		_, _ = fmt.Fprintf(output, "  import-meta   Import document metadata from a TOML file.\n")
 		_, _ = fmt.Fprintf(output, "  bash          Output bash completion script.\n")
 		_, _ = fmt.Fprintf(output, "  version   Show version information\n")
 		_, _ = fmt.Fprintf(output, "  help      Show help for a command.\n")

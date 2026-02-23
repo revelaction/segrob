@@ -4,6 +4,7 @@ go 1.24.2
 
 require (
 	github.com/c-bata/go-prompt v0.2.6
+	github.com/pelletier/go-toml/v2 v2.2.4
 	golang.org/x/term v0.39.0
 	zombiezen.com/go/sqlite v1.4.2
 )
