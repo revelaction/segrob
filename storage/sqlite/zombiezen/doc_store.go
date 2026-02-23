@@ -120,7 +120,7 @@ func (h *DocStore) Nlp(id int) ([]sent.Sentence, error) {
 	return sentences, nil
 }
 
-func (h *DocStore) FindCandidates(lemmas []string, labels []string, after storage.Cursor, limit int, onCandidate func(sent.Sentence) error) (storage.Cursor, error) {
+func (h *DocStore) FindCandidates(lemmas []string, labelIDs []int, after storage.Cursor, limit int, onCandidate func(sent.Sentence) error) (storage.Cursor, error) {
 	if len(lemmas) == 0 {
 		return after, nil
 	}
@@ -131,7 +131,7 @@ func (h *DocStore) FindCandidates(lemmas []string, labels []string, after storag
 	}
 	defer h.pool.Put(conn)
 
-	query, args := h.buildCandidateQuery(lemmas, labels, after, limit)
+	query, args := h.buildCandidateQuery(lemmas, labelIDs, after, limit)
 
 	// We need to fetch the rowIDs first
 	var rowIDs []int64
@@ -187,13 +187,13 @@ func (h *DocStore) FindCandidates(lemmas []string, labels []string, after storag
 	return newCursor, nil
 }
 
-func (h *DocStore) buildCandidateQuery(lemmas []string, labels []string, after storage.Cursor, limit int) (string, []interface{}) {
+func (h *DocStore) buildCandidateQuery(lemmas []string, labelIDs []int, after storage.Cursor, limit int) (string, []interface{}) {
 	var queryBuilder strings.Builder
 	var args []interface{}
 
 	// Outer scan: first lemma drives the query
 	queryBuilder.WriteString("SELECT sentence_rowid FROM sentence_lemmas AS s_outer WHERE lemma = ? AND sentence_rowid > ?")
-	args = append(args, lemmas[0], after)
+	args = append(args, lemmas[0], int(after))
 
 	// Remaining lemmas: EXISTS probes using reverse index (sentence_rowid, lemma)
 	for _, lemma := range lemmas[1:] {
@@ -201,10 +201,10 @@ func (h *DocStore) buildCandidateQuery(lemmas []string, labels []string, after s
 		args = append(args, lemma)
 	}
 
-	// Labels: EXISTS probes using reverse index (sentence_rowid, label)
-	for _, label := range labels {
-		queryBuilder.WriteString(" AND EXISTS (SELECT 1 FROM sentence_labels WHERE sentence_rowid = s_outer.sentence_rowid AND label = ?)")
-		args = append(args, label)
+	// Labels: EXISTS probes using reverse index (sentence_rowid, label_id)
+	for _, labelID := range labelIDs {
+		queryBuilder.WriteString(" AND EXISTS (SELECT 1 FROM sentence_labels WHERE sentence_rowid = s_outer.sentence_rowid AND label_id = ?)")
+		args = append(args, labelID)
 	}
 
 	queryBuilder.WriteString(" ORDER BY sentence_rowid ASC LIMIT ?")
