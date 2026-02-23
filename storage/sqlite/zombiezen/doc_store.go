@@ -297,6 +297,148 @@ func (h *DocStore) WriteMeta(source string, labels []string) (err error) {
 	return nil
 }
 
+func (h *DocStore) WriteNLP(docID int, sentences []sent.SentenceIngest) (err error) {
+	conn, err := h.pool.Take(context.TODO())
+	if err != nil {
+		return err
+	}
+	defer h.pool.Put(conn)
+
+	// Start Transaction
+	defer sqlitex.Save(conn)(&err)
+
+	// Fetch existing label IDs for this doc
+	var labelIDs []int
+	err = sqlitex.Execute(conn, "SELECT label_id FROM doc_labels WHERE doc_id = ?", &sqlitex.ExecOptions{
+		Args: []interface{}{docID},
+		ResultFunc: func(stmt *sqlite.Stmt) error {
+			labelIDs = append(labelIDs, stmt.ColumnInt(0))
+			return nil
+		},
+	})
+	if err != nil {
+		return fmt.Errorf("failed to fetch label IDs: %w", err)
+	}
+
+	for _, sentence := range sentences {
+		err = sqlitex.Execute(conn, "INSERT INTO sentences (doc_id, sentence_id, data) VALUES (?, ?, ?)", &sqlitex.ExecOptions{
+			Args: []interface{}{docID, sentence.ID, string(sentence.Tokens)},
+		})
+		if err != nil {
+			return fmt.Errorf("failed to insert sentence: %w", err)
+		}
+		sentRowID := conn.LastInsertRowID()
+
+		for _, lemma := range sentence.Lemmas {
+			err = sqlitex.Execute(conn, "INSERT INTO sentence_lemmas (lemma, sentence_rowid) VALUES (?, ?)", &sqlitex.ExecOptions{
+				Args: []interface{}{lemma, sentRowID},
+			})
+			if err != nil {
+				return fmt.Errorf("failed to insert lemma: %w", err)
+			}
+		}
+
+		for _, labelID := range labelIDs {
+			err = sqlitex.Execute(conn, "INSERT INTO sentence_labels (label_id, sentence_rowid) VALUES (?, ?)", &sqlitex.ExecOptions{
+				Args: []interface{}{labelID, sentRowID},
+			})
+			if err != nil {
+				return fmt.Errorf("failed to insert sentence label: %w", err)
+			}
+		}
+	}
+
+	return nil
+}
+
+func (h *DocStore) AddLabel(docID int, labels ...string) (err error) {
+	conn, err := h.pool.Take(context.TODO())
+	if err != nil {
+		return err
+	}
+	defer h.pool.Put(conn)
+
+	// Start Transaction
+	defer sqlitex.Save(conn)(&err)
+
+	for _, label := range labels {
+		labelID, err := h.upsertLabelID(conn, label)
+		if err != nil {
+			return err
+		}
+
+		err = sqlitex.Execute(conn, "INSERT OR IGNORE INTO doc_labels (doc_id, label_id) VALUES (?, ?)", &sqlitex.ExecOptions{
+			Args: []interface{}{docID, labelID},
+		})
+		if err != nil {
+			return err
+		}
+
+		// Denormalize to sentence_labels
+		err = sqlitex.Execute(conn, `
+			INSERT OR IGNORE INTO sentence_labels (label_id, sentence_rowid)
+			SELECT ?, rowid FROM sentences WHERE doc_id = ?`,
+			&sqlitex.ExecOptions{
+				Args: []interface{}{labelID, docID},
+			})
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (h *DocStore) RemoveLabel(docID int, labels ...string) (err error) {
+	conn, err := h.pool.Take(context.TODO())
+	if err != nil {
+		return err
+	}
+	defer h.pool.Put(conn)
+
+	// Start Transaction
+	defer sqlitex.Save(conn)(&err)
+
+	for _, label := range labels {
+		var labelID int
+		err = sqlitex.Execute(conn, "SELECT id FROM labels WHERE name = ?", &sqlitex.ExecOptions{
+			Args: []interface{}{label},
+			ResultFunc: func(stmt *sqlite.Stmt) error {
+				labelID = stmt.ColumnInt(0)
+				return nil
+			},
+		})
+		if err != nil {
+			return err
+		}
+
+		if labelID == 0 {
+			continue // Label not found, nothing to remove
+		}
+
+		err = sqlitex.Execute(conn, "DELETE FROM doc_labels WHERE doc_id = ? AND label_id = ?", &sqlitex.ExecOptions{
+			Args: []interface{}{docID, labelID},
+		})
+		if err != nil {
+			return err
+		}
+
+		// Denormalize removal: remove from sentence_labels
+		err = sqlitex.Execute(conn, `
+			DELETE FROM sentence_labels 
+			WHERE label_id = ? 
+			AND sentence_rowid IN (SELECT rowid FROM sentences WHERE doc_id = ?)`,
+			&sqlitex.ExecOptions{
+				Args: []interface{}{labelID, docID},
+			})
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func Labels(s string) []string {
 	if s == "" {
 		return nil
