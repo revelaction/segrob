@@ -115,6 +115,12 @@ type AddLabelOptions struct {
 	DocPath string
 }
 
+type RemoveLabelOptions struct {
+	DocID   int
+	Labels  []string
+	DocPath string
+}
+
 // stringSliceFlag implements flag.Value for multi-value strings
 type stringSliceFlag []string
 
@@ -1005,6 +1011,49 @@ func parseAddLabelArgs(args []string, ui UI) (AddLabelOptions, error) {
 	return opts, nil
 }
 
+func parseRemoveLabelArgs(args []string, ui UI) (RemoveLabelOptions, error) {
+	fs := flag.NewFlagSet("remove-label", flag.ContinueOnError)
+	fs.SetOutput(io.Discard)
+
+	var opts RemoveLabelOptions
+	fs.StringVar(&opts.DocPath, "doc-path", os.Getenv("SEGROB_DOC_PATH"), "Path to SQLite file")
+	fs.StringVar(&opts.DocPath, "d", os.Getenv("SEGROB_DOC_PATH"), "alias for -doc-path")
+
+	fs.Usage = func() {
+		_, _ = fmt.Fprintf(fs.Output(), "Usage: %s remove-label [options] <doc_id> <label> [<label>...]\n", os.Args[0])
+		_, _ = fmt.Fprintf(fs.Output(), "\nDescription:\n")
+		_, _ = fmt.Fprintf(fs.Output(), "  Remove one or more labels from a document.\n")
+		_, _ = fmt.Fprintf(fs.Output(), "\nOptions:\n")
+		fs.PrintDefaults()
+	}
+
+	if err := fs.Parse(args); err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			fs.SetOutput(ui.Out)
+			fs.Usage()
+			return opts, err
+		}
+		return opts, err
+	}
+
+	if fs.NArg() < 2 {
+		return opts, errors.New("remove-label requires at least two arguments: <doc_id> and one or more <label>")
+	}
+
+	docId, err := strconv.Atoi(fs.Arg(0))
+	if err != nil {
+		return opts, fmt.Errorf("invalid docID '%s': %w", fs.Arg(0), err)
+	}
+	opts.DocID = docId
+	opts.Labels = fs.Args()[1:]
+
+	if opts.DocPath == "" {
+		return opts, errors.New("no document source specified (use -d or SEGROB_DOC_PATH)")
+	}
+
+	return opts, nil
+}
+
 func setupUsage(fs *flag.FlagSet) {
 	fs.Usage = func() {
 		output := fs.Output()
@@ -1031,6 +1080,7 @@ func setupUsage(fs *flag.FlagSet) {
 		_, _ = fmt.Fprintf(output, "  import-meta   Import document metadata from a TOML file.\n")
 		_, _ = fmt.Fprintf(output, "  import-nlp    Import NLP-processed sentences into the database.\n")
 		_, _ = fmt.Fprintf(output, "  add-label     Add one or more labels to a document.\n")
+		_, _ = fmt.Fprintf(output, "  remove-label  Remove one or more labels from a document.\n")
 		_, _ = fmt.Fprintf(output, "  bash          Output bash completion script.\n")
 		_, _ = fmt.Fprintf(output, "  version   Show version information\n")
 		_, _ = fmt.Fprintf(output, "  help      Show help for a command.\n")

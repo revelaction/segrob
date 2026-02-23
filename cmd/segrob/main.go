@@ -336,6 +336,16 @@ func runCommand(cmd string, args []string, ui UI) error {
 			return err
 		}
 		return addLabelCommand(p, opts, ui)
+
+	case "remove-label":
+		opts, err := parseRemoveLabelArgs(args, ui)
+		if err != nil {
+			if errors.Is(err, flag.ErrHelp) {
+				return nil
+			}
+			return err
+		}
+		return removeLabelCommand(p, opts, ui)
 	}
 
 	return fmt.Errorf("unknown command: %s", cmd)
