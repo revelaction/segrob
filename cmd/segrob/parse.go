@@ -851,29 +851,6 @@ func parseExportDocArgs(args []string, ui UI) (ExportDocOptions, error) {
 	return opts, nil
 }
 
-func parseMigrateArgs(args []string, ui UI) (migrateOptions, error) {
-	fs := flag.NewFlagSet("migrate", flag.ContinueOnError)
-	fs.SetOutput(io.Discard)
-
-	var opts migrateOptions
-	fs.StringVar(&opts.From, "from", "", "Source directory with legacy JSON docs")
-	fs.StringVar(&opts.To, "to", "", "Target directory for new JSON docs")
-
-	fs.Usage = func() {
-		_, _ = fmt.Fprintf(fs.Output(), "Usage: %s migrate --from <dir> --to <dir>\n", os.Args[0])
-	}
-
-	if err := fs.Parse(args); err != nil {
-		return opts, err
-	}
-
-	if opts.From == "" || opts.To == "" {
-		return opts, errors.New("--from and --to are required")
-	}
-
-	return opts, nil
-}
-
 func parseInitDbArgs(args []string, ui UI) (InitDbOptions, error) {
 	fs := flag.NewFlagSet("init-db", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
@@ -1075,7 +1052,6 @@ func setupUsage(fs *flag.FlagSet) {
 		_, _ = fmt.Fprintf(output, "  export-topic  Export topics from SQLite to filesystem.\n")
 		_, _ = fmt.Fprintf(output, "  import-doc    Import docs from filesystem to SQLite.\n")
 		_, _ = fmt.Fprintf(output, "  export-doc    Export docs from SQLite to filesystem.\n")
-		_, _ = fmt.Fprintf(output, "  migrate       Migrate legacy JSON docs to new JSON format.\n")
 		_, _ = fmt.Fprintf(output, "  init-db       Initialize a new SQLite database with the required schema\n")
 		_, _ = fmt.Fprintf(output, "  import-meta   Import document metadata from a TOML file.\n")
 		_, _ = fmt.Fprintf(output, "  import-nlp    Import NLP-processed sentences into the database.\n")
