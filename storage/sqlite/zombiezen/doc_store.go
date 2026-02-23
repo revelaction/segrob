@@ -41,28 +41,19 @@ func (h *DocStore) upsertLabelID(conn *sqlite.Conn, name string) (int, error) {
 	return labelID, nil
 }
 
-func (h *DocStore) List(labelSubStr string) ([]sent.Doc, error) {
+func (h *DocStore) List() ([]sent.Meta, error) {
 	conn, err := h.pool.Take(context.TODO())
 	if err != nil {
 		return nil, err
 	}
 	defer h.pool.Put(conn)
 
-	var docs []sent.Doc
-	err = sqlitex.Execute(conn, "SELECT id, title, labels FROM docs ORDER BY title", &sqlitex.ExecOptions{
+	var metas []sent.Meta
+	err = sqlitex.Execute(conn, "SELECT id, source FROM docs ORDER BY source", &sqlitex.ExecOptions{
 		ResultFunc: func(stmt *sqlite.Stmt) error {
-			labels := Labels(stmt.ColumnText(2))
-
-			if labelSubStr != "" {
-				if !SliceElementsContains(labels, labelSubStr) {
-					return nil
-				}
-			}
-
-			docs = append(docs, sent.Doc{
-				Id:     stmt.ColumnInt(0),
-				Title:  stmt.ColumnText(1),
-				Labels: labels,
+			metas = append(metas, sent.Meta{
+				ID:     stmt.ColumnInt(0),
+				Source: stmt.ColumnText(1),
 			})
 			return nil
 		},
@@ -70,16 +61,7 @@ func (h *DocStore) List(labelSubStr string) ([]sent.Doc, error) {
 	if err != nil {
 		return nil, err
 	}
-	return docs, nil
-}
-
-func SliceElementsContains(slice []string, substr string) bool {
-	for _, s := range slice {
-		if strings.Contains(s, substr) {
-			return true
-		}
-	}
-	return false
+	return metas, nil
 }
 
 func (h *DocStore) Read(id int) (sent.Doc, error) {
