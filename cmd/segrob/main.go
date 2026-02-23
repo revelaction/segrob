@@ -326,6 +326,16 @@ func runCommand(cmd string, args []string, ui UI) error {
 			return err
 		}
 		return importNlpCommand(p, opts, ui)
+
+	case "add-label":
+		opts, err := parseAddLabelArgs(args, ui)
+		if err != nil {
+			if errors.Is(err, flag.ErrHelp) {
+				return nil
+			}
+			return err
+		}
+		return addLabelCommand(p, opts, ui)
 	}
 
 	return fmt.Errorf("unknown command: %s", cmd)
