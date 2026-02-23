@@ -88,6 +88,38 @@ func (h *DocStore) Labels(id int) ([]sent.Label, error) {
 	return labels, nil
 }
 
+func (h *DocStore) Nlp(id int) ([]sent.Sentence, error) {
+	conn, err := h.pool.Take(context.TODO())
+	if err != nil {
+		return nil, err
+	}
+	defer h.pool.Put(conn)
+
+	var sentences []sent.Sentence
+	err = sqlitex.Execute(conn, "SELECT sentence_id, data FROM sentences WHERE doc_id = ? ORDER BY sentence_id", &sqlitex.ExecOptions{
+		Args: []interface{}{id},
+		ResultFunc: func(stmt *sqlite.Stmt) error {
+			sentenceID := stmt.ColumnInt(0)
+			data := stmt.ColumnText(1)
+			var tokens []sent.Token
+			if err := json.Unmarshal([]byte(data), &tokens); err != nil {
+				return err
+			}
+			sentences = append(sentences, sent.Sentence{
+				Id:     sentenceID,
+				DocId:  id,
+				Tokens: tokens,
+			})
+			return nil
+		},
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return sentences, nil
+}
+
 func (h *DocStore) FindCandidates(lemmas []string, labels []string, after storage.Cursor, limit int, onCandidate func(sent.Sentence) error) (storage.Cursor, error) {
 	if len(lemmas) == 0 {
 		return after, nil
