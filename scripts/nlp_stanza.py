@@ -10,23 +10,6 @@ import json
 from pathlib import Path
 import stanza
 
-def add_labels(cmd_labels, file_path):
-    """Build labels list from filename parts, stanza version, and command-line labels."""
-    labels = []
-
-    # Optimistically consider the file name properly formatted
-    # <title>-<author>-<traductor>.txt
-    file_name = Path(file_path).stem
-    labels.extend(file_name.split("-"))
-
-    # Lemmatizer version
-    labels.append(f"{stanza.__name__}-{stanza.__version__}")
-
-    # Command-line labels
-    if cmd_labels is not None:
-        labels.extend(cmd_labels)
-
-    return labels
 
 
 def main():
@@ -38,11 +21,6 @@ def main():
         type=argparse.FileType('r', encoding='UTF-8'),
         help="input text file", 
         metavar="FILE"
-    )
-    parser.add_argument(
-        '-l', '--label', 
-        action='append', 
-        help="add a label to the document metadata (can be used multiple times)"
     )
 
     args = parser.parse_args()
@@ -59,7 +37,6 @@ def main():
     doc = nlp(text)
 
     res = {
-        "labels": add_labels(args.label, file_name),
         "sentences": []
     }
     
@@ -68,6 +45,8 @@ def main():
 
     for sentence in doc.sentences:
         sent_dict = []
+        unique_lemmas = set()
+        
         for token in sentence.tokens:
             # Multi-Word Token (MWT) Logic:
             # Stanza identifies MWTs (like "envolverse" or "del") as a single Token 
@@ -158,8 +137,7 @@ def main():
                 #
                 # we add here for simplicity and compatibility.
                 if word.feats is None:
-                # sometime feats is not existant in stanza: repeat pos
-                if word.feats is None:
+                    # sometime feats is not existant in stanza: repeat pos
                     t['tag'] = word.upos 
                 else:
                     t['tag'] = word.upos + "__" + word.feats
@@ -182,13 +160,17 @@ def main():
                 t['index'] = int(word.id) - 1
                 
                 # Lemma lowercase 
-                t['lemma'] = word.lemma.lower() 
+                lemma = word.lemma.lower()
+                t['lemma'] = lemma
+                if lemma:
+                    unique_lemmas.add(lemma)
                 
                 sent_dict.append(t)
                 token_index += 1
 
         res['sentences'].append({
             "id": sentence_id,
+            "lemmas": list(unique_lemmas),
             "tokens": sent_dict
         })
         sentence_id += 1

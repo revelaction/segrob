@@ -13,23 +13,6 @@ import spacy
 import es_dep_news_trf
 
 
-def add_labels(cmd_labels, file_path):
-    """Build labels list from filename parts, spacy version, and command-line labels."""
-    labels = []
-
-    # Optimistically consider the file name properly formatted
-    # <title>-<author>-<traductor>.txt
-    file_name = Path(file_path).stem
-    labels.extend(file_name.split("-"))
-
-    # Lemmatizer version
-    labels.append(f"{spacy.__name__}-{spacy.__version__}")
-
-    # Command-line labels
-    if cmd_labels is not None:
-        labels.extend(cmd_labels)
-
-    return labels
 
 
 def main():
@@ -41,11 +24,6 @@ def main():
         type=argparse.FileType("r", encoding="UTF-8"),
         help="input text file",
         metavar="FILE",
-    )
-    parser.add_argument(
-        "-l", "--label",
-        action="append",
-        help="add a label to the document metadata (can be used multiple times)",
     )
 
     args = parser.parse_args()
@@ -63,7 +41,6 @@ def main():
 
     # Build result structure
     res = {
-        "labels": add_labels(args.label, file_name),
         "sentences": [],
     }
 
@@ -72,6 +49,7 @@ def main():
 
     for sentence in doc.sents:
         sent_tokens = []
+        unique_lemmas = set()
         sentence_index = 0
         # Absolute index of the first token in the sentence
         sent_start_idx = sentence[0].i
@@ -88,6 +66,7 @@ def main():
             # We split and create separate tokens with identical idx to signal MWT.
             # it does not split "del"
             for word in token.lemma_.split(" "):
+                lemma = word.lower()
                 t = {
                     "id": token_index,
                     "pos": token.pos_,
@@ -97,8 +76,10 @@ def main():
                     "text": token.text,
                     "idx": token.idx,  # Character offset in source document
                     "index": sentence_index,  # Token position in sentence
-                    "lemma": word.lower(),
+                    "lemma": lemma,
                 }
+                if lemma:
+                    unique_lemmas.add(lemma)
 
                 sent_tokens.append(t)
                 token_index += 1
@@ -106,6 +87,7 @@ def main():
 
         res["sentences"].append({
             "id": sentence_id,
+            "lemmas": list(unique_lemmas),
             "tokens": sent_tokens
         })
         sentence_id += 1
