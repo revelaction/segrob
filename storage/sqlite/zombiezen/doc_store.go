@@ -24,6 +24,23 @@ func NewDocStore(pool *sqlitex.Pool) *DocStore {
 	return &DocStore{pool: pool}
 }
 
+func (h *DocStore) upsertLabelID(conn *sqlite.Conn, name string) (int, error) {
+	var labelID int
+	err := sqlitex.Execute(conn,
+		"INSERT INTO labels (name) VALUES (?) ON CONFLICT(name) DO UPDATE SET name = name RETURNING id",
+		&sqlitex.ExecOptions{
+			Args: []interface{}{name},
+			ResultFunc: func(stmt *sqlite.Stmt) error {
+				labelID = stmt.ColumnInt(0)
+				return nil
+			},
+		})
+	if err != nil {
+		return 0, err
+	}
+	return labelID, nil
+}
+
 func (h *DocStore) List(labelSubStr string) ([]sent.Doc, error) {
 	conn, err := h.pool.Take(context.TODO())
 	if err != nil {
