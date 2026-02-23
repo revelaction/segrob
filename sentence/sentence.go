@@ -3,7 +3,7 @@ package sentence
 // Sentence represents a distinct syntactic unit.
 // Identity = (DocId, Id)
 type Sentence struct {
-	Id     int     `json:"id"`     // Sequential index in Doc (0, 1, ...)
+	Id     int     `json:"id"` // Sequential index in Doc (0, 1, ...)
 	DocId  int     `json:"doc_id"`
 	Tokens []Token `json:"tokens"`
 }
@@ -13,7 +13,7 @@ type Doc struct {
 
 	Title string
 
-	Labels []string
+	Labels    []string
 	Sentences []Sentence `json:"sentences"`
 }
 
