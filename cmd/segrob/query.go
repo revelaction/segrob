@@ -1,8 +1,6 @@
 package main
 
 import (
-	"fmt"
-
 	"github.com/revelaction/segrob/query"
 	"github.com/revelaction/segrob/render"
 	"github.com/revelaction/segrob/storage"
@@ -10,17 +8,6 @@ import (
 
 // Query command
 func queryCommand(dr storage.DocRepository, tr storage.TopicRepository, opts QueryOptions, ui UI) error {
-
-	if p, ok := dr.(storage.Preloader); ok {
-		err := p.LoadNLP(opts.Labels, nil, func(current, total int, name string) {
-			fmt.Fprintf(ui.Err, "\r📖 Loading docs: %d/%d (%s)...%s", current, total, name, render.ClearLine)
-		})
-		fmt.Fprint(ui.Err, "\n")
-
-		if err != nil {
-			return err
-		}
-	}
 
 	topicLib, err := tr.ReadAll()
 	if err != nil {
