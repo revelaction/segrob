@@ -16,8 +16,8 @@ type migrateOptions struct {
 
 // legacyDoc mirrors the old JSON structure: tokens: [][]Token
 type legacyDoc struct {
-	Labels []string          `json:"labels"`
-	Tokens [][]sent.Token     `json:"tokens"`
+	Labels []string       `json:"labels"`
+	Tokens [][]sent.Token `json:"tokens"`
 }
 
 func migrateCommand(opts migrateOptions, ui UI) error {

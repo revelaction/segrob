@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"os"
 	"strings"
 
@@ -13,17 +12,6 @@ import (
 )
 
 func exprCommand(dr storage.DocRepository, opts ExprOptions, args []string, ui UI) error {
-
-	if p, ok := dr.(storage.Preloader); ok {
-		err := p.LoadNLP(opts.Labels, nil, func(current, total int, name string) {
-			fmt.Fprintf(ui.Err, "\r📖 Loading docs: %d/%d (%s)...%s", current, total, name, render.ClearLine)
-		})
-		fmt.Fprint(ui.Err, "\n")
-
-		if err != nil {
-			return err
-		}
-	}
 
 	// args is guaranteed to have at least 1 element by parseExprArgs
 	// Flatten arguments to support quoted expressions containing spaces,
@@ -42,6 +30,24 @@ func exprCommand(dr storage.DocRepository, opts ExprOptions, args []string, ui U
 	expr, parseErr := topic.Parse(flatArgs)
 	if parseErr != nil {
 		return parseErr
+	}
+
+	// Resolve labels to IDs
+	var labelIDs []int
+	if len(opts.Labels) > 0 {
+		allLabels, err := dr.ListLabels("")
+		if err != nil {
+			return err
+		}
+		labelMap := make(map[string]int)
+		for _, l := range allLabels {
+			labelMap[l.Name] = l.ID
+		}
+		for _, name := range opts.Labels {
+			if id, ok := labelMap[name]; ok {
+				labelIDs = append(labelIDs, id)
+			}
+		}
 	}
 
 	// Prepare Matcher
@@ -65,7 +71,7 @@ func exprCommand(dr storage.DocRepository, opts ExprOptions, args []string, ui U
 	lemmas := expr.Lemmas()
 
 	for {
-		newCursor, err := dr.FindCandidates(lemmas, opts.Labels, cursor, limit, func(s sent.Sentence) error {
+		newCursor, err := dr.FindCandidates(lemmas, labelIDs, cursor, limit, func(s sent.Sentence) error {
 			if m := matcher.MatchSentence(s); m != nil {
 				return onMatch(m)
 			}
@@ -99,12 +105,12 @@ func exprCommand(dr storage.DocRepository, opts ExprOptions, args []string, ui U
 	r.NumMatches = opts.NMatches
 
 	// Populate DocNames for indexed search
-	list, err := dr.List("")
+	list, err := dr.List()
 	if err != nil {
 		return err
 	}
 	for _, d := range list {
-		r.AddDocName(d.Id, d.Title)
+		r.AddDocName(d.ID, d.Source)
 	}
 
 	r.Render(results)
