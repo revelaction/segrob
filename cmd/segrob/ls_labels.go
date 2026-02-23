@@ -8,13 +8,17 @@ import (
 )
 
 func lsLabelsCommand(repo storage.DocRepository, opts LsLabelsOptions, ui UI) error {
-	labels, err := repo.Labels(opts.Match)
+	labels, err := repo.ListLabels(opts.Match)
 	if err != nil {
 		return err
 	}
 
 	if len(labels) > 0 {
-		fmt.Fprintln(ui.Out, strings.Join(labels, ", "))
+		var names []string
+		for _, l := range labels {
+			names = append(names, l.Name)
+		}
+		fmt.Fprintln(ui.Out, strings.Join(names, ", "))
 	}
 
 	return nil
