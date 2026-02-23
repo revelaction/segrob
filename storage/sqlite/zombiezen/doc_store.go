@@ -263,8 +263,7 @@ func (h *DocStore) buildListLabelsQuery(labelSubStr string) (string, []interface
 	return queryBuilder.String(), args
 }
 
-func (h *DocStore) Write(doc sent.Doc) error {
-
+func (h *DocStore) WriteMeta(source string, labels []string) (err error) {
 	conn, err := h.pool.Take(context.TODO())
 	if err != nil {
 		return err
@@ -274,55 +273,24 @@ func (h *DocStore) Write(doc sent.Doc) error {
 	// Start Transaction
 	defer sqlitex.Save(conn)(&err)
 
-	// Insert Doc
-	labels := strings.Join(doc.Labels, ",")
-	err = sqlitex.Execute(conn, "INSERT INTO docs (title, labels) VALUES (?, ?)", &sqlitex.ExecOptions{
-		Args: []interface{}{doc.Title, labels},
+	err = sqlitex.Execute(conn, "INSERT INTO docs (source) VALUES (?)", &sqlitex.ExecOptions{
+		Args: []interface{}{source},
 	})
 	if err != nil {
 		return fmt.Errorf("failed to insert doc: %w", err)
 	}
-	docID := conn.LastInsertRowID()
+	docID := int(conn.LastInsertRowID())
 
-	for _, sentence := range doc.Sentences {
-		data, marshalErr := json.Marshal(sentence.Tokens)
-		if marshalErr != nil {
-			return marshalErr
+	for _, label := range labels {
+		labelID, err := h.upsertLabelID(conn, label)
+		if err != nil {
+			return fmt.Errorf("failed to upsert label %s: %w", label, err)
 		}
-
-		err = sqlitex.Execute(conn, "INSERT INTO sentences (doc_id, sentence_id, data) VALUES (?, ?, ?)", &sqlitex.ExecOptions{
-			Args: []interface{}{docID, sentence.Id, string(data)},
+		err = sqlitex.Execute(conn, "INSERT INTO doc_labels (doc_id, label_id) VALUES (?, ?)", &sqlitex.ExecOptions{
+			Args: []interface{}{docID, labelID},
 		})
 		if err != nil {
-			return fmt.Errorf("failed to insert sentence: %w", err)
-		}
-		sentRowID := conn.LastInsertRowID()
-
-		// Extract unique lemmas
-		uniqueLemmas := make(map[string]bool)
-		for _, token := range sentence.Tokens {
-			if token.Lemma != "" {
-				uniqueLemmas[token.Lemma] = true
-			}
-		}
-
-		for lemma := range uniqueLemmas {
-			err = sqlitex.Execute(conn, "INSERT INTO sentence_lemmas (lemma, sentence_rowid) VALUES (?, ?)", &sqlitex.ExecOptions{
-				Args: []interface{}{lemma, sentRowID},
-			})
-			if err != nil {
-				return fmt.Errorf("failed to insert lemma: %w", err)
-			}
-		}
-
-		// Insert labels
-		for _, label := range doc.Labels {
-			err = sqlitex.Execute(conn, "INSERT INTO sentence_labels (label, sentence_rowid) VALUES (?, ?)", &sqlitex.ExecOptions{
-				Args: []interface{}{label, sentRowID},
-			})
-			if err != nil {
-				return fmt.Errorf("failed to insert label: %w", err)
-			}
+			return fmt.Errorf("failed to insert doc_label: %w", err)
 		}
 	}
 
