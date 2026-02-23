@@ -64,42 +64,28 @@ func (h *DocStore) List() ([]sent.Meta, error) {
 	return metas, nil
 }
 
-func (h *DocStore) Read(id int) (sent.Doc, error) {
+func (h *DocStore) Labels(id int) ([]sent.Label, error) {
 	conn, err := h.pool.Take(context.TODO())
 	if err != nil {
-		return sent.Doc{}, err
+		return nil, err
 	}
 	defer h.pool.Put(conn)
 
-	doc := sent.Doc{Id: id}
-	found := false
-
-	err = sqlitex.Execute(conn, "SELECT sentence_id, data FROM sentences WHERE doc_id = ? ORDER BY sentence_id", &sqlitex.ExecOptions{
+	var labels []sent.Label
+	err = sqlitex.Execute(conn, "SELECT l.id, l.name FROM doc_labels dl JOIN labels l ON dl.label_id = l.id WHERE dl.doc_id = ?", &sqlitex.ExecOptions{
 		Args: []interface{}{id},
 		ResultFunc: func(stmt *sqlite.Stmt) error {
-			found = true
-			sentenceID := stmt.ColumnInt(0)
-			data := stmt.ColumnText(1)
-			var tokens []sent.Token
-			if err := json.Unmarshal([]byte(data), &tokens); err != nil {
-				return err
-			}
-			doc.Sentences = append(doc.Sentences, sent.Sentence{
-				Id:     sentenceID,
-				DocId:  id,
-				Tokens: tokens,
+			labels = append(labels, sent.Label{
+				ID:   stmt.ColumnInt(0),
+				Name: stmt.ColumnText(1),
 			})
 			return nil
 		},
 	})
 	if err != nil {
-		return sent.Doc{}, err
+		return nil, err
 	}
-	if !found {
-		return sent.Doc{}, fmt.Errorf("doc not found: %d", id)
-	}
-
-	return doc, nil
+	return labels, nil
 }
 
 func (h *DocStore) FindCandidates(lemmas []string, labels []string, after storage.Cursor, limit int, onCandidate func(sent.Sentence) error) (storage.Cursor, error) {
