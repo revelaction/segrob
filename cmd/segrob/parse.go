@@ -103,6 +103,12 @@ type ImportMetaOptions struct {
 	DbPath   string
 }
 
+type ImportNlpOptions struct {
+	DocID  int
+	From   string
+	DbPath string
+}
+
 // stringSliceFlag implements flag.Value for multi-value strings
 type stringSliceFlag []string
 
@@ -913,6 +919,43 @@ func parseImportMetaArgs(args []string, ui UI) (ImportMetaOptions, error) {
 	return opts, nil
 }
 
+func parseImportNlpArgs(args []string, ui UI) (ImportNlpOptions, error) {
+	fs := flag.NewFlagSet("import-nlp", flag.ContinueOnError)
+	fs.SetOutput(io.Discard)
+
+	var opts ImportNlpOptions
+	fs.IntVar(&opts.DocID, "doc-id", 0, "Document ID to associate with this NLP data")
+	fs.StringVar(&opts.From, "from", "", "Source JSON file (optional, defaults to stdin)")
+	fs.StringVar(&opts.DbPath, "to", "", "Target SQLite database file")
+
+	fs.Usage = func() {
+		_, _ = fmt.Fprintf(fs.Output(), "Usage: %s import-nlp --doc-id <id> [--from <file.json>] --to <db>\n", os.Args[0])
+		_, _ = fmt.Fprintf(fs.Output(), "\nDescription:\n")
+		_, _ = fmt.Fprintf(fs.Output(), "  Import NLP-processed sentences (lemmas and tokens) into the database.\n")
+		_, _ = fmt.Fprintf(fs.Output(), "\nOptions:\n")
+		fs.PrintDefaults()
+	}
+
+	if err := fs.Parse(args); err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			fs.SetOutput(ui.Out)
+			fs.Usage()
+			return opts, err
+		}
+		return opts, err
+	}
+
+	if opts.DocID == 0 {
+		return opts, errors.New("--doc-id is required and must be non-zero")
+	}
+
+	if opts.DbPath == "" {
+		return opts, errors.New("--to is required")
+	}
+
+	return opts, nil
+}
+
 func setupUsage(fs *flag.FlagSet) {
 	fs.Usage = func() {
 		output := fs.Output()
@@ -937,6 +980,7 @@ func setupUsage(fs *flag.FlagSet) {
 		_, _ = fmt.Fprintf(output, "  migrate       Migrate legacy JSON docs to new JSON format.\n")
 		_, _ = fmt.Fprintf(output, "  init-db       Initialize a new SQLite database with the required schema\n")
 		_, _ = fmt.Fprintf(output, "  import-meta   Import document metadata from a TOML file.\n")
+		_, _ = fmt.Fprintf(output, "  import-nlp    Import NLP-processed sentences into the database.\n")
 		_, _ = fmt.Fprintf(output, "  bash          Output bash completion script.\n")
 		_, _ = fmt.Fprintf(output, "  version   Show version information\n")
 		_, _ = fmt.Fprintf(output, "  help      Show help for a command.\n")
