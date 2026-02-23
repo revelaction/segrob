@@ -8,21 +8,16 @@ import (
 )
 
 func sentenceCommand(repo storage.DocRepository, opts SentenceOptions, docId int, sentId int, ui UI) error {
-	if p, ok := repo.(storage.Preloader); ok {
-		if err := p.LoadNLP(nil, &docId, nil); err != nil {
-			return err
-		}
-	}
-	doc, err := repo.Read(docId)
+	sentences, err := repo.Nlp(docId)
 	if err != nil {
 		return err
 	}
 
-	if sentId < 0 || sentId >= len(doc.Sentences) {
-		return fmt.Errorf("sentence index %d out of bounds (0-%d)", sentId, len(doc.Sentences)-1)
+	if sentId < 0 || sentId >= len(sentences) {
+		return fmt.Errorf("sentence index %d out of bounds (0-%d)", sentId, len(sentences)-1)
 	}
 
-	s := doc.Sentences[sentId]
+	s := sentences[sentId]
 	r := render.NewCLIRenderer()
 	r.HasColor = false
 	prefix := fmt.Sprintf("✍  %d ", sentId)
