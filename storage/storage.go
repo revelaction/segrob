@@ -31,28 +31,37 @@ type Cursor int64
 
 // DocReader defines read operations for document storage
 type DocReader interface {
-	// List returns the metadata (Id, Title, Labels) of documents.
-	// If labelMatch is not empty, only documents with at least one label matching the string are returned.
-	// Content (Tokens) is not loaded.
-	List(labelSubStr string) ([]sent.Doc, error)
+	// List returns document identity metadata (Id, Source).
+	List() ([]sent.Meta, error)
 
-	// Read returns a document by ID
-	Read(id int) (sent.Doc, error)
+	// Labels returns the labels for a document by ID.
+	Labels(id int) ([]sent.Label, error)
 
-	// FindCandidates returns sentence candidates matching ALL given lemmas AND ALL labels,
-	// resuming after the given cursor. It calls onCandidate for each result.
-	// Returns the new cursor and any error.
-	FindCandidates(lemmas []string, labels []string, after Cursor, limit int, onCandidate func(sent.Sentence) error) (Cursor, error)
+	// Nlp returns sentences for a document by ID. Labels are not loaded.
+	Nlp(id int) ([]sent.Sentence, error)
 
-	// Labels returns all unique labels found across all documents, sorted alphabetically.
-	// If labelSubStr is not empty, it returns labels that contain the labelSubStr.
-	Labels(labelSubStr string) ([]string, error)
+	// FindCandidates returns sentence candidates matching ALL given lemmas
+	// AND ALL labelIDs. The caller uses ListLabels() to obtain IDs.
+	FindCandidates(lemmas []string, labelIDs []int, after Cursor, limit int, onCandidate func(sent.Sentence) error) (Cursor, error)
+
+	// ListLabels returns all labels (ID and Name). If labelSubStr is not empty,
+	// only labels whose name contains the substring are returned.
+	ListLabels(labelSubStr string) ([]sent.Label, error)
 }
 
 // DocWriter defines write operations for document storage
 type DocWriter interface {
-	// Write persists a document and its sentences/lemmas to storage
-	Write(doc sent.Doc) error
+	// WriteMeta persists document metadata (Source) and its labels.
+	WriteMeta(source string, labels []string) error
+
+	// WriteNLP persists sentences and updates lookup tables for the given docID.
+	WriteNLP(docID int, sentences []sent.SentenceIngest) error
+
+	// AddLabel adds labels to a document and updates optimization tables.
+	AddLabel(docID int, labels ...string) error
+
+	// RemoveLabel removes labels from a document and updates optimization tables.
+	RemoveLabel(docID int, labels ...string) error
 }
 
 // DocRepository combines read and write operations
