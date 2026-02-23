@@ -94,6 +94,10 @@ type ExportDocOptions struct {
 	To   string
 }
 
+type InitDbOptions struct {
+	DbPath string
+}
+
 // stringSliceFlag implements flag.Value for multi-value strings
 type stringSliceFlag []string
 
@@ -847,6 +851,34 @@ func parseMigrateArgs(args []string, ui UI) (migrateOptions, error) {
 	return opts, nil
 }
 
+func parseInitDbArgs(args []string, ui UI) (InitDbOptions, error) {
+	fs := flag.NewFlagSet("init-db", flag.ContinueOnError)
+	fs.SetOutput(io.Discard)
+
+	var opts InitDbOptions
+	fs.Usage = func() {
+		_, _ = fmt.Fprintf(fs.Output(), "Usage: %s init-db <db>\n", os.Args[0])
+		_, _ = fmt.Fprintf(fs.Output(), "\nDescription:\n")
+		_, _ = fmt.Fprintf(fs.Output(), "  Initialize a new SQLite database with the required schema.\n")
+	}
+
+	if err := fs.Parse(args); err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			fs.SetOutput(ui.Out)
+			fs.Usage()
+			return opts, err
+		}
+		return opts, err
+	}
+
+	if fs.NArg() != 1 {
+		return opts, errors.New("init-db requires exactly one argument: <db>")
+	}
+
+	opts.DbPath = fs.Arg(0)
+	return opts, nil
+}
+
 func setupUsage(fs *flag.FlagSet) {
 	fs.Usage = func() {
 		output := fs.Output()
@@ -869,7 +901,8 @@ func setupUsage(fs *flag.FlagSet) {
 		_, _ = fmt.Fprintf(output, "  import-doc    Import docs from filesystem to SQLite.\n")
 		_, _ = fmt.Fprintf(output, "  export-doc    Export docs from SQLite to filesystem.\n")
 		_, _ = fmt.Fprintf(output, "  migrate       Migrate legacy JSON docs to new JSON format.\n")
-		_, _ = fmt.Fprintf(output, "  bash      Output bash completion script.\n")
+		_, _ = fmt.Fprintf(output, "  init-db       Initialize a new SQLite database with the required schema\n")
+		_, _ = fmt.Fprintf(output, "  bash          Output bash completion script.\n")
 		_, _ = fmt.Fprintf(output, "  version   Show version information\n")
 		_, _ = fmt.Fprintf(output, "  help      Show help for a command.\n")
 		_, _ = fmt.Fprintf(output, "\nVersion: %s, commit %s\n", BuildTag, BuildCommit)
