@@ -10,25 +10,20 @@ import (
 )
 
 func topicsCommand(docRepo storage.DocRepository, topicRepo storage.TopicRepository, opts TopicsOptions, docId int, sentId int, ui UI) error {
-	if p, ok := docRepo.(storage.Preloader); ok {
-		if err := p.LoadNLP(nil, &docId, nil); err != nil {
-			return err
-		}
-	}
-	doc, err := docRepo.Read(docId)
+	sentences, err := docRepo.Nlp(docId)
 	if err != nil {
 		return err
 	}
 
-	return renderTopics(doc, sentId, topicRepo, opts, ui)
+	return renderTopics(sentences, sentId, topicRepo, opts, ui)
 }
 
-func renderTopics(doc sent.Doc, sentId int, topicRepo storage.TopicRepository, opts TopicsOptions, ui UI) error {
-	if sentId < 0 || sentId >= len(doc.Sentences) {
-		return fmt.Errorf("sentence index %d out of range (0-%d)", sentId, len(doc.Sentences)-1)
+func renderTopics(sentences []sent.Sentence, sentId int, topicRepo storage.TopicRepository, opts TopicsOptions, ui UI) error {
+	if sentId < 0 || sentId >= len(sentences) {
+		return fmt.Errorf("sentence index %d out of range (0-%d)", sentId, len(sentences)-1)
 	}
 
-	s := doc.Sentences[sentId]
+	s := sentences[sentId]
 
 	r := render.NewCLIRenderer()
 	r.HasColor = false
