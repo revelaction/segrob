@@ -15,7 +15,7 @@ import sys
 from pathlib import Path
 from ebooklib import epub
 
-OPF = 'http://www.idpf.org/2007/opf'
+OPF_ROLE = '{http://www.idpf.org/2007/opf}role'
 
 
 # ---------------------------------------------------------------------------
@@ -51,10 +51,21 @@ def normalize_date(val):
 # Extract functions
 # ---------------------------------------------------------------------------
 
-def extract_creator(book):
-    items = dc(book, 'creator')
-    return items[0][0] if items else ""
+def _role(attrs):
+    return attrs.get(OPF_ROLE) or attrs.get('opf:role') or attrs.get('role', '')
 
+def extract_creator(book):
+    for value, attrs in dc(book, 'creator'):
+        if _role(attrs) != 'trl':
+            return value
+    return ""
+
+def extract_translator(book):
+    for dc_name in ('contributor', 'creator'):
+        for value, attrs in dc(book, dc_name):
+            if _role(attrs) == 'trl':
+                return value
+    return ""
 
 def extract_title(book):
     items = dc(book, 'title')
@@ -65,32 +76,19 @@ def extract_language(book):
     items = dc(book, 'language')
     return items[0][0] if items else ""
 
-
+"""
+Only returns a value when the event is explicitly publication. Modification
+dates are skipped, and ambiguous dateless entries (no event attribute) are also
+skipped — better an empty field than a wrong year.
+"""
 def extract_date_publication(book):
-    """Return publication date. Prefers opf:event=publication if present, else first date."""
+    OPF_EVENT = '{http://www.idpf.org/2007/opf}event'
     for value, attrs in dc(book, 'date'):
-        if attrs.get('opf:event') == 'publication':
+        event = attrs.get(OPF_EVENT) or attrs.get('opf:event') or attrs.get('event', '')
+        if event == 'publication':
             return value
-    items = dc(book, 'date')
-    return items[0][0] if items else ""
-
-
-def extract_translator(book):
-    """Return translator name (role=trl) from contributor or creator, or empty string."""
-    # Build EPUB 3 refinements map: {element_id: {property: value}}
-    refinements = {}
-    for value, attrs in book.metadata.get(OPF, {}).get('meta', []):
-        ref = attrs.get('refines', '')
-        if ref.startswith('#'):
-            refinements.setdefault(ref[1:], {})[attrs.get('property', '')] = value
-
-    for dc_name in ('contributor', 'creator'):
-        for value, attrs in dc(book, dc_name):
-            # EPUB 2: opf:role attribute directly; EPUB 3: resolved from refinements
-            role = attrs.get('opf:role') or refinements.get(attrs.get('id', ''), {}).get('role', '')
-            if role == 'trl':
-                return value
     return ""
+
 
 
 # ---------------------------------------------------------------------------
@@ -142,6 +140,7 @@ def main():
 
         essentials = {"creator": creator, "title": title, "date": date, "language": language}
         found   = [k for k, v in essentials.items() if v]
+        if translator: found.append("translator")
         missing = [k for k, v in essentials.items() if not v]
         print(
             f"[{epub_path.name}] Found: {', '.join(found) or 'None'} | "
