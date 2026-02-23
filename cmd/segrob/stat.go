@@ -9,25 +9,20 @@ import (
 )
 
 func statCommand(repo storage.DocRepository, opts StatOptions, docId int, sentId *int, ui UI) error {
-	if p, ok := repo.(storage.Preloader); ok {
-		if err := p.LoadNLP(nil, &docId, nil); err != nil {
-			return err
-		}
-	}
-	doc, err := repo.Read(docId)
+	sentences, err := repo.Nlp(docId)
 	if err != nil {
 		return err
 	}
 
 	if sentId != nil {
-		if *sentId < 0 || *sentId >= len(doc.Sentences) {
-			return fmt.Errorf("sentence index %d out of bounds (doc has %d sentences)", *sentId, len(doc.Sentences))
+		if *sentId < 0 || *sentId >= len(sentences) {
+			return fmt.Errorf("sentence index %d out of bounds (doc has %d sentences)", *sentId, len(sentences))
 		}
-		doc = sent.Doc{Sentences: []sent.Sentence{doc.Sentences[*sentId]}}
+		sentences = []sent.Sentence{sentences[*sentId]}
 	}
 
 	hdl := stat.NewHandler()
-	hdl.Aggregate(doc)
+	hdl.Aggregate(sentences)
 
 	stats := hdl.Get()
 	fmt.Fprintf(ui.Out, "Num sentences %d, num tokens per sentence %d\n", stats.NumSentences, stats.TokensPerSentenceMean)

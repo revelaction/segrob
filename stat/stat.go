@@ -26,10 +26,13 @@ func NewHandler() *Handler {
 	}
 }
 
-func (h *Handler) Aggregate(doc sent.Doc) {
-	h.stats.NumSentences = len(doc.Sentences)
+func (h *Handler) Aggregate(sentences []sent.Sentence) {
+	h.stats.NumSentences = len(sentences)
+	if h.stats.NumSentences == 0 {
+		return
+	}
 	//
-	for _, sentence := range doc.Sentences {
+	for _, sentence := range sentences {
 		h.stats.NumTokens += len(sentence.Tokens)
 		h.stats.TokensPerSentenceDis[len(sentence.Tokens)]++
 	}
