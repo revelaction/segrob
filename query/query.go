@@ -86,14 +86,33 @@ func (h *Handler) Run() error {
 		matcher.AddTopicExpr(expr)
 
 		// Fetch doc names for rendering
-		docList, err := h.DocRepo.List("")
+		docList, err := h.DocRepo.List()
 		if err != nil {
 			fmt.Printf("Error listing docs: %v\n", err)
 			continue
 		}
 		docNames := make(map[int]string)
 		for _, d := range docList {
-			docNames[d.Id] = d.Title
+			docNames[d.ID] = d.Source
+		}
+
+		// Resolve labels to IDs
+		var labelIDs []int
+		if len(h.Labels) > 0 {
+			allLabels, err := h.DocRepo.ListLabels("")
+			if err != nil {
+				fmt.Printf("Error listing labels: %v\n", err)
+				continue
+			}
+			labelMap := make(map[string]int)
+			for _, l := range allLabels {
+				labelMap[l.Name] = l.ID
+			}
+			for _, name := range h.Labels {
+				if id, ok := labelMap[name]; ok {
+					labelIDs = append(labelIDs, id)
+				}
+			}
 		}
 
 		// Extract lemmas from all relevant expressions (OR logic) for indexed retrieval.
@@ -116,7 +135,7 @@ func (h *Handler) Run() error {
 			// doc := sent.Doc{Tokens: make([][]sent.Token, 1)} // No longer needed
 			for {
 				// Fetch batch
-				newCursor, err := h.DocRepo.FindCandidates(lemmas, h.Labels, cursor, 500, func(s sent.Sentence) error {
+				newCursor, err := h.DocRepo.FindCandidates(lemmas, labelIDs, cursor, 500, func(s sent.Sentence) error {
 					fetched++
 					h.Renderer.AddDocName(s.DocId, docNames[s.DocId])
 
