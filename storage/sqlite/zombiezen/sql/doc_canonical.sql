@@ -22,8 +22,8 @@ CREATE TABLE IF NOT EXISTS doc_labels (
 CREATE TABLE IF NOT EXISTS sentences (
     rowid       INTEGER PRIMARY KEY,
     doc_id      INTEGER NOT NULL,
-    sentence_id INTEGER NOT NULL,
-    data        TEXT NOT NULL,
+    sentence_id INTEGER NOT NULL, -- Sequential index (0, 1, ...)
+    data        TEXT NOT NULL,    -- Full JSON content (tokens)
     FOREIGN KEY (doc_id) REFERENCES docs(id)
 );
 
