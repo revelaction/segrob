@@ -267,26 +267,6 @@ func runCommand(cmd string, args []string, ui UI) error {
 		}
 		return exportTopicCommand(opts, ui)
 
-	case "import-doc":
-		opts, err := parseImportDocArgs(args, ui)
-		if err != nil {
-			if errors.Is(err, flag.ErrHelp) {
-				return nil
-			}
-			return err
-		}
-		return importDocCommand(opts, ui)
-
-	case "export-doc":
-		opts, err := parseExportDocArgs(args, ui)
-		if err != nil {
-			if errors.Is(err, flag.ErrHelp) {
-				return nil
-			}
-			return err
-		}
-		return exportDocCommand(opts, ui)
-
 	case "init-db":
 		opts, err := parseInitDbArgs(args, ui)
 		if err != nil {

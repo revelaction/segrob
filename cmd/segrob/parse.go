@@ -84,16 +84,6 @@ type ExportTopicOptions struct {
 	To   string
 }
 
-type ImportDocOptions struct {
-	From string
-	To   string
-}
-
-type ExportDocOptions struct {
-	From string
-	To   string
-}
-
 type InitDbOptions struct {
 	DbPath string
 }
@@ -805,52 +795,6 @@ func parseExportTopicArgs(args []string, ui UI) (ExportTopicOptions, error) {
 	return opts, nil
 }
 
-func parseImportDocArgs(args []string, ui UI) (ImportDocOptions, error) {
-	fs := flag.NewFlagSet("import-doc", flag.ContinueOnError)
-	fs.SetOutput(io.Discard)
-
-	var opts ImportDocOptions
-	fs.StringVar(&opts.From, "from", "", "Source directory with JSON docs")
-	fs.StringVar(&opts.To, "to", "", "Target SQLite database file")
-
-	fs.Usage = func() {
-		_, _ = fmt.Fprintf(fs.Output(), "Usage: %s import-doc --from <dir> --to <sqlite_file>\n", os.Args[0])
-	}
-
-	if err := fs.Parse(args); err != nil {
-		return opts, err
-	}
-
-	if opts.From == "" || opts.To == "" {
-		return opts, errors.New("--from and --to are required")
-	}
-
-	return opts, nil
-}
-
-func parseExportDocArgs(args []string, ui UI) (ExportDocOptions, error) {
-	fs := flag.NewFlagSet("export-doc", flag.ContinueOnError)
-	fs.SetOutput(io.Discard)
-
-	var opts ExportDocOptions
-	fs.StringVar(&opts.From, "from", "", "Source SQLite database file")
-	fs.StringVar(&opts.To, "to", "", "Target directory for JSON docs")
-
-	fs.Usage = func() {
-		_, _ = fmt.Fprintf(fs.Output(), "Usage: %s export-doc --from <sqlite_file> --to <dir>\n", os.Args[0])
-	}
-
-	if err := fs.Parse(args); err != nil {
-		return opts, err
-	}
-
-	if opts.From == "" || opts.To == "" {
-		return opts, errors.New("--from and --to are required")
-	}
-
-	return opts, nil
-}
-
 func parseInitDbArgs(args []string, ui UI) (InitDbOptions, error) {
 	fs := flag.NewFlagSet("init-db", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
@@ -1050,8 +994,6 @@ func setupUsage(fs *flag.FlagSet) {
 		_, _ = fmt.Fprintf(output, "  stat      Show statistics for a document or sentence.\n")
 		_, _ = fmt.Fprintf(output, "  import-topic  Import topics from filesystem to SQLite.\n")
 		_, _ = fmt.Fprintf(output, "  export-topic  Export topics from SQLite to filesystem.\n")
-		_, _ = fmt.Fprintf(output, "  import-doc    Import docs from filesystem to SQLite.\n")
-		_, _ = fmt.Fprintf(output, "  export-doc    Export docs from SQLite to filesystem.\n")
 		_, _ = fmt.Fprintf(output, "  init-db       Initialize a new SQLite database with the required schema\n")
 		_, _ = fmt.Fprintf(output, "  import-meta   Import document metadata from a TOML file.\n")
 		_, _ = fmt.Fprintf(output, "  import-nlp    Import NLP-processed sentences into the database.\n")
