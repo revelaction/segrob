@@ -2,43 +2,57 @@ package main
 
 import (
 	"fmt"
-	"os"
-	"path/filepath"
 	"strings"
 
-	"github.com/pelletier/go-toml/v2"
+	"github.com/revelaction/segrob/storage/sqlite/zombiezen"
 )
 
-type docMetaDTO struct {
-	Source string   `toml:"source"`
-	Labels []string `toml:"labels"`
-}
-
-func importMetaCommand(p *Pool, opts ImportMetaOptions, ui UI) error {
-	data, err := os.ReadFile(opts.Filename)
+func importMetaCommand(opts ImportMetaOptions, ui UI) error {
+	// Open corpus database (read-only source)
+	corpusPool, err := zombiezen.NewPool(opts.From)
 	if err != nil {
-		return fmt.Errorf("failed to read file %s: %w", opts.Filename, err)
+		return fmt.Errorf("failed to open corpus database: %w", err)
 	}
+	defer corpusPool.Close()
 
-	var doc docMetaDTO
-	if err := toml.Unmarshal(data, &doc); err != nil {
-		return fmt.Errorf("failed to decode TOML: %w", err)
-	}
-
-	// Derived source if missing
-	if doc.Source == "" {
-		base := filepath.Base(opts.Filename)
-		doc.Source = strings.TrimSuffix(base, ".meta.toml")
-	}
-
-	repo, err := NewDocRepository(p, opts.DbPath)
+	// Open segrob database (write target)
+	docPool, err := zombiezen.NewPool(opts.To)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to open segrob database: %w", err)
+	}
+	defer docPool.Close()
+
+	corpusStore := zombiezen.NewCorpusStore(corpusPool)
+	docStore := zombiezen.NewDocStore(docPool)
+
+	// Read metadata from corpus
+	meta, err := corpusStore.ReadMeta(opts.ID)
+	if err != nil {
+		return fmt.Errorf("failed to read corpus meta for %s: %w", opts.ID, err)
 	}
 
-	if err := repo.WriteMeta(doc.Source, doc.Labels); err != nil {
-		return fmt.Errorf("failed to write meta: %w", err)
+	// Check if id already exists in segrob.db (idempotent)
+	exists, err := docStore.Exists(meta.ID)
+	if err != nil {
+		return fmt.Errorf("failed to check existence for %s: %w", meta.ID, err)
 	}
+	if exists {
+		return nil
+	}
+
+	// Split comma-separated labels into slice
+	var labels []string
+	if meta.Labels != "" {
+		labels = strings.Split(meta.Labels, ",")
+	}
+
+	// Write to segrob.db; source is the epub basename
+	if err := docStore.WriteMeta(meta.ID, meta.Epub, labels); err != nil {
+		return fmt.Errorf("failed to write meta for %s: %w", meta.ID, err)
+	}
+
+	// Success: print to stderr
+	fmt.Fprintf(ui.Err, "%s %s %s\n", meta.ID, meta.Epub, meta.Labels)
 
 	return nil
 }
