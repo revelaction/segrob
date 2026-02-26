@@ -111,6 +111,11 @@ type RemoveLabelOptions struct {
 	DocPath string
 }
 
+type CorpusOptions struct {
+	OutputDb string
+	Dir      string
+}
+
 // stringSliceFlag implements flag.Value for multi-value strings
 type stringSliceFlag []string
 
@@ -972,6 +977,48 @@ func parseRemoveLabelArgs(args []string, ui UI) (RemoveLabelOptions, error) {
 		return opts, errors.New("no document source specified (use -d or SEGROB_DOC_PATH)")
 	}
 
+	return opts, nil
+}
+
+func parseCorpusArgs(args []string, ui UI) (CorpusOptions, error) {
+	fs := flag.NewFlagSet("corpus", flag.ContinueOnError)
+	fs.SetOutput(io.Discard)
+
+	var opts CorpusOptions
+	fs.StringVar(&opts.OutputDb, "output-db", "corpus.db", "Output SQLite file for corpus data")
+	fs.StringVar(&opts.OutputDb, "o", "corpus.db", "alias for -output-db")
+
+	fs.Usage = func() {
+		_, _ = fmt.Fprintf(fs.Output(), "Usage: %s corpus [options] <dir>\n", os.Args[0])
+		_, _ = fmt.Fprintf(fs.Output(), "\nDescription:\n")
+		_, _ = fmt.Fprintf(fs.Output(), "  Scan a directory for epub files and build a corpus database.\n")
+		_, _ = fmt.Fprintf(fs.Output(), "\nOptions:\n")
+		fs.PrintDefaults()
+	}
+
+	if err := fs.Parse(args); err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			fs.SetOutput(ui.Out)
+			fs.Usage()
+			return opts, err
+		}
+		return opts, err
+	}
+
+	if fs.NArg() != 1 {
+		return opts, errors.New("corpus requires exactly one directory argument")
+	}
+
+	dir := fs.Arg(0)
+	info, err := os.Stat(dir)
+	if err != nil {
+		return opts, fmt.Errorf("directory not found: %s", dir)
+	}
+	if !info.IsDir() {
+		return opts, fmt.Errorf("argument is not a directory: %s", dir)
+	}
+
+	opts.Dir = dir
 	return opts, nil
 }
 
