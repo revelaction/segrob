@@ -1,13 +1,17 @@
 package main
 
 import (
+	"archive/zip"
+	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
 
+	"github.com/revelaction/segrob/epub"
 	"github.com/revelaction/segrob/storage/sqlite/zombiezen"
 )
 
@@ -64,4 +68,46 @@ func corpusCommand(opts CorpusOptions, ui UI) error {
 	}
 
 	return nil
+}
+
+// processEpub reads epub bytes from r, computes the hash, extracts DC labels,
+// runs pandoc (via stdin) to convert it to plain text, and returns a CorpusRecord.
+func processEpub(r io.Reader, name string) (zombiezen.CorpusRecord, error) {
+	var record zombiezen.CorpusRecord
+
+	epubBytes, err := io.ReadAll(r)
+	if err != nil {
+		return record, fmt.Errorf("failed to read epub %s: %w", name, err)
+	}
+
+	// Compute epub hash for ID (truncated to 16 bytes = 32 hex chars)
+	record.ID = sha256Hex(epubBytes, 16)
+	record.Epub = name
+
+	// Extract DC labels via *zip.Reader (decoupled from filesystem)
+	zr, err := zip.NewReader(bytes.NewReader(epubBytes), int64(len(epubBytes)))
+	if err != nil {
+		return record, fmt.Errorf("failed to open epub zip %s: %w", name, err)
+	}
+
+	labels, err := epub.Labels(zr)
+	if err != nil {
+		return record, fmt.Errorf("failed to extract epub labels from %s: %w", name, err)
+	}
+	record.Labels = labels
+
+	// Run pandoc to convert epub to plain text via stdin
+	cmd := exec.Command("pandoc", "-f", "epub", "-t", "plain", "--wrap=preserve")
+	cmd.Stdin = bytes.NewReader(epubBytes)
+	txtBytes, err := cmd.Output()
+	if err != nil {
+		return record, fmt.Errorf("pandoc failed for %s: %w", name, err)
+	}
+
+	record.Txt = string(txtBytes)
+
+	// Hash the full text output (full 32 bytes = 64 hex chars)
+	record.TxtHash = sha256Hex(txtBytes, 32)
+
+	return record, nil
 }
