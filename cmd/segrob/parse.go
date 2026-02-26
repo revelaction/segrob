@@ -1046,6 +1046,7 @@ func setupUsage(fs *flag.FlagSet) {
 		_, _ = fmt.Fprintf(output, "  import-nlp    Import NLP-processed sentences into the database.\n")
 		_, _ = fmt.Fprintf(output, "  add-label     Add one or more labels to a document.\n")
 		_, _ = fmt.Fprintf(output, "  remove-label  Remove one or more labels from a document.\n")
+		_, _ = fmt.Fprintf(output, "  corpus        Scan an epub directory and build a corpus database.\n")
 		_, _ = fmt.Fprintf(output, "  bash          Output bash completion script.\n")
 		_, _ = fmt.Fprintf(output, "  version   Show version information\n")
 		_, _ = fmt.Fprintf(output, "  help      Show help for a command.\n")
