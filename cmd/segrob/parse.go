@@ -834,10 +834,15 @@ func parseImportMetaArgs(args []string, ui UI) (ImportMetaOptions, error) {
 	fs.SetOutput(io.Discard)
 
 	var opts ImportMetaOptions
+	fs.StringVar(&opts.From, "from", os.Getenv("SEGROB_CORPUS_PATH"), "Source corpus SQLite file")
+	fs.StringVar(&opts.To, "to", os.Getenv("SEGROB_DOC_PATH"), "Target segrob SQLite file")
+
 	fs.Usage = func() {
-		_, _ = fmt.Fprintf(fs.Output(), "Usage: %s import-meta <filename> <db>\n", os.Args[0])
+		_, _ = fmt.Fprintf(fs.Output(), "Usage: %s import-meta <id> [--from corpus.db] [--to segrob.db]\n", os.Args[0])
 		_, _ = fmt.Fprintf(fs.Output(), "\nDescription:\n")
-		_, _ = fmt.Fprintf(fs.Output(), "  Import document metadata from a TOML file.\n")
+		_, _ = fmt.Fprintf(fs.Output(), "  Import document metadata from a corpus database into segrob.\n")
+		_, _ = fmt.Fprintf(fs.Output(), "\nOptions:\n")
+		fs.PrintDefaults()
 	}
 
 	if err := fs.Parse(args); err != nil {
@@ -849,12 +854,20 @@ func parseImportMetaArgs(args []string, ui UI) (ImportMetaOptions, error) {
 		return opts, err
 	}
 
-	if fs.NArg() != 2 {
-		return opts, errors.New("import-meta requires exactly two arguments: <filename> <db>")
+	if fs.NArg() != 1 {
+		return opts, errors.New("import-meta requires exactly one argument: <id>")
 	}
 
-	opts.Filename = fs.Arg(0)
-	opts.DbPath = fs.Arg(1)
+	opts.ID = fs.Arg(0)
+
+	if opts.From == "" {
+		return opts, errors.New("corpus source must be specified via --from or SEGROB_CORPUS_PATH")
+	}
+
+	if opts.To == "" {
+		return opts, errors.New("target db must be specified via --to or SEGROB_DOC_PATH")
+	}
+
 	return opts, nil
 }
 
