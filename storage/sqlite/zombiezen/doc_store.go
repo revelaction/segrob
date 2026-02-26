@@ -51,7 +51,7 @@ func (h *DocStore) List() ([]sent.Meta, error) {
 	err = sqlitex.Execute(conn, "SELECT id, source FROM docs ORDER BY source", &sqlitex.ExecOptions{
 		ResultFunc: func(stmt *sqlite.Stmt) error {
 			metas = append(metas, sent.Meta{
-				ID:     stmt.ColumnInt(0),
+				Id:     stmt.ColumnText(0),
 				Source: stmt.ColumnText(1),
 			})
 			return nil
@@ -63,7 +63,7 @@ func (h *DocStore) List() ([]sent.Meta, error) {
 	return metas, nil
 }
 
-func (h *DocStore) Labels(id int) ([]sent.Label, error) {
+func (h *DocStore) Labels(id string) ([]sent.Label, error) {
 	conn, err := h.pool.Take(context.TODO())
 	if err != nil {
 		return nil, err
@@ -87,7 +87,7 @@ func (h *DocStore) Labels(id int) ([]sent.Label, error) {
 	return labels, nil
 }
 
-func (h *DocStore) Nlp(id int) ([]sent.Sentence, error) {
+func (h *DocStore) Nlp(id string) ([]sent.Sentence, error) {
 	conn, err := h.pool.Take(context.TODO())
 	if err != nil {
 		return nil, err
@@ -105,9 +105,9 @@ func (h *DocStore) Nlp(id int) ([]sent.Sentence, error) {
 				return err
 			}
 			sentences = append(sentences, sent.Sentence{
-				Id:     sentenceID,
-				DocId:  id,
-				Tokens: tokens,
+				SentenceId: sentenceID,
+				DocId:      id,
+				Tokens:     tokens,
 			})
 			return nil
 		},
@@ -168,8 +168,8 @@ func (h *DocStore) FindCandidates(lemmas []string, labelIDs []int, after storage
 			}
 
 			s := sent.Sentence{
-				DocId: stmt.ColumnInt(1),
-				Id:    stmt.ColumnInt(2),
+				DocId:      stmt.ColumnText(1),
+				SentenceId: stmt.ColumnInt(2),
 			}
 			data := stmt.ColumnText(3)
 			if err := json.Unmarshal([]byte(data), &s.Tokens); err != nil {
@@ -263,7 +263,7 @@ func (h *DocStore) buildListLabelsQuery(labelSubStr string) (string, []interface
 	return queryBuilder.String(), args
 }
 
-func (h *DocStore) WriteMeta(source string, labels []string) (err error) {
+func (h *DocStore) WriteMeta(id string, source string, labels []string) (err error) {
 	conn, err := h.pool.Take(context.TODO())
 	if err != nil {
 		return err
@@ -273,13 +273,12 @@ func (h *DocStore) WriteMeta(source string, labels []string) (err error) {
 	// Start Transaction
 	defer sqlitex.Save(conn)(&err)
 
-	err = sqlitex.Execute(conn, "INSERT INTO docs (source) VALUES (?)", &sqlitex.ExecOptions{
-		Args: []interface{}{source},
+	err = sqlitex.Execute(conn, "INSERT INTO docs (id, source) VALUES (?, ?)", &sqlitex.ExecOptions{
+		Args: []interface{}{id, source},
 	})
 	if err != nil {
 		return fmt.Errorf("failed to insert doc: %w", err)
 	}
-	docID := int(conn.LastInsertRowID())
 
 	for _, label := range labels {
 		labelID, err := h.upsertLabelID(conn, label)
@@ -287,7 +286,7 @@ func (h *DocStore) WriteMeta(source string, labels []string) (err error) {
 			return fmt.Errorf("failed to upsert label %s: %w", label, err)
 		}
 		err = sqlitex.Execute(conn, "INSERT INTO doc_labels (doc_id, label_id) VALUES (?, ?)", &sqlitex.ExecOptions{
-			Args: []interface{}{docID, labelID},
+			Args: []interface{}{id, labelID},
 		})
 		if err != nil {
 			return fmt.Errorf("failed to insert doc_label: %w", err)
@@ -297,7 +296,7 @@ func (h *DocStore) WriteMeta(source string, labels []string) (err error) {
 	return nil
 }
 
-func (h *DocStore) WriteNLP(docID int, sentences []sent.SentenceIngest) (err error) {
+func (h *DocStore) WriteNLP(docID string, sentences []sent.SentenceIngest) (err error) {
 	conn, err := h.pool.Take(context.TODO())
 	if err != nil {
 		return err
@@ -351,7 +350,7 @@ func (h *DocStore) WriteNLP(docID int, sentences []sent.SentenceIngest) (err err
 	return nil
 }
 
-func (h *DocStore) AddLabel(docID int, labels ...string) (err error) {
+func (h *DocStore) AddLabel(docID string, labels ...string) (err error) {
 	conn, err := h.pool.Take(context.TODO())
 	if err != nil {
 		return err
@@ -389,7 +388,7 @@ func (h *DocStore) AddLabel(docID int, labels ...string) (err error) {
 	return nil
 }
 
-func (h *DocStore) RemoveLabel(docID int, labels ...string) (err error) {
+func (h *DocStore) RemoveLabel(docID string, labels ...string) (err error) {
 	conn, err := h.pool.Take(context.TODO())
 	if err != nil {
 		return err
@@ -450,4 +449,25 @@ func Labels(s string) []string {
 		}
 	}
 	return res
+}
+
+// Exists returns true if a document with the given ID is present in the docs table.
+func (h *DocStore) Exists(id string) (bool, error) {
+	conn, err := h.pool.Take(context.TODO())
+	if err != nil {
+		return false, err
+	}
+	defer h.pool.Put(conn)
+
+	var exists bool
+	err = sqlitex.Execute(conn,
+		"SELECT 1 FROM docs WHERE id = ?",
+		&sqlitex.ExecOptions{
+			Args: []interface{}{id},
+			ResultFunc: func(stmt *sqlite.Stmt) error {
+				exists = true
+				return nil
+			},
+		})
+	return exists, err
 }
