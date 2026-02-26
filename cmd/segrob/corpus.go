@@ -22,6 +22,25 @@ func sha256Hex(data []byte, n int) string {
 	return hex.EncodeToString(h[:n])
 }
 
+// epubPaths returns a list of absolute paths to epub files in the given directory.
+// It is a flat scan (no recursion).
+func epubPaths(dir string) ([]string, error) {
+	var paths []string
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read directory %s: %w", dir, err)
+	}
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+		if filepath.Ext(entry.Name()) == ".epub" {
+			paths = append(paths, filepath.Join(dir, entry.Name()))
+		}
+	}
+	return paths, nil
+}
+
 func corpusCommand(opts CorpusOptions, ui UI) error {
 	// Check pandoc exists
 	if _, err := exec.LookPath("pandoc"); err != nil {
@@ -43,27 +62,18 @@ func corpusCommand(opts CorpusOptions, ui UI) error {
 	store := zombiezen.NewCorpusStore(pool)
 
 	// Collect epub file paths from the single directory (flat, no recursion)
-	var epubPaths []string
-	entries, err := os.ReadDir(opts.Dir)
+	paths, err := epubPaths(opts.Dir)
 	if err != nil {
-		return fmt.Errorf("failed to read directory %s: %w", opts.Dir, err)
-	}
-	for _, entry := range entries {
-		if entry.IsDir() {
-			continue
-		}
-		if filepath.Ext(entry.Name()) == ".epub" {
-			epubPaths = append(epubPaths, filepath.Join(opts.Dir, entry.Name()))
-		}
+		return err
 	}
 
-	if len(epubPaths) == 0 {
+	if len(paths) == 0 {
 		fmt.Fprintf(ui.Err, "No epub files found in %s.\n", opts.Dir)
 		return nil
 	}
 
 	// Build iterator and write stream
-	seq := corpusIterator(store, epubPaths, ui)
+	seq := corpusIterator(store, paths, ui)
 	if err := store.WriteStream(seq); err != nil {
 		return err
 	}
