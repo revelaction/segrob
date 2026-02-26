@@ -6,7 +6,6 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
-	"io"
 	"iter"
 	"os"
 	"os/exec"
@@ -72,18 +71,11 @@ func corpusCommand(opts CorpusOptions, ui UI) error {
 	return nil
 }
 
-// processEpub reads epub bytes from r, computes the hash, extracts DC labels,
+// processEpub takes pre-read epub bytes and a pre-computed id, extracts DC labels,
 // runs pandoc (via stdin) to convert it to plain text, and returns a CorpusRecord.
-func processEpub(r io.Reader, name string) (zombiezen.CorpusRecord, error) {
+func processEpub(epubBytes []byte, name, id string) (zombiezen.CorpusRecord, error) {
 	var record zombiezen.CorpusRecord
-
-	epubBytes, err := io.ReadAll(r)
-	if err != nil {
-		return record, fmt.Errorf("failed to read epub %s: %w", name, err)
-	}
-
-	// Compute epub hash for ID (truncated to 16 bytes = 32 hex chars)
-	record.ID = sha256Hex(epubBytes, 16)
+	record.ID = id
 	record.Epub = name
 
 	// Extract DC labels via *zip.Reader (decoupled from filesystem)
@@ -119,30 +111,42 @@ func processEpub(r io.Reader, name string) (zombiezen.CorpusRecord, error) {
 // prints a summary line per processed epub. On error, it yields the error
 // and halts.
 func corpusIterator(store *zombiezen.CorpusStore, epubPaths []string, ui UI) iter.Seq2[zombiezen.CorpusRecord, error] {
+	seen := make(map[string]bool)
 	return func(yield func(zombiezen.CorpusRecord, error) bool) {
 		for _, epubPath := range epubPaths {
-			f, err := os.Open(epubPath)
+			name := filepath.Base(epubPath)
+
+			epubBytes, err := os.ReadFile(epubPath)
 			if err != nil {
-				yield(zombiezen.CorpusRecord{}, fmt.Errorf("failed to open %s: %w", epubPath, err))
+				yield(zombiezen.CorpusRecord{}, fmt.Errorf("failed to read %s: %w", epubPath, err))
 				return
 			}
 
-			record, err := processEpub(f, filepath.Base(epubPath))
-			f.Close()
-			if err != nil {
-				yield(zombiezen.CorpusRecord{}, err)
-				return
+			// Compute hash early to skip duplicates before heavy work
+			id := sha256Hex(epubBytes, 16)
+
+			if seen[id] {
+				fmt.Fprintf(ui.Err, "[skip] %s (duplicate in batch)\n", name)
+				continue
 			}
 
-			// Check if already in DB (idempotency)
-			exists, err := store.Exists(record.ID)
+			exists, err := store.Exists(id)
 			if err != nil {
 				yield(zombiezen.CorpusRecord{}, fmt.Errorf("failed to check existence for %s: %w", epubPath, err))
 				return
 			}
 			if exists {
-				fmt.Fprintf(ui.Err, "[skip] %s (already in corpus)\n", record.Epub)
+				fmt.Fprintf(ui.Err, "[skip] %s (already in corpus)\n", name)
 				continue
+			}
+
+			seen[id] = true
+
+			// Now do the expensive work: zip parsing, label extraction, pandoc
+			record, err := processEpub(epubBytes, name, id)
+			if err != nil {
+				yield(zombiezen.CorpusRecord{}, err)
+				return
 			}
 
 			// Print summary line: labels and text length in UTF-8 characters
