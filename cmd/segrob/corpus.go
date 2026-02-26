@@ -7,9 +7,11 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
+	"iter"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"unicode/utf8"
 
 	"github.com/revelaction/segrob/epub"
 	"github.com/revelaction/segrob/storage/sqlite/zombiezen"
@@ -110,4 +112,46 @@ func processEpub(r io.Reader, name string) (zombiezen.CorpusRecord, error) {
 	record.TxtHash = sha256Hex(txtBytes, 32)
 
 	return record, nil
+}
+
+// corpusIterator returns an iter.Seq2 that yields CorpusRecord values for
+// each epub path. It checks existence in the store (idempotency) and
+// prints a summary line per processed epub. On error, it yields the error
+// and halts.
+func corpusIterator(store *zombiezen.CorpusStore, epubPaths []string, ui UI) iter.Seq2[zombiezen.CorpusRecord, error] {
+	return func(yield func(zombiezen.CorpusRecord, error) bool) {
+		for _, epubPath := range epubPaths {
+			f, err := os.Open(epubPath)
+			if err != nil {
+				yield(zombiezen.CorpusRecord{}, fmt.Errorf("failed to open %s: %w", epubPath, err))
+				return
+			}
+
+			record, err := processEpub(f, filepath.Base(epubPath))
+			f.Close()
+			if err != nil {
+				yield(zombiezen.CorpusRecord{}, err)
+				return
+			}
+
+			// Check if already in DB (idempotency)
+			exists, err := store.Exists(record.ID)
+			if err != nil {
+				yield(zombiezen.CorpusRecord{}, fmt.Errorf("failed to check existence for %s: %w", epubPath, err))
+				return
+			}
+			if exists {
+				fmt.Fprintf(ui.Err, "[skip] %s (already in corpus)\n", record.Epub)
+				continue
+			}
+
+			// Print summary line: labels and text length in UTF-8 characters
+			charCount := utf8.RuneCountInString(record.Txt)
+			fmt.Fprintf(ui.Out, "%s | labels: %s | chars: %d\n", record.Epub, record.Labels, charCount)
+
+			if !yield(record, nil) {
+				return
+			}
+		}
+	}
 }
