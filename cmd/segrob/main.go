@@ -316,6 +316,16 @@ func runCommand(cmd string, args []string, ui UI) error {
 			return err
 		}
 		return removeLabelCommand(p, opts, ui)
+
+	case "corpus":
+		opts, err := parseCorpusArgs(args, ui)
+		if err != nil {
+			if errors.Is(err, flag.ErrHelp) {
+				return nil
+			}
+			return err
+		}
+		return corpusCommand(opts, ui)
 	}
 
 	return fmt.Errorf("unknown command: %s", cmd)
