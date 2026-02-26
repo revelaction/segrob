@@ -89,8 +89,9 @@ type InitDbOptions struct {
 }
 
 type ImportMetaOptions struct {
-	Filename string
-	DbPath   string
+	From string // corpus.db path (--from / SEGROB_CORPUS_PATH)
+	To   string // segrob.db path (--to / SEGROB_DOC_PATH)
+	ID   string // positional arg: document id to import
 }
 
 type ImportNlpOptions struct {
