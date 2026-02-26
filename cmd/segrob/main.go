@@ -285,7 +285,7 @@ func runCommand(cmd string, args []string, ui UI) error {
 			}
 			return err
 		}
-		return importMetaCommand(p, opts, ui)
+		return importMetaCommand(opts, ui)
 
 	case "import-nlp":
 		opts, err := parseImportNlpArgs(args, ui)
