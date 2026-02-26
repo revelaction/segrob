@@ -14,6 +14,6 @@ func addLabelCommand(p *Pool, opts AddLabelOptions, ui UI) error {
 		return fmt.Errorf("failed to add labels: %w", err)
 	}
 
-	fmt.Fprintf(ui.Err, "Successfully added %d labels to doc ID %d\n", len(opts.Labels), opts.DocID)
+	fmt.Fprintf(ui.Err, "Successfully added %d labels to doc ID %s\n", len(opts.Labels), opts.DocID)
 	return nil
 }

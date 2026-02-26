@@ -43,6 +43,6 @@ func importNlpCommand(p *Pool, opts ImportNlpOptions, ui UI) error {
 		return fmt.Errorf("failed to write NLP data: %w", err)
 	}
 
-	fmt.Fprintf(ui.Err, "Successfully imported %d sentences for doc ID %d\n", len(doc.Sentences), opts.DocID)
+	fmt.Fprintf(ui.Err, "Successfully imported %d sentences for doc ID %s\n", len(doc.Sentences), opts.DocID)
 	return nil
 }

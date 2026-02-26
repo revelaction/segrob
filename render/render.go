@@ -63,7 +63,7 @@ type CLIRenderer struct {
 	// Show only sentences with this amount of matches
 	NumMatches int
 
-	DocNames map[int]string
+	DocNames map[string]string
 }
 
 // Render matches the doc with the current TopicExpr and fills the Matches
@@ -106,12 +106,12 @@ func (r *CLIRenderer) Render(resultsSorted []*match.SentenceMatch) {
 	}
 }
 
-func (r *CLIRenderer) AddDocName(docId int, name string) {
+func (r *CLIRenderer) AddDocName(docId string, name string) {
 	r.DocNames[docId] = name
 }
 
 func NewCLIRenderer() *CLIRenderer {
-	return &CLIRenderer{DocNames: map[int]string{}}
+	return &CLIRenderer{DocNames: map[string]string{}}
 }
 
 func (r *CLIRenderer) Sentence(s []sent.Token, prefix string) {
@@ -346,7 +346,7 @@ func (r *CLIRenderer) buildPrefixDoc(sentenceMatch *match.SentenceMatch) string 
 	}
 
 	// Default
-	return fmt.Sprintf("[%37s %2d %5d:%2d] ✍  ", r.title(sentenceMatch.Sentence.DocId), sentenceMatch.Sentence.DocId, sentenceMatch.Sentence.Id, sentenceMatch.NumExprs)
+	return fmt.Sprintf("[%37s %s %5d:%2d] ✍  ", r.title(sentenceMatch.Sentence.DocId), sentenceMatch.Sentence.DocId, sentenceMatch.Sentence.SentenceId, sentenceMatch.NumExprs)
 }
 
 func PrefixFuncEmpty(sentenceMatch *match.SentenceMatch) string {
@@ -354,11 +354,11 @@ func PrefixFuncEmpty(sentenceMatch *match.SentenceMatch) string {
 }
 
 func PrefixFuncIconHand(sentenceMatch *match.SentenceMatch) string {
-	return fmt.Sprintf("%2d ✍  ", sentenceMatch.Sentence.Id)
+	return fmt.Sprintf("%2d ✍  ", sentenceMatch.Sentence.SentenceId)
 }
 
 func PrefixFuncIconLabel(sentenceMatch *match.SentenceMatch) string {
-	return fmt.Sprintf("%2d 🔖 ", sentenceMatch.Sentence.Id)
+	return fmt.Sprintf("%2d 🔖 ", sentenceMatch.Sentence.SentenceId)
 
 }
 
@@ -378,7 +378,7 @@ func (r *CLIRenderer) buildPrefixTopic(sm *match.SentenceMatch) string {
 	return fmt.Sprintf("[%-50s] ✍  ", topicPrefix)
 }
 
-func (r *CLIRenderer) title(docId int) string {
+func (r *CLIRenderer) title(docId string) string {
 	title := r.DocNames[docId]
 	l := len(title)
 	var part string

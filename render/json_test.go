@@ -37,8 +37,8 @@ func TestJSONRendererRenderOneResult(t *testing.T) {
 			},
 		},
 		Sentence: sent.Sentence{
-			Id:    5,
-			DocId: 1,
+			SentenceId: 5,
+			DocId:      "1",
 			Tokens: []sent.Token{
 				{Index: 0, Lemma: "cat", Text: "cat"},
 				{Index: 1, Lemma: "dog", Text: "dog"},

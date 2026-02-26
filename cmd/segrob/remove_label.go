@@ -14,6 +14,6 @@ func removeLabelCommand(p *Pool, opts RemoveLabelOptions, ui UI) error {
 		return fmt.Errorf("failed to remove labels: %w", err)
 	}
 
-	fmt.Fprintf(ui.Err, "Successfully removed %d labels from doc ID %d\n", len(opts.Labels), opts.DocID)
+	fmt.Fprintf(ui.Err, "Successfully removed %d labels from doc ID %s\n", len(opts.Labels), opts.DocID)
 	return nil
 }

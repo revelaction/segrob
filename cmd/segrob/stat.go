@@ -8,7 +8,7 @@ import (
 	"github.com/revelaction/segrob/storage"
 )
 
-func statCommand(repo storage.DocRepository, opts StatOptions, docId int, sentId *int, ui UI) error {
+func statCommand(repo storage.DocRepository, opts StatOptions, docId string, sentId *int, ui UI) error {
 	sentences, err := repo.Nlp(docId)
 	if err != nil {
 		return err

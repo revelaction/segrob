@@ -14,7 +14,7 @@ func lsDocCommand(repo storage.DocRepository, opts LsDocOptions, ui UI) error {
 	}
 
 	for _, doc := range docs {
-		labels, err := repo.Labels(doc.ID)
+		labels, err := repo.Labels(doc.Id)
 		if err != nil {
 			return err
 		}
@@ -33,9 +33,9 @@ func lsDocCommand(repo storage.DocRepository, opts LsDocOptions, ui UI) error {
 		}
 
 		if len(labelNames) > 0 {
-			fmt.Fprintf(ui.Out, "📖 %d %s 🔖 %s\n", doc.ID, doc.Source, strings.Join(labelNames, ", "))
+			fmt.Fprintf(ui.Out, "📖 %s %s 🔖 %s\n", doc.Id, doc.Source, strings.Join(labelNames, ", "))
 		} else {
-			fmt.Fprintf(ui.Out, "📖 %d %s\n", doc.ID, doc.Source)
+			fmt.Fprintf(ui.Out, "📖 %s %s\n", doc.Id, doc.Source)
 		}
 	}
 

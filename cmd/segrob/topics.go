@@ -9,7 +9,7 @@ import (
 	"github.com/revelaction/segrob/storage"
 )
 
-func topicsCommand(docRepo storage.DocRepository, topicRepo storage.TopicRepository, opts TopicsOptions, docId int, sentId int, ui UI) error {
+func topicsCommand(docRepo storage.DocRepository, topicRepo storage.TopicRepository, opts TopicsOptions, docId string, sentId int, ui UI) error {
 	sentences, err := docRepo.Nlp(docId)
 	if err != nil {
 		return err

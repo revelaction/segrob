@@ -91,9 +91,9 @@ func (h *Handler) Run() error {
 			fmt.Printf("Error listing docs: %v\n", err)
 			continue
 		}
-		docNames := make(map[int]string)
+		docNames := make(map[string]string)
 		for _, d := range docList {
-			docNames[d.ID] = d.Source
+			docNames[d.Id] = d.Source
 		}
 
 		// Resolve labels to IDs
@@ -170,7 +170,7 @@ func (h *Handler) Run() error {
 			if results[i].Sentence.DocId != results[j].Sentence.DocId {
 				return results[i].Sentence.DocId < results[j].Sentence.DocId
 			}
-			return results[i].Sentence.Id < results[j].Sentence.Id
+			return results[i].Sentence.SentenceId < results[j].Sentence.SentenceId
 		})
 
 		h.Renderer.Render(results)

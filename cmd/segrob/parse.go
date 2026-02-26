@@ -95,19 +95,19 @@ type ImportMetaOptions struct {
 }
 
 type ImportNlpOptions struct {
-	DocID  int
+	DocID  string
 	From   string
 	DbPath string
 }
 
 type AddLabelOptions struct {
-	DocID   int
+	DocID   string
 	Labels  []string
 	DocPath string
 }
 
 type RemoveLabelOptions struct {
-	DocID   int
+	DocID   string
 	Labels  []string
 	DocPath string
 }
@@ -201,7 +201,7 @@ func parseMainArgs(args []string, ui UI) (string, []string, error) {
 	return cmd, cmdArgs, nil
 }
 
-func parseDocArgs(args []string, ui UI) (DocOptions, int, error) {
+func parseDocArgs(args []string, ui UI) (DocOptions, string, error) {
 	fs := flag.NewFlagSet("doc", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
 
@@ -228,28 +228,23 @@ func parseDocArgs(args []string, ui UI) (DocOptions, int, error) {
 		if errors.Is(err, flag.ErrHelp) {
 			fs.SetOutput(ui.Out)
 			fs.Usage()
-			return opts, 0, err
+			return opts, "", err
 		}
-		return opts, 0, err
+		return opts, "", err
 	}
 
 	opts.Count = countOpt.value
 
 	if opts.DocPath == "" {
-		return opts, 0, errors.New("document source must be specified via -d or SEGROB_DOC_PATH")
+		return opts, "", errors.New("document source must be specified via -d or SEGROB_DOC_PATH")
 	}
 
 	arg := fs.Arg(0)
 	if arg == "" {
-		return opts, 0, errors.New("document ID required")
+		return opts, "", errors.New("document ID required")
 	}
 
-	id, err := strconv.Atoi(arg)
-	if err != nil {
-		return opts, 0, fmt.Errorf("invalid document ID '%s': %w", arg, err)
-	}
-
-	return opts, id, nil
+	return opts, arg, nil
 }
 
 func parseLsDocArgs(args []string, ui UI) (LsDocOptions, bool, error) {
@@ -331,7 +326,7 @@ func parseLsLabelsArgs(args []string, ui UI) (LsLabelsOptions, error) {
 	return opts, nil
 }
 
-func parseSentenceArgs(args []string, ui UI) (SentenceOptions, int, int, error) {
+func parseSentenceArgs(args []string, ui UI) (SentenceOptions, string, int, error) {
 	fs := flag.NewFlagSet("sentence", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
 
@@ -351,33 +346,30 @@ func parseSentenceArgs(args []string, ui UI) (SentenceOptions, int, int, error) 
 		if errors.Is(err, flag.ErrHelp) {
 			fs.SetOutput(ui.Out)
 			fs.Usage()
-			return opts, 0, 0, err
+			return opts, "", 0, err
 		}
-		return opts, 0, 0, err
+		return opts, "", 0, err
 	}
 
 	if opts.DocPath == "" {
-		return opts, 0, 0, errors.New("document source must be specified via -d or SEGROB_DOC_PATH")
+		return opts, "", 0, errors.New("document source must be specified via -d or SEGROB_DOC_PATH")
 	}
 
 	if fs.NArg() != 2 {
-		return opts, 0, 0, errors.New("sentence command needs exactly two arguments: <doc_id> <sentence_id>")
+		return opts, "", 0, errors.New("sentence command needs exactly two arguments: <doc_id> <sentence_id>")
 	}
 
-	docId, err := strconv.Atoi(fs.Arg(0))
-	if err != nil {
-		return opts, 0, 0, fmt.Errorf("invalid docID '%s': %w", fs.Arg(0), err)
-	}
+	docId := fs.Arg(0)
 
 	sentId, err := strconv.Atoi(fs.Arg(1))
 	if err != nil {
-		return opts, 0, 0, fmt.Errorf("invalid sentenceId '%s': %w", fs.Arg(1), err)
+		return opts, "", 0, fmt.Errorf("invalid sentenceId '%s': %w", fs.Arg(1), err)
 	}
 
 	return opts, docId, sentId, nil
 }
 
-func parseTopicsArgs(args []string, ui UI) (TopicsOptions, int, int, error) {
+func parseTopicsArgs(args []string, ui UI) (TopicsOptions, string, int, error) {
 	fs := flag.NewFlagSet("topics", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
 
@@ -405,35 +397,32 @@ func parseTopicsArgs(args []string, ui UI) (TopicsOptions, int, int, error) {
 		if errors.Is(err, flag.ErrHelp) {
 			fs.SetOutput(ui.Out)
 			fs.Usage()
-			return opts, 0, 0, err
+			return opts, "", 0, err
 		}
-		return opts, 0, 0, err
+		return opts, "", 0, err
 	}
 
 	if opts.TopicPath == "" {
-		return opts, 0, 0, errors.New("topic source must be specified via -t or SEGROB_TOPIC_PATH")
+		return opts, "", 0, errors.New("topic source must be specified via -t or SEGROB_TOPIC_PATH")
 	}
 
 	if opts.DocPath == "" {
-		return opts, 0, 0, errors.New("document source must be specified via -d or SEGROB_DOC_PATH")
+		return opts, "", 0, errors.New("document source must be specified via -d or SEGROB_DOC_PATH")
 	}
 
 	if fs.NArg() != 2 {
-		return opts, 0, 0, errors.New("topics command needs exactly two arguments: <doc_id> <sentence_id>")
+		return opts, "", 0, errors.New("topics command needs exactly two arguments: <doc_id> <sentence_id>")
 	}
 
-	docId, err := strconv.Atoi(fs.Arg(0))
-	if err != nil {
-		return opts, 0, 0, fmt.Errorf("invalid docID '%s': %w", fs.Arg(0), err)
-	}
+	docId := fs.Arg(0)
 
 	sentId, err := strconv.Atoi(fs.Arg(1))
 	if err != nil {
-		return opts, 0, 0, fmt.Errorf("invalid sentenceId '%s': %w", fs.Arg(1), err)
+		return opts, "", 0, fmt.Errorf("invalid sentenceId '%s': %w", fs.Arg(1), err)
 	}
 
 	if err := validatePaths(opts.DocPath, opts.TopicPath); err != nil {
-		return opts, 0, 0, err
+		return opts, "", 0, err
 	}
 
 	return opts, docId, sentId, nil
@@ -672,7 +661,7 @@ func parseTopicArgs(args []string, ui UI) (TopicOptions, string, bool, error) {
 	return opts, name, !info.IsDir(), nil
 }
 
-func parseStatArgs(args []string, ui UI) (StatOptions, int, *int, error) {
+func parseStatArgs(args []string, ui UI) (StatOptions, string, *int, error) {
 	fs := flag.NewFlagSet("stat", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
 
@@ -692,29 +681,26 @@ func parseStatArgs(args []string, ui UI) (StatOptions, int, *int, error) {
 		if errors.Is(err, flag.ErrHelp) {
 			fs.SetOutput(ui.Out)
 			fs.Usage()
-			return opts, 0, nil, err
+			return opts, "", nil, err
 		}
-		return opts, 0, nil, err
+		return opts, "", nil, err
 	}
 
 	if opts.DocPath == "" {
-		return opts, 0, nil, errors.New("document source must be specified via -d or SEGROB_DOC_PATH")
+		return opts, "", nil, errors.New("document source must be specified via -d or SEGROB_DOC_PATH")
 	}
 
 	if fs.NArg() < 1 {
-		return opts, 0, nil, errors.New("stat command needs at least one argument: <doc_id>")
+		return opts, "", nil, errors.New("stat command needs at least one argument: <doc_id>")
 	}
 
-	docId, err := strconv.Atoi(fs.Arg(0))
-	if err != nil {
-		return opts, 0, nil, fmt.Errorf("invalid docID '%s': %w", fs.Arg(0), err)
-	}
+	docId := fs.Arg(0)
 
 	var sentId *int
 	if fs.NArg() > 1 {
 		v, err := strconv.Atoi(fs.Arg(1))
 		if err != nil {
-			return opts, 0, nil, fmt.Errorf("invalid sentenceId '%s': %w", fs.Arg(1), err)
+			return opts, "", nil, fmt.Errorf("invalid sentenceId '%s': %w", fs.Arg(1), err)
 		}
 		sentId = &v
 	}
@@ -876,7 +862,7 @@ func parseImportNlpArgs(args []string, ui UI) (ImportNlpOptions, error) {
 	fs.SetOutput(io.Discard)
 
 	var opts ImportNlpOptions
-	fs.IntVar(&opts.DocID, "doc-id", 0, "Document ID to associate with this NLP data")
+	fs.StringVar(&opts.DocID, "doc-id", "", "Document ID to associate with this NLP data")
 	fs.StringVar(&opts.From, "from", "", "Source JSON file (optional, defaults to stdin)")
 	fs.StringVar(&opts.DbPath, "to", "", "Target SQLite database file")
 
@@ -897,8 +883,8 @@ func parseImportNlpArgs(args []string, ui UI) (ImportNlpOptions, error) {
 		return opts, err
 	}
 
-	if opts.DocID == 0 {
-		return opts, errors.New("--doc-id is required and must be non-zero")
+	if opts.DocID == "" {
+		return opts, errors.New("--doc-id is required")
 	}
 
 	if opts.DbPath == "" {
@@ -937,11 +923,7 @@ func parseAddLabelArgs(args []string, ui UI) (AddLabelOptions, error) {
 		return opts, errors.New("add-label requires at least two arguments: <doc_id> and one or more <label>")
 	}
 
-	docId, err := strconv.Atoi(fs.Arg(0))
-	if err != nil {
-		return opts, fmt.Errorf("invalid docID '%s': %w", fs.Arg(0), err)
-	}
-	opts.DocID = docId
+	opts.DocID = fs.Arg(0)
 	opts.Labels = fs.Args()[1:]
 
 	if opts.DocPath == "" {
@@ -980,11 +962,7 @@ func parseRemoveLabelArgs(args []string, ui UI) (RemoveLabelOptions, error) {
 		return opts, errors.New("remove-label requires at least two arguments: <doc_id> and one or more <label>")
 	}
 
-	docId, err := strconv.Atoi(fs.Arg(0))
-	if err != nil {
-		return opts, fmt.Errorf("invalid docID '%s': %w", fs.Arg(0), err)
-	}
-	opts.DocID = docId
+	opts.DocID = fs.Arg(0)
 	opts.Labels = fs.Args()[1:]
 
 	if opts.DocPath == "" {

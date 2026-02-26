@@ -110,7 +110,7 @@ func exprCommand(dr storage.DocRepository, opts ExprOptions, args []string, ui U
 		return err
 	}
 	for _, d := range list {
-		r.AddDocName(d.ID, d.Source)
+		r.AddDocName(d.Id, d.Source)
 	}
 
 	r.Render(results)
