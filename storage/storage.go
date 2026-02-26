@@ -35,10 +35,10 @@ type DocReader interface {
 	List() ([]sent.Meta, error)
 
 	// Labels returns the labels for a document by ID.
-	Labels(id int) ([]sent.Label, error)
+	Labels(id string) ([]sent.Label, error)
 
 	// Nlp returns sentences for a document by ID. Labels are not loaded.
-	Nlp(id int) ([]sent.Sentence, error)
+	Nlp(id string) ([]sent.Sentence, error)
 
 	// FindCandidates returns sentence candidates matching ALL given lemmas
 	// AND ALL labelIDs. The caller uses ListLabels() to obtain IDs.
@@ -51,17 +51,17 @@ type DocReader interface {
 
 // DocWriter defines write operations for document storage
 type DocWriter interface {
-	// WriteMeta persists document metadata (Source) and its labels.
-	WriteMeta(source string, labels []string) error
+	// WriteMeta persists document metadata (id, source) and its labels.
+	WriteMeta(id string, source string, labels []string) error
 
 	// WriteNLP persists sentences and updates lookup tables for the given docID.
-	WriteNLP(docID int, sentences []sent.SentenceIngest) error
+	WriteNLP(docID string, sentences []sent.SentenceIngest) error
 
 	// AddLabel adds labels to a document and updates optimization tables.
-	AddLabel(docID int, labels ...string) error
+	AddLabel(docID string, labels ...string) error
 
 	// RemoveLabel removes labels from a document and updates optimization tables.
-	RemoveLabel(docID int, labels ...string) error
+	RemoveLabel(docID string, labels ...string) error
 }
 
 // DocRepository combines read and write operations

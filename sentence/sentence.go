@@ -5,9 +5,9 @@ import "encoding/json"
 // Sentence represents a distinct syntactic unit.
 // Identity = (DocId, Id)
 type Sentence struct {
-	Id     int     `json:"id"` // Sequential index in Doc (0, 1, ...)
-	DocId  int     `json:"doc_id"`
-	Tokens []Token `json:"tokens"`
+	SentenceId int     `json:"id"` // Sequential index in Doc (0, 1, ...)
+	DocId      string  `json:"doc_id"`
+	Tokens     []Token `json:"tokens"`
 }
 
 type Label struct {
@@ -16,7 +16,7 @@ type Label struct {
 }
 
 type Meta struct {
-	ID     int    `json:"id" toml:"-"`
+	Id     string `json:"id" toml:"-"`
 	Source string `json:"source" toml:"source"`
 }
 
