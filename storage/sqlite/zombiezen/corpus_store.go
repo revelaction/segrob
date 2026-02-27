@@ -117,3 +117,35 @@ func (s *CorpusStore) ReadMeta(id string) (CorpusMeta, error) {
 	}
 	return meta, nil
 }
+
+// ReadTxt retrieves the txt field for a given document ID as raw bytes.
+func (s *CorpusStore) ReadTxt(id string) ([]byte, error) {
+	conn, err := s.pool.Take(context.TODO())
+	if err != nil {
+		return nil, err
+	}
+	defer s.pool.Put(conn)
+
+	var txt []byte
+	var found bool
+	err = sqlitex.Execute(conn,
+		"SELECT txt FROM docs WHERE id = ?",
+		&sqlitex.ExecOptions{
+			Args: []interface{}{id},
+			ResultFunc: func(stmt *sqlite.Stmt) error {
+				// ColumnBytes copies the blob/text content as raw bytes
+				n := stmt.ColumnLen(0)
+				txt = make([]byte, n)
+				stmt.ColumnBytes(0, txt)
+				found = true
+				return nil
+			},
+		})
+	if err != nil {
+		return nil, err
+	}
+	if !found {
+		return nil, fmt.Errorf("document %s not found in corpus", id)
+	}
+	return txt, nil
+}
