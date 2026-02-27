@@ -326,6 +326,16 @@ func runCommand(cmd string, args []string, ui UI) error {
 			return err
 		}
 		return corpusCommand(opts, ui)
+
+	case "cat-txt":
+		opts, err := parseCatTxtArgs(args, ui)
+		if err != nil {
+			if errors.Is(err, flag.ErrHelp) {
+				return nil
+			}
+			return err
+		}
+		return catTxtCommand(opts, ui)
 	}
 
 	return fmt.Errorf("unknown command: %s", cmd)
