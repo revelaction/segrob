@@ -1020,6 +1020,44 @@ func parseCorpusArgs(args []string, ui UI) (CorpusOptions, error) {
 	return opts, nil
 }
 
+func parseCatTxtArgs(args []string, ui UI) (CatTxtOptions, error) {
+	fs := flag.NewFlagSet("cat-txt", flag.ContinueOnError)
+	fs.SetOutput(io.Discard)
+
+	var opts CatTxtOptions
+	fs.StringVar(&opts.DbPath, "db", os.Getenv("SEGROB_CORPUS_PATH"), "Corpus SQLite file")
+	fs.StringVar(&opts.Output, "output", "", "Output file path (default: stdout)")
+
+	fs.Usage = func() {
+		_, _ = fmt.Fprintf(fs.Output(), "Usage: %s cat-txt <id> [--db corpus.db] [--output file.txt]\n", os.Args[0])
+		_, _ = fmt.Fprintf(fs.Output(), "\nDescription:\n")
+		_, _ = fmt.Fprintf(fs.Output(), "  Output the txt field of a corpus document byte-exact.\n")
+		_, _ = fmt.Fprintf(fs.Output(), "\nOptions:\n")
+		fs.PrintDefaults()
+	}
+
+	if err := fs.Parse(args); err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			fs.SetOutput(ui.Out)
+			fs.Usage()
+			return opts, err
+		}
+		return opts, err
+	}
+
+	if fs.NArg() != 1 {
+		return opts, errors.New("cat-txt requires exactly one argument: <id>")
+	}
+
+	opts.ID = fs.Arg(0)
+
+	if opts.DbPath == "" {
+		return opts, errors.New("corpus database must be specified via --db or SEGROB_CORPUS_PATH")
+	}
+
+	return opts, nil
+}
+
 func setupUsage(fs *flag.FlagSet) {
 	fs.Usage = func() {
 		output := fs.Output()
