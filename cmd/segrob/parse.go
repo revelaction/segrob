@@ -117,6 +117,12 @@ type CorpusOptions struct {
 	Dir      string
 }
 
+type CatTxtOptions struct {
+	DbPath string // --db / SEGROB_CORPUS_PATH
+	Output string // --output file path (empty = stdout)
+	ID     string // positional arg: document id
+}
+
 // stringSliceFlag implements flag.Value for multi-value strings
 type stringSliceFlag []string
 
