@@ -296,7 +296,7 @@ func (h *DocStore) WriteMeta(id string, source string, labels []string) (err err
 	return nil
 }
 
-func (h *DocStore) WriteNLP(docID string, sentences []sent.SentenceIngest) (err error) {
+func (h *DocStore) WriteNLP(docID string, sentences []storage.SentenceIngest) (err error) {
 	conn, err := h.pool.Take(context.TODO())
 	if err != nil {
 		return err

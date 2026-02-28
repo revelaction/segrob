@@ -64,7 +64,7 @@ type DocWriter interface {
 	WriteMeta(id string, source string, labels []string) error
 
 	// WriteNLP persists sentences and updates lookup tables for the given docID.
-	WriteNLP(docID string, sentences []sent.SentenceIngest) error
+	WriteNLP(docID string, sentences []SentenceIngest) error
 
 	// AddLabel adds labels to a document and updates optimization tables.
 	AddLabel(docID string, labels ...string) error
