@@ -287,15 +287,15 @@ func runCommand(cmd string, args []string, ui UI) error {
 		}
 		return importMetaCommand(opts, ui)
 
-	case "import-nlp":
-		opts, err := parseImportNlpArgs(args, ui)
+	case "nlp":
+		opts, err := parseNlp(args)
 		if err != nil {
 			if errors.Is(err, flag.ErrHelp) {
 				return nil
 			}
 			return err
 		}
-		return importNlpCommand(p, opts, ui)
+		return nlpCommand(opts, ui)
 
 	case "add-label":
 		opts, err := parseAddLabelArgs(args, ui)
