@@ -119,6 +119,28 @@ func (h *DocStore) Nlp(id string) ([]sent.Sentence, error) {
 	return sentences, nil
 }
 
+// HasSentences returns true if at least one sentence exists for the given doc ID.
+func (h *DocStore) HasSentences(id string) (bool, error) {
+	conn, err := h.pool.Take(context.TODO())
+	if err != nil {
+		return false, err
+	}
+	defer h.pool.Put(conn)
+
+	var has bool
+	// Using the cheapest possible query to check for existence
+	err = sqlitex.Execute(conn,
+		"SELECT 1 FROM sentences WHERE doc_id = ? LIMIT 1",
+		&sqlitex.ExecOptions{
+			Args: []interface{}{id},
+			ResultFunc: func(stmt *sqlite.Stmt) error {
+				has = true
+				return nil
+			},
+		})
+	return has, err
+}
+
 func (h *DocStore) FindCandidates(lemmas []string, labelIDs []int, after storage.Cursor, limit int, onCandidate func(sent.Sentence) error) (storage.Cursor, error) {
 	if len(lemmas) == 0 {
 		return after, nil
