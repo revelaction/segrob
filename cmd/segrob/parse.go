@@ -94,10 +94,11 @@ type ImportMetaOptions struct {
 	ID   string // positional arg: document id to import
 }
 
-type ImportNlpOptions struct {
-	DocID  string
-	From   string
-	DbPath string
+type NlpOptions struct {
+	NlpScript string
+	From      string
+	To        string
+	ID        string
 }
 
 type AddLabelOptions struct {
@@ -863,39 +864,32 @@ func parseImportMetaArgs(args []string, ui UI) (ImportMetaOptions, error) {
 	return opts, nil
 }
 
-func parseImportNlpArgs(args []string, ui UI) (ImportNlpOptions, error) {
-	fs := flag.NewFlagSet("import-nlp", flag.ContinueOnError)
-	fs.SetOutput(io.Discard)
-
-	var opts ImportNlpOptions
-	fs.StringVar(&opts.DocID, "doc-id", "", "Document ID to associate with this NLP data")
-	fs.StringVar(&opts.From, "from", "", "Source JSON file (optional, defaults to stdin)")
-	fs.StringVar(&opts.DbPath, "to", "", "Target SQLite database file")
-
-	fs.Usage = func() {
-		_, _ = fmt.Fprintf(fs.Output(), "Usage: %s import-nlp --doc-id <id> [--from <file.json>] --to <db>\n", os.Args[0])
-		_, _ = fmt.Fprintf(fs.Output(), "\nDescription:\n")
-		_, _ = fmt.Fprintf(fs.Output(), "  Import NLP-processed sentences (lemmas and tokens) into the database.\n")
-		_, _ = fmt.Fprintf(fs.Output(), "\nOptions:\n")
-		fs.PrintDefaults()
-	}
+func parseNlp(args []string) (NlpOptions, error) {
+	fs := flag.NewFlagSet("nlp", flag.ContinueOnError)
+	var opts NlpOptions
+	fs.StringVar(&opts.NlpScript, "nlp-script", os.Getenv("SEGROB_NLP_SCRIPT"), "path to python NLP script")
+	fs.StringVar(&opts.NlpScript, "s", os.Getenv("SEGROB_NLP_SCRIPT"), "path to python NLP script (shorthand)")
+	fs.StringVar(&opts.From, "from", os.Getenv("SEGROB_CORPUS_PATH"), "path to corpus database")
+	fs.StringVar(&opts.To, "to", os.Getenv("SEGROB_DOC_PATH"), "path to segrob database")
 
 	if err := fs.Parse(args); err != nil {
-		if errors.Is(err, flag.ErrHelp) {
-			fs.SetOutput(ui.Out)
-			fs.Usage()
-			return opts, err
-		}
 		return opts, err
 	}
 
-	if opts.DocID == "" {
-		return opts, errors.New("--doc-id is required")
+	if opts.NlpScript == "" {
+		return opts, fmt.Errorf("--nlp-script must be supplied if SEGROB_NLP_SCRIPT is not set")
+	}
+	if opts.From == "" {
+		return opts, fmt.Errorf("--from must be supplied if SEGROB_CORPUS_PATH is not set")
+	}
+	if opts.To == "" {
+		return opts, fmt.Errorf("--to must be supplied if SEGROB_DOC_PATH is not set")
 	}
 
-	if opts.DbPath == "" {
-		return opts, errors.New("--to is required")
+	if fs.NArg() != 1 {
+		return opts, fmt.Errorf("requires exactly 1 argument (doc ID)")
 	}
+	opts.ID = fs.Arg(0)
 
 	return opts, nil
 }
@@ -1079,7 +1073,7 @@ func setupUsage(fs *flag.FlagSet) {
 		_, _ = fmt.Fprintf(output, "  export-topic  Export topics from SQLite to filesystem.\n")
 		_, _ = fmt.Fprintf(output, "  init-db       Initialize a new SQLite database with the required schema\n")
 		_, _ = fmt.Fprintf(output, "  import-meta   Import document metadata from a TOML file.\n")
-		_, _ = fmt.Fprintf(output, "  import-nlp    Import NLP-processed sentences into the database.\n")
+		_, _ = fmt.Fprintf(output, "  nlp           Process document with NLP and import sentences.\n")
 		_, _ = fmt.Fprintf(output, "  add-label     Add one or more labels to a document.\n")
 		_, _ = fmt.Fprintf(output, "  remove-label  Remove one or more labels from a document.\n")
 		_, _ = fmt.Fprintf(output, "  corpus        Scan an epub directory and build a corpus database.\n")
