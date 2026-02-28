@@ -28,6 +28,16 @@ func nlpCommand(opts NlpOptions, ui UI) error {
 	defer poolTo.Close()
 	storeTo := zombiezen.NewDocStore(poolTo)
 
+	// Check if already processed to avoid duplication
+	hasNLP, err := storeTo.HasSentences(opts.ID)
+	if err != nil {
+		return err
+	}
+	if hasNLP {
+		fmt.Fprintf(ui.Err, "Document %s already has NLP data, skipping.\n", opts.ID)
+		return nil
+	}
+
 	// Read raw text
 	txtBytes, err := storeFrom.ReadTxt(opts.ID)
 	if err != nil {
@@ -35,14 +45,14 @@ func nlpCommand(opts NlpOptions, ui UI) error {
 	}
 
 	// Setup nlp process buffer and execution
-    // f ex: python scripts/nlp.py  -> exec.Command("python", "scripts/nlp.py", "-")
-    parts := strings.Fields(opts.NlpScript)
-    if len(parts) == 0 {
-        return fmt.Errorf("NLP script command is empty")
-    }
+	// f ex: python scripts/nlp.py  -> exec.Command("python", "scripts/nlp.py", "-")
+	parts := strings.Fields(opts.NlpScript)
+	if len(parts) == 0 {
+		return fmt.Errorf("NLP script command is empty")
+	}
 
-    cmdArgs := append(parts[1:], "-") // from stdin
-    cmd := exec.Command(parts[0], cmdArgs...) 
+	cmdArgs := append(parts[1:], "-") // from stdin
+	cmd := exec.Command(parts[0], cmdArgs...)
 
 	cmd.Stdin = bytes.NewReader(txtBytes)
 
