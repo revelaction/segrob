@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os/exec"
+	"strings"
 
 	"github.com/revelaction/segrob/storage"
 	"github.com/revelaction/segrob/storage/sqlite/zombiezen"
@@ -33,8 +34,16 @@ func nlpCommand(opts NlpOptions, ui UI) error {
 		return err
 	}
 
-	// Setup python process buffer and execution
-	cmd := exec.Command(opts.NlpScript, "-")
+	// Setup nlp process buffer and execution
+    // f ex: python scripts/nlp.py  -> exec.Command("python", "scripts/nlp.py", "-")
+    parts := strings.Fields(opts.NlpScript)
+    if len(parts) == 0 {
+        return fmt.Errorf("NLP script command is empty")
+    }
+
+    cmdArgs := append(parts[1:], "-") // from stdin
+    cmd := exec.Command(parts[0], cmdArgs...) 
+
 	cmd.Stdin = bytes.NewReader(txtBytes)
 
 	// We read everything directly into memory

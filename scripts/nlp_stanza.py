@@ -33,7 +33,7 @@ def main():
     # STANZA
     # Initialize pipeline (download if necessary)
     stanza.download('es')
-    nlp = stanza.Pipeline("es")
+    nlp = stanza.Pipeline("es", download_method=stanza.DownloadMethod.REUSE_RESOURCES)
     doc = nlp(text)
 
     res = {
