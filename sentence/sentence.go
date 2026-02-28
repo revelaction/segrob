@@ -1,7 +1,5 @@
 package sentence
 
-import "encoding/json"
-
 // Sentence represents a distinct syntactic unit.
 // Identity = (DocId, Id)
 type Sentence struct {
@@ -18,12 +16,6 @@ type Label struct {
 type Meta struct {
 	Id     string `json:"id" toml:"-"`
 	Source string `json:"source" toml:"source"`
-}
-
-type SentenceIngest struct {
-	ID     int             `json:"id"`
-	Lemmas []string        `json:"lemmas"`
-	Tokens json.RawMessage `json:"tokens"` // Avoids unmarshaling tokens
 }
 
 // Token represents a word of the sentence, with POS and metadata.

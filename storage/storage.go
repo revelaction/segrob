@@ -1,6 +1,8 @@
 package storage
 
 import (
+	"encoding/json"
+
 	sent "github.com/revelaction/segrob/sentence"
 	"github.com/revelaction/segrob/topic"
 )
@@ -28,6 +30,13 @@ type TopicRepository interface {
 
 // Cursor for paginated lemma-based queries
 type Cursor int64
+
+// SentenceIngest represents the flat parsed structure ready for insertion.
+type SentenceIngest struct {
+	ID     int             `json:"id"`
+	Lemmas []string        `json:"lemmas"`
+	Tokens json.RawMessage `json:"tokens"` // Avoids unmarshaling tokens early
+}
 
 // DocReader defines read operations for document storage
 type DocReader interface {
