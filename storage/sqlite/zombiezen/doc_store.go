@@ -352,6 +352,9 @@ func (h *DocStore) WriteMeta(id string, source string, labels []string) (err err
 	return nil
 }
 
+// TODO shoudl be canonical only in sentences
+// TODO bring the labels avoid select
+// TODO split in transactions writnlp writeLemmaOPtimize, ...
 func (h *DocStore) WriteNLP(docID string, sentences []storage.SentenceIngest) (err error) {
 	conn, err := h.pool.Take(context.TODO())
 	if err != nil {
@@ -483,19 +486,6 @@ func (h *DocStore) RemoveLabel(docID string, labels ...string) (err error) {
 	}
 
 	return nil
-}
-
-func Labels(s string) []string {
-	if s == "" {
-		return nil
-	}
-	var res []string
-	for _, part := range strings.Split(s, ",") {
-		if part != "" {
-			res = append(res, part)
-		}
-	}
-	return res
 }
 
 // Exists returns true if a document with the given ID is present in the docs table.
