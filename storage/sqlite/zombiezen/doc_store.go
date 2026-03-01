@@ -210,6 +210,16 @@ func (h *DocStore) FindCandidates(lemmas []string, labelIDs []int, after storage
 	return newCursor, nil
 }
 
+// buildCandidateQuery constructs the SQL query for finding sentences matching multiple lemmas and labels.
+//
+// Example for lemmas ["house", "big"] and labels [1, 5]:
+//
+//	SELECT sentence_rowid FROM sentence_lemmas AS s_outer
+//	WHERE lemma = ? AND sentence_rowid > ?
+//	AND EXISTS (SELECT 1 FROM sentence_lemmas WHERE sentence_rowid = s_outer.sentence_rowid AND lemma = ?)
+//	AND EXISTS (SELECT 1 FROM sentence_labels WHERE sentence_rowid = s_outer.sentence_rowid AND label_id = ?)
+//	AND EXISTS (SELECT 1 FROM sentence_labels WHERE sentence_rowid = s_outer.sentence_rowid AND label_id = ?)
+//	ORDER BY sentence_rowid ASC LIMIT ?
 func (h *DocStore) buildCandidateQuery(lemmas []string, labelIDs []int, after storage.Cursor, limit int) (string, []interface{}) {
 	var queryBuilder strings.Builder
 	var args []interface{}
