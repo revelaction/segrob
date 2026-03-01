@@ -23,7 +23,9 @@ func NewDocStore(pool *sqlitex.Pool) *DocStore {
 	return &DocStore{pool: pool}
 }
 
-func (h *DocStore) upsertLabelID(conn *sqlite.Conn, name string) (int, error) {
+// upsertLabel inserts a label if it doesn't exist and returns its ID.
+// It accepts a sqlite.Conn to allow being called within an existing transaction.
+func (h *DocStore) upsertLabel(conn *sqlite.Conn, name string) (int, error) {
 	var labelID int
 	err := sqlitex.Execute(conn,
 		"INSERT INTO labels (name) VALUES (?) ON CONFLICT(name) DO UPDATE SET name = name RETURNING id",
@@ -303,7 +305,7 @@ func (h *DocStore) WriteMeta(id string, source string, labels []string) (err err
 	}
 
 	for _, label := range labels {
-		labelID, err := h.upsertLabelID(conn, label)
+		labelID, err := h.upsertLabel(conn, label)
 		if err != nil {
 			return fmt.Errorf("failed to upsert label %s: %w", label, err)
 		}
@@ -383,7 +385,7 @@ func (h *DocStore) AddLabel(docID string, labels ...string) (err error) {
 	defer sqlitex.Save(conn)(&err)
 
 	for _, label := range labels {
-		labelID, err := h.upsertLabelID(conn, label)
+		labelID, err := h.upsertLabel(conn, label)
 		if err != nil {
 			return err
 		}
