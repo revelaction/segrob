@@ -4,19 +4,12 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/revelaction/segrob/storage/sqlite/zombiezen"
+	"github.com/revelaction/segrob/storage"
 )
 
-func catTxtCommand(opts CatTxtOptions, ui UI) error {
-	pool, err := zombiezen.NewPool(opts.DbPath)
-	if err != nil {
-		return fmt.Errorf("failed to open corpus database: %w", err)
-	}
-	defer pool.Close()
+func catTxtCommand(repo storage.CorpusRepository, opts CatTxtOptions, ui UI) error {
 
-	store := zombiezen.NewCorpusStore(pool)
-
-	txt, err := store.ReadTxt(opts.ID)
+	txt, err := repo.ReadTxt(opts.ID)
 	if err != nil {
 		return fmt.Errorf("failed to read txt for %s: %w", opts.ID, err)
 	}

@@ -4,35 +4,19 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/revelaction/segrob/storage/sqlite/zombiezen"
+	"github.com/revelaction/segrob/storage"
 )
 
-func importMetaCommand(opts ImportMetaOptions, ui UI) error {
-	// Open corpus database (read-only source)
-	corpusPool, err := zombiezen.NewPool(opts.From)
-	if err != nil {
-		return fmt.Errorf("failed to open corpus database: %w", err)
-	}
-	defer corpusPool.Close()
-
-	// Open segrob database (write target)
-	docPool, err := zombiezen.NewPool(opts.To)
-	if err != nil {
-		return fmt.Errorf("failed to open segrob database: %w", err)
-	}
-	defer docPool.Close()
-
-	corpusStore := zombiezen.NewCorpusStore(corpusPool)
-	docStore := zombiezen.NewDocStore(docPool)
+func importMetaCommand(corpusRepo storage.CorpusRepository, docRepo storage.DocRepository, opts ImportMetaOptions, ui UI) error {
 
 	// Read metadata from corpus
-	meta, err := corpusStore.ReadMeta(opts.ID)
+	meta, err := corpusRepo.ReadMeta(opts.ID)
 	if err != nil {
 		return fmt.Errorf("failed to read corpus meta for %s: %w", opts.ID, err)
 	}
 
 	// Check if id already exists in segrob.db (idempotent)
-	exists, err := docStore.Exists(meta.ID)
+	exists, err := docRepo.Exists(meta.ID)
 	if err != nil {
 		return fmt.Errorf("failed to check existence for %s: %w", meta.ID, err)
 	}
@@ -47,7 +31,7 @@ func importMetaCommand(opts ImportMetaOptions, ui UI) error {
 	}
 
 	// Write to segrob.db; source is the epub basename
-	if err := docStore.WriteMeta(meta.ID, meta.Epub, labels); err != nil {
+	if err := docRepo.WriteMeta(meta.ID, meta.Epub, labels); err != nil {
 		return fmt.Errorf("failed to write meta for %s: %w", meta.ID, err)
 	}
 

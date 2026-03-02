@@ -3,14 +3,12 @@ package main
 import (
 	"fmt"
 
+	"zombiezen.com/go/sqlite/sqlitex"
+
 	"github.com/revelaction/segrob/storage/sqlite/zombiezen"
 )
 
-func initDbCommand(p *Pool, opts InitDbOptions, ui UI) error {
-	pool, err := p.Open(opts.DbPath)
-	if err != nil {
-		return err
-	}
+func initDbCommand(pool *sqlitex.Pool, opts InitDbOptions, ui UI) error {
 
 	if err := zombiezen.CreateSchemas(pool, "doc_canonical.sql"); err != nil {
 		return err

@@ -353,11 +353,15 @@ func runCommand(cmd string, args []string, ui UI) error {
 			}
 			return err
 		}
+		pool, err := setup.GetPool(opts.OutputDb)
+		if err != nil {
+			return err
+		}
 		repo, err := setup.NewCorpusRepository(opts.OutputDb)
 		if err != nil {
 			return err
 		}
-		return corpusCommand(repo, opts, ui)
+		return corpusCommand(pool, repo, opts, ui)
 
 	case "cat-txt":
 		opts, err := parseCatTxtArgs(args, ui)

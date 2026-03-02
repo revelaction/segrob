@@ -8,28 +8,12 @@ import (
 	"strings"
 
 	"github.com/revelaction/segrob/storage"
-	"github.com/revelaction/segrob/storage/sqlite/zombiezen"
 )
 
-func nlpCommand(opts NlpOptions, ui UI) error {
-	// Pool From (corpus)
-	poolFrom, err := zombiezen.NewPool(opts.From)
-	if err != nil {
-		return fmt.Errorf("failed to open corpus database: %w", err)
-	}
-	defer poolFrom.Close()
-	storeFrom := zombiezen.NewCorpusStore(poolFrom)
-
-	// Pool To (segrob)
-	poolTo, err := zombiezen.NewPool(opts.To)
-	if err != nil {
-		return fmt.Errorf("failed to open segrob database: %w", err)
-	}
-	defer poolTo.Close()
-	storeTo := zombiezen.NewDocStore(poolTo)
+func nlpCommand(corpusRepo storage.CorpusRepository, docRepo storage.DocRepository, opts NlpOptions, ui UI) error {
 
 	// Check if already processed to avoid duplication
-	hasNLP, err := storeTo.HasSentences(opts.ID)
+	hasNLP, err := docRepo.HasSentences(opts.ID)
 	if err != nil {
 		return err
 	}
@@ -39,7 +23,7 @@ func nlpCommand(opts NlpOptions, ui UI) error {
 	}
 
 	// Read raw text
-	txtBytes, err := storeFrom.ReadTxt(opts.ID)
+	txtBytes, err := corpusRepo.ReadTxt(opts.ID)
 	if err != nil {
 		return err
 	}
@@ -74,7 +58,7 @@ func nlpCommand(opts NlpOptions, ui UI) error {
 	}
 
 	// Write to database via the pre-existing buffer method
-	if err := storeTo.WriteNLP(opts.ID, doc.Sentences); err != nil {
+	if err := docRepo.WriteNLP(opts.ID, doc.Sentences); err != nil {
 		return fmt.Errorf("failed to write NLP data: %w", err)
 	}
 

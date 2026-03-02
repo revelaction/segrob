@@ -13,7 +13,9 @@ import (
 	"unicode/utf8"
 
 	"github.com/revelaction/segrob/epub"
+	"github.com/revelaction/segrob/storage"
 	"github.com/revelaction/segrob/storage/sqlite/zombiezen"
+	"zombiezen.com/go/sqlite/sqlitex"
 )
 
 // sha256Hex returns the hex-encoded SHA-256 of data, truncated to n bytes.
@@ -41,25 +43,16 @@ func epubPaths(dir string) ([]string, error) {
 	return paths, nil
 }
 
-func corpusCommand(opts CorpusOptions, ui UI) error {
+func corpusCommand(pool *sqlitex.Pool, repo storage.CorpusRepository, opts CorpusOptions, ui UI) error {
 	// Check pandoc exists
 	if _, err := exec.LookPath("pandoc"); err != nil {
 		return fmt.Errorf("pandoc is not installed or not in PATH: %w", err)
 	}
 
-	// Open/create the corpus database
-	pool, err := zombiezen.NewPool(opts.OutputDb)
-	if err != nil {
-		return fmt.Errorf("failed to open corpus database: %w", err)
-	}
-	defer pool.Close()
-
 	// Create schema if not exists
 	if err := zombiezen.CreateSchemas(pool, "corpus.sql"); err != nil {
 		return fmt.Errorf("failed to create corpus schema: %w", err)
 	}
-
-	store := zombiezen.NewCorpusStore(pool)
 
 	// Collect epub file paths from the single directory (flat, no recursion)
 	paths, err := epubPaths(opts.Dir)
@@ -73,8 +66,8 @@ func corpusCommand(opts CorpusOptions, ui UI) error {
 	}
 
 	// Build iterator and write stream
-	seq := corpusIterator(store, paths, ui)
-	if err := store.WriteStream(seq); err != nil {
+	seq := corpusIterator(repo, paths, ui)
+	if err := repo.WriteStream(seq); err != nil {
 		return err
 	}
 
@@ -120,7 +113,7 @@ func processEpub(epubBytes []byte, name, id string) (zombiezen.CorpusRecord, err
 // each epub path. It checks existence in the store (idempotency) and
 // prints a summary line per processed epub. On error, it yields the error
 // and halts.
-func corpusIterator(store *zombiezen.CorpusStore, epubPaths []string, ui UI) iter.Seq2[zombiezen.CorpusRecord, error] {
+func corpusIterator(repo storage.CorpusRepository, epubPaths []string, ui UI) iter.Seq2[zombiezen.CorpusRecord, error] {
 	seen := make(map[string]bool)
 	return func(yield func(zombiezen.CorpusRecord, error) bool) {
 		for _, epubPath := range epubPaths {
@@ -140,7 +133,7 @@ func corpusIterator(store *zombiezen.CorpusStore, epubPaths []string, ui UI) ite
 				continue
 			}
 
-			exists, err := store.Exists(id)
+			exists, err := repo.Exists(id)
 			if err != nil {
 				yield(zombiezen.CorpusRecord{}, fmt.Errorf("failed to check existence for %s: %w", epubPath, err))
 				return
