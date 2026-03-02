@@ -1,35 +1,50 @@
 package main
 
 import (
-	"fmt"
-	"os"
+	"path/filepath"
 
-	"github.com/revelaction/segrob/storage"
-	"github.com/revelaction/segrob/storage/filesystem"
 	"github.com/revelaction/segrob/storage/sqlite/zombiezen"
+	"zombiezen.com/go/sqlite/sqlitex"
 )
 
-func NewTopicRepository(p *Pool, path string) (storage.TopicRepository, error) {
-	info, err := os.Stat(path)
-	if err != nil {
-		return nil, fmt.Errorf("repository not found: %s", path)
-	}
-
-	if info.IsDir() {
-		return filesystem.NewTopicStore(path), nil
-	}
-
-	pool, err := p.Open(path)
-	if err != nil {
-		return nil, err
-	}
-	return zombiezen.NewTopicStore(pool), nil
+type Setup struct {
+	pools map[string]*sqlitex.Pool
 }
 
-func NewDocRepository(p *Pool, path string) (storage.DocRepository, error) {
-	pool, err := p.Open(path)
+func NewSetup() *Setup {
+	return &Setup{
+		pools: make(map[string]*sqlitex.Pool),
+	}
+}
+
+// GetPool returns an existing pool for the given path if available, or opens a new one.
+// It uses absolute paths to identify unique databases.
+func (s *Setup) GetPool(path string) (*sqlitex.Pool, error) {
+	absPath, err := filepath.Abs(path)
 	if err != nil {
 		return nil, err
 	}
-	return zombiezen.NewDocStore(pool), nil
+
+	if pool, ok := s.pools[absPath]; ok {
+		return pool, nil
+	}
+
+	pool, err := zombiezen.NewPool(absPath)
+	if err != nil {
+		return nil, err
+	}
+
+	s.pools[absPath] = pool
+	return pool, nil
+}
+
+// Close closes all managed pools.
+func (s *Setup) Close() error {
+	var firstErr error
+	for _, pool := range s.pools {
+		if err := pool.Close(); err != nil && firstErr == nil {
+			firstErr = err
+		}
+	}
+	return firstErr
 }
