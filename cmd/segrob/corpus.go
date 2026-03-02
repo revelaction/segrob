@@ -6,7 +6,6 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
-	"iter"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -76,8 +75,8 @@ func corpusCommand(pool *sqlitex.Pool, repo storage.CorpusRepository, opts Corpu
 
 // processEpub takes pre-read epub bytes and a pre-computed id, extracts DC labels,
 // runs pandoc (via stdin) to convert it to plain text, and returns a CorpusRecord.
-func processEpub(epubBytes []byte, name, id string) (zombiezen.CorpusRecord, error) {
-	var record zombiezen.CorpusRecord
+func processEpub(epubBytes []byte, name, id string) (storage.CorpusRecord, error) {
+	var record storage.CorpusRecord
 	record.ID = id
 	record.Epub = name
 
@@ -113,15 +112,15 @@ func processEpub(epubBytes []byte, name, id string) (zombiezen.CorpusRecord, err
 // each epub path. It checks existence in the store (idempotency) and
 // prints a summary line per processed epub. On error, it yields the error
 // and halts.
-func corpusIterator(repo storage.CorpusRepository, epubPaths []string, ui UI) iter.Seq2[zombiezen.CorpusRecord, error] {
+func corpusIterator(repo storage.CorpusRepository, epubPaths []string, ui UI) func(yield func(storage.CorpusRecord, error) bool) {
 	seen := make(map[string]bool)
-	return func(yield func(zombiezen.CorpusRecord, error) bool) {
+	return func(yield func(storage.CorpusRecord, error) bool) {
 		for _, epubPath := range epubPaths {
 			name := filepath.Base(epubPath)
 
 			epubBytes, err := os.ReadFile(epubPath)
 			if err != nil {
-				yield(zombiezen.CorpusRecord{}, fmt.Errorf("failed to read %s: %w", epubPath, err))
+				yield(storage.CorpusRecord{}, fmt.Errorf("failed to read %s: %w", epubPath, err))
 				return
 			}
 
@@ -135,7 +134,7 @@ func corpusIterator(repo storage.CorpusRepository, epubPaths []string, ui UI) it
 
 			exists, err := repo.Exists(id)
 			if err != nil {
-				yield(zombiezen.CorpusRecord{}, fmt.Errorf("failed to check existence for %s: %w", epubPath, err))
+				yield(storage.CorpusRecord{}, fmt.Errorf("failed to check existence for %s: %w", epubPath, err))
 				return
 			}
 			if exists {
@@ -148,7 +147,7 @@ func corpusIterator(repo storage.CorpusRepository, epubPaths []string, ui UI) it
 			// Now do the expensive work: zip parsing, label extraction, pandoc
 			record, err := processEpub(epubBytes, name, id)
 			if err != nil {
-				yield(zombiezen.CorpusRecord{}, err)
+				yield(storage.CorpusRecord{}, err)
 				return
 			}
 

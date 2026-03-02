@@ -3,22 +3,13 @@ package zombiezen
 import (
 	"context"
 	"fmt"
-	"iter"
 
 	"github.com/revelaction/segrob/storage"
 	"zombiezen.com/go/sqlite"
 	"zombiezen.com/go/sqlite/sqlitex"
 )
 
-// CorpusRecord holds all data collected for a single epub that will be
-// inserted as one row in the corpus docs table.
-type CorpusRecord struct {
-	ID      string // SHA-256 truncated hex of epub bytes
-	Labels  string // comma-separated DC labels
-	Epub    string // epub file name (basename)
-	Txt     string // full plain text from pandoc
-	TxtHash string // SHA-256 hex of txt bytes
-}
+var _ storage.CorpusRepository = (*CorpusStore)(nil)
 
 type CorpusStore struct {
 	pool *sqlitex.Pool
@@ -52,7 +43,7 @@ func (s *CorpusStore) Exists(id string) (bool, error) {
 // WriteStream inserts corpus records yielded by the iterator into
 // a single transaction. If the iterator yields an error or a DB insert
 // fails, the transaction is rolled back.
-func (s *CorpusStore) WriteStream(seq iter.Seq2[CorpusRecord, error]) (err error) {
+func (s *CorpusStore) WriteStream(seq func(yield func(storage.CorpusRecord, error) bool)) (err error) {
 	conn, err := s.pool.Take(context.TODO())
 	if err != nil {
 		return err

@@ -59,6 +59,9 @@ type DocReader interface {
 
 	// HasSentences returns true if at least one sentence exists for the given doc ID.
 	HasSentences(id string) (bool, error)
+
+	// Exists returns true if a document with the given ID is present in the docs table.
+	Exists(id string) (bool, error)
 }
 
 // DocWriter defines write operations for document storage
@@ -96,9 +99,29 @@ type CorpusReader interface {
 
 	// ReadTxt retrieves the txt field for a given document ID as raw bytes.
 	ReadTxt(id string) ([]byte, error)
+
+	// Exists returns true if a record with the given ID is present in the docs table.
+	Exists(id string) (bool, error)
 }
 
-// CorpusRepository combines read operations
+// CorpusRecord holds all data collected for a single epub that will be
+// inserted as one row in the corpus docs table.
+type CorpusRecord struct {
+	ID      string // SHA-256 truncated hex of epub bytes
+	Labels  string // comma-separated DC labels
+	Epub    string // epub file name (basename)
+	Txt     string // full plain text from pandoc
+	TxtHash string // SHA-256 hex of txt bytes
+}
+
+// CorpusWriter defines write operations for corpus storage
+type CorpusWriter interface {
+	// WriteStream inserts corpus records yielded by the iterator.
+	WriteStream(seq func(yield func(CorpusRecord, error) bool)) error
+}
+
+// CorpusRepository combines read and write operations
 type CorpusRepository interface {
 	CorpusReader
+	CorpusWriter
 }
