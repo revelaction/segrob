@@ -29,7 +29,7 @@ func (s *CorpusStore) Exists(id string) (bool, error) {
 
 	var exists bool
 	err = sqlitex.Execute(conn,
-		"SELECT 1 FROM docs WHERE id = ?",
+		"SELECT 1 FROM corpus WHERE id = ?",
 		&sqlitex.ExecOptions{
 			Args: []interface{}{id},
 			ResultFunc: func(stmt *sqlite.Stmt) error {
@@ -59,7 +59,7 @@ func (s *CorpusStore) WriteStream(seq func(yield func(storage.CorpusRecord, erro
 		}
 
 		err = sqlitex.Execute(conn,
-			`INSERT INTO docs (id, labels, epub, txt, txt_hash, txt_reviewed, txt_reviewed_at, txt_reviewer, txt_review_notes, deleted, deleted_at)
+			`INSERT INTO corpus (id, labels, epub, txt, txt_hash, txt_reviewed, txt_reviewed_at, txt_reviewer, txt_review_notes, deleted, deleted_at)
 			 VALUES (?, ?, ?, ?, ?, false, '', '', '', false, '')`,
 			&sqlitex.ExecOptions{
 				Args: []interface{}{record.ID, record.Labels, record.Epub, record.Txt, record.TxtHash},
@@ -83,7 +83,7 @@ func (s *CorpusStore) ReadMeta(id string) (storage.CorpusMeta, error) {
 	var meta storage.CorpusMeta
 	var found bool
 	err = sqlitex.Execute(conn,
-		"SELECT id, epub, labels FROM docs WHERE id = ?",
+		"SELECT id, epub, labels FROM corpus WHERE id = ?",
 		&sqlitex.ExecOptions{
 			Args: []interface{}{id},
 			ResultFunc: func(stmt *sqlite.Stmt) error {
@@ -114,7 +114,7 @@ func (s *CorpusStore) ReadTxt(id string) ([]byte, error) {
 	var txt []byte
 	var found bool
 	err = sqlitex.Execute(conn,
-		"SELECT txt FROM docs WHERE id = ?",
+		"SELECT txt FROM corpus WHERE id = ?",
 		&sqlitex.ExecOptions{
 			Args: []interface{}{id},
 			ResultFunc: func(stmt *sqlite.Stmt) error {

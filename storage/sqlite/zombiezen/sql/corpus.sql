@@ -1,6 +1,6 @@
 -- Time format for reference: strftime('%Y-%m-%dT%H:%M:%SZ', 'now')
 
-CREATE TABLE IF NOT EXISTS docs (
+CREATE TABLE IF NOT EXISTS corpus (
     id               TEXT PRIMARY KEY,
     labels           TEXT,
     epub             TEXT,
