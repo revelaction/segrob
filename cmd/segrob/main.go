@@ -66,8 +66,8 @@ func runCommand(cmd string, args []string, ui UI) error {
 		}
 	}
 
-	p := &Pool{}
-	defer p.Close()
+	setup := NewSetup()
+	defer setup.Close()
 
 	switch cmd {
 	case "version":
@@ -91,7 +91,7 @@ func runCommand(cmd string, args []string, ui UI) error {
 			}
 			return err
 		}
-		repo, err := NewDocRepository(p, opts.DocPath)
+		repo, err := setup.NewDocRepository(opts.DocPath)
 		if err != nil {
 			return err
 		}
@@ -105,7 +105,7 @@ func runCommand(cmd string, args []string, ui UI) error {
 			}
 			return err
 		}
-		repo, err := NewDocRepository(p, opts.DocPath)
+		repo, err := setup.NewDocRepository(opts.DocPath)
 		if err != nil {
 			return err
 		}
@@ -119,7 +119,7 @@ func runCommand(cmd string, args []string, ui UI) error {
 			}
 			return err
 		}
-		repo, err := NewDocRepository(p, opts.DocPath)
+		repo, err := setup.NewDocRepository(opts.DocPath)
 		if err != nil {
 			return err
 		}
@@ -133,7 +133,7 @@ func runCommand(cmd string, args []string, ui UI) error {
 			}
 			return err
 		}
-		repo, err := NewDocRepository(p, opts.DocPath)
+		repo, err := setup.NewDocRepository(opts.DocPath)
 		if err != nil {
 			return err
 		}
@@ -147,11 +147,11 @@ func runCommand(cmd string, args []string, ui UI) error {
 			}
 			return err
 		}
-		dr, err := NewDocRepository(p, opts.DocPath)
+		dr, err := setup.NewDocRepository(opts.DocPath)
 		if err != nil {
 			return err
 		}
-		tr, err := NewTopicRepository(p, opts.TopicPath)
+		tr, err := setup.NewTopicRepository(opts.TopicPath)
 		if err != nil {
 			return err
 		}
@@ -165,7 +165,7 @@ func runCommand(cmd string, args []string, ui UI) error {
 			}
 			return err
 		}
-		dr, err := NewDocRepository(p, opts.DocPath)
+		dr, err := setup.NewDocRepository(opts.DocPath)
 		if err != nil {
 			return err
 		}
@@ -179,11 +179,11 @@ func runCommand(cmd string, args []string, ui UI) error {
 			}
 			return err
 		}
-		dr, err := NewDocRepository(p, opts.DocPath)
+		dr, err := setup.NewDocRepository(opts.DocPath)
 		if err != nil {
 			return err
 		}
-		tr, err := NewTopicRepository(p, opts.TopicPath)
+		tr, err := setup.NewTopicRepository(opts.TopicPath)
 		if err != nil {
 			return err
 		}
@@ -197,7 +197,7 @@ func runCommand(cmd string, args []string, ui UI) error {
 			}
 			return err
 		}
-		tr, err := NewTopicRepository(p, opts.TopicPath)
+		tr, err := setup.NewTopicRepository(opts.TopicPath)
 		if err != nil {
 			return err
 		}
@@ -211,7 +211,7 @@ func runCommand(cmd string, args []string, ui UI) error {
 			}
 			return err
 		}
-		tr, err := NewTopicRepository(p, opts.TopicPath)
+		tr, err := setup.NewTopicRepository(opts.TopicPath)
 		if err != nil {
 			return err
 		}
@@ -225,7 +225,7 @@ func runCommand(cmd string, args []string, ui UI) error {
 			}
 			return err
 		}
-		repo, err := NewDocRepository(p, opts.DocPath)
+		repo, err := setup.NewDocRepository(opts.DocPath)
 		if err != nil {
 			return err
 		}
@@ -275,7 +275,11 @@ func runCommand(cmd string, args []string, ui UI) error {
 			}
 			return err
 		}
-		return initDbCommand(p, opts, ui)
+		pool, err := setup.GetPool(opts.DbPath)
+		if err != nil {
+			return err
+		}
+		return initDbCommand(pool, opts, ui)
 
 	case "import-meta":
 		opts, err := parseImportMetaArgs(args, ui)
@@ -285,7 +289,15 @@ func runCommand(cmd string, args []string, ui UI) error {
 			}
 			return err
 		}
-		return importMetaCommand(opts, ui)
+		corpusRepo, err := setup.NewCorpusRepository(opts.From)
+		if err != nil {
+			return err
+		}
+		docRepo, err := setup.NewDocRepository(opts.To)
+		if err != nil {
+			return err
+		}
+		return importMetaCommand(corpusRepo, docRepo, opts, ui)
 
 	case "nlp":
 		opts, err := parseNlp(args)
@@ -295,7 +307,15 @@ func runCommand(cmd string, args []string, ui UI) error {
 			}
 			return err
 		}
-		return nlpCommand(opts, ui)
+		corpusRepo, err := setup.NewCorpusRepository(opts.From)
+		if err != nil {
+			return err
+		}
+		docRepo, err := setup.NewDocRepository(opts.To)
+		if err != nil {
+			return err
+		}
+		return nlpCommand(corpusRepo, docRepo, opts, ui)
 
 	case "add-label":
 		opts, err := parseAddLabelArgs(args, ui)
@@ -305,7 +325,11 @@ func runCommand(cmd string, args []string, ui UI) error {
 			}
 			return err
 		}
-		return addLabelCommand(p, opts, ui)
+		repo, err := setup.NewDocRepository(opts.DocPath)
+		if err != nil {
+			return err
+		}
+		return addLabelCommand(repo, opts, ui)
 
 	case "remove-label":
 		opts, err := parseRemoveLabelArgs(args, ui)
@@ -315,7 +339,11 @@ func runCommand(cmd string, args []string, ui UI) error {
 			}
 			return err
 		}
-		return removeLabelCommand(p, opts, ui)
+		repo, err := setup.NewDocRepository(opts.DocPath)
+		if err != nil {
+			return err
+		}
+		return removeLabelCommand(repo, opts, ui)
 
 	case "corpus":
 		opts, err := parseCorpusArgs(args, ui)
@@ -325,7 +353,11 @@ func runCommand(cmd string, args []string, ui UI) error {
 			}
 			return err
 		}
-		return corpusCommand(opts, ui)
+		repo, err := setup.NewCorpusRepository(opts.OutputDb)
+		if err != nil {
+			return err
+		}
+		return corpusCommand(repo, opts, ui)
 
 	case "cat-txt":
 		opts, err := parseCatTxtArgs(args, ui)
@@ -335,7 +367,11 @@ func runCommand(cmd string, args []string, ui UI) error {
 			}
 			return err
 		}
-		return catTxtCommand(opts, ui)
+		repo, err := setup.NewCorpusRepository(opts.DbPath)
+		if err != nil {
+			return err
+		}
+		return catTxtCommand(repo, opts, ui)
 	}
 
 	return fmt.Errorf("unknown command: %s", cmd)
