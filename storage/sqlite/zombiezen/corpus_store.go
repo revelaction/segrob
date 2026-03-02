@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"iter"
 
+	"github.com/revelaction/segrob/storage"
 	"zombiezen.com/go/sqlite"
 	"zombiezen.com/go/sqlite/sqlitex"
 )
@@ -80,22 +81,15 @@ func (s *CorpusStore) WriteStream(seq iter.Seq2[CorpusRecord, error]) (err error
 	return nil
 }
 
-// CorpusMeta holds the metadata fields needed for import.
-type CorpusMeta struct {
-	ID     string // SHA-256 truncated hex of epub bytes
-	Epub   string // epub file name (basename), used as source
-	Labels string // comma-separated DC labels
-}
-
 // ReadMeta retrieves id, epub, and labels for a given document ID.
-func (s *CorpusStore) ReadMeta(id string) (CorpusMeta, error) {
+func (s *CorpusStore) ReadMeta(id string) (storage.CorpusMeta, error) {
 	conn, err := s.pool.Take(context.TODO())
 	if err != nil {
-		return CorpusMeta{}, err
+		return storage.CorpusMeta{}, err
 	}
 	defer s.pool.Put(conn)
 
-	var meta CorpusMeta
+	var meta storage.CorpusMeta
 	var found bool
 	err = sqlitex.Execute(conn,
 		"SELECT id, epub, labels FROM docs WHERE id = ?",
@@ -110,10 +104,10 @@ func (s *CorpusStore) ReadMeta(id string) (CorpusMeta, error) {
 			},
 		})
 	if err != nil {
-		return CorpusMeta{}, err
+		return storage.CorpusMeta{}, err
 	}
 	if !found {
-		return CorpusMeta{}, fmt.Errorf("document %s not found in corpus", id)
+		return storage.CorpusMeta{}, fmt.Errorf("document %s not found in corpus", id)
 	}
 	return meta, nil
 }

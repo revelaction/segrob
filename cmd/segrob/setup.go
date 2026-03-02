@@ -3,6 +3,7 @@ package main
 import (
 	"path/filepath"
 
+	"github.com/revelaction/segrob/storage"
 	"github.com/revelaction/segrob/storage/sqlite/zombiezen"
 	"zombiezen.com/go/sqlite/sqlitex"
 )
@@ -36,6 +37,30 @@ func (s *Setup) GetPool(path string) (*sqlitex.Pool, error) {
 
 	s.pools[absPath] = pool
 	return pool, nil
+}
+
+func (s *Setup) NewDocRepository(path string) (storage.DocRepository, error) {
+	pool, err := s.GetPool(path)
+	if err != nil {
+		return nil, err
+	}
+	return zombiezen.NewDocStore(pool), nil
+}
+
+func (s *Setup) NewCorpusRepository(path string) (storage.CorpusRepository, error) {
+	pool, err := s.GetPool(path)
+	if err != nil {
+		return nil, err
+	}
+	return zombiezen.NewCorpusStore(pool), nil
+}
+
+func (s *Setup) NewTopicRepository(path string) (storage.TopicRepository, error) {
+	pool, err := s.GetPool(path)
+	if err != nil {
+		return nil, err
+	}
+	return zombiezen.NewTopicStore(pool), nil
 }
 
 // Close closes all managed pools.

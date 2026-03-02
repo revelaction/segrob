@@ -81,3 +81,24 @@ type DocRepository interface {
 	DocReader
 	DocWriter
 }
+
+// CorpusMeta holds the metadata fields needed for import.
+type CorpusMeta struct {
+	ID     string // SHA-256 truncated hex of epub bytes
+	Epub   string // epub file name (basename), used as source
+	Labels string // comma-separated DC labels
+}
+
+// CorpusReader defines read operations for corpus storage
+type CorpusReader interface {
+	// ReadMeta retrieves id, epub, and labels for a given document ID.
+	ReadMeta(id string) (CorpusMeta, error)
+
+	// ReadTxt retrieves the txt field for a given document ID as raw bytes.
+	ReadTxt(id string) ([]byte, error)
+}
+
+// CorpusRepository combines read operations
+type CorpusRepository interface {
+	CorpusReader
+}
