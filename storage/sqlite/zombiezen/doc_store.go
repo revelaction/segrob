@@ -72,13 +72,14 @@ func (h *DocStore) List() ([]sent.Meta, error) {
 	defer h.pool.Put(conn)
 
 	var metas []sent.Meta
+
 	err = sqlitex.Execute(conn, "SELECT id, source, label_ids FROM docs ORDER BY source", &sqlitex.ExecOptions{
 		ResultFunc: func(stmt *sqlite.Stmt) error {
 			meta := sent.Meta{
 				Id:     stmt.ColumnText(0),
 				Source: stmt.ColumnText(1),
 			}
-
+			
 			labelIDsStr := stmt.ColumnText(2)
 			var labelIDs []int
 			if labelIDsStr != "" {
@@ -89,7 +90,7 @@ func (h *DocStore) List() ([]sent.Meta, error) {
 				}
 			}
 			meta.LabelIDs = labelIDs
-
+			
 			metas = append(metas, meta)
 			return nil
 		},
@@ -316,27 +317,24 @@ func (h *DocStore) WriteMeta(id string, source string, labels []string) (err err
 	}
 	defer h.pool.Put(conn)
 
-	// Start Transaction
 	defer sqlitex.Save(conn)(&err)
 
-	err = sqlitex.Execute(conn, "INSERT INTO docs (id, source) VALUES (?, ?)", &sqlitex.ExecOptions{
-		Args: []interface{}{id, source},
-	})
-	if err != nil {
-		return fmt.Errorf("failed to insert doc: %w", err)
-	}
-
+	var labelIDStrs []string
 	for _, label := range labels {
 		labelID, err := h.upsertLabel(conn, label)
 		if err != nil {
 			return fmt.Errorf("failed to upsert label %s: %w", label, err)
 		}
-		err = sqlitex.Execute(conn, "INSERT INTO doc_labels (doc_id, label_id) VALUES (?, ?)", &sqlitex.ExecOptions{
-			Args: []interface{}{id, labelID},
-		})
-		if err != nil {
-			return fmt.Errorf("failed to insert doc_label: %w", err)
-		}
+		labelIDStrs = append(labelIDStrs, strconv.Itoa(labelID))
+	}
+
+	labelIDsStr := strings.Join(labelIDStrs, ",")
+
+	err = sqlitex.Execute(conn, "INSERT INTO docs (id, source, label_ids) VALUES (?, ?, ?)", &sqlitex.ExecOptions{
+		Args: []interface{}{id, source, labelIDsStr},
+	})
+	if err != nil {
+		return fmt.Errorf("failed to insert doc %s: %w", id, err)
 	}
 
 	return nil
