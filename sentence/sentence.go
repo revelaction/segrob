@@ -14,8 +14,9 @@ type Label struct {
 }
 
 type Meta struct {
-	Id     string `json:"id" toml:"-"`
-	Source string `json:"source" toml:"source"`
+	Id       string `json:"id" toml:"-"`
+	Source   string `json:"source" toml:"source"`
+	LabelIDs []int  `json:"label_ids"`
 }
 
 // Token represents a word of the sentence, with POS and metadata.
