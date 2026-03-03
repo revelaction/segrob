@@ -72,43 +72,33 @@ func (h *DocStore) List() ([]sent.Meta, error) {
 	defer h.pool.Put(conn)
 
 	var metas []sent.Meta
-	err = sqlitex.Execute(conn, "SELECT id, source FROM docs ORDER BY source", &sqlitex.ExecOptions{
+	err = sqlitex.Execute(conn, "SELECT id, source, label_ids FROM docs ORDER BY source", &sqlitex.ExecOptions{
 		ResultFunc: func(stmt *sqlite.Stmt) error {
-			metas = append(metas, sent.Meta{
+			meta := sent.Meta{
 				Id:     stmt.ColumnText(0),
 				Source: stmt.ColumnText(1),
-			})
+			}
+
+			labelIDsStr := stmt.ColumnText(2)
+			var labelIDs []int
+			if labelIDsStr != "" {
+				for _, idStr := range strings.Split(labelIDsStr, ",") {
+					if id, err := strconv.Atoi(idStr); err == nil {
+						labelIDs = append(labelIDs, id)
+					}
+				}
+			}
+			meta.LabelIDs = labelIDs
+
+			metas = append(metas, meta)
 			return nil
 		},
 	})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to list docs: %w", err)
 	}
+
 	return metas, nil
-}
-
-func (h *DocStore) Labels(id string) ([]sent.Label, error) {
-	conn, err := h.pool.Take(context.TODO())
-	if err != nil {
-		return nil, err
-	}
-	defer h.pool.Put(conn)
-
-	var labels []sent.Label
-	err = sqlitex.Execute(conn, "SELECT l.id, l.name FROM doc_labels dl JOIN labels l ON dl.label_id = l.id WHERE dl.doc_id = ?", &sqlitex.ExecOptions{
-		Args: []interface{}{id},
-		ResultFunc: func(stmt *sqlite.Stmt) error {
-			labels = append(labels, sent.Label{
-				ID:   stmt.ColumnInt(0),
-				Name: stmt.ColumnText(1),
-			})
-			return nil
-		},
-	})
-	if err != nil {
-		return nil, err
-	}
-	return labels, nil
 }
 
 func (h *DocStore) Nlp(id string) ([]sent.Sentence, error) {
