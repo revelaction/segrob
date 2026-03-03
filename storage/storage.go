@@ -43,9 +43,6 @@ type DocReader interface {
 	// List returns document identity metadata (Id, Source).
 	List() ([]sent.Meta, error)
 
-	// Labels returns the labels for a document by ID.
-	Labels(id string) ([]sent.Label, error)
-
 	// Nlp returns sentences for a document by ID. Labels are not loaded.
 	Nlp(id string) ([]sent.Sentence, error)
 
