@@ -395,23 +395,43 @@ func (h *DocStore) AddLabel(docID string, labels ...string) (err error) {
 	}
 	defer h.pool.Put(conn)
 
-	// Start Transaction
 	defer sqlitex.Save(conn)(&err)
 
+	var currentLabelIDsStr string
+	err = sqlitex.Execute(conn, "SELECT label_ids FROM docs WHERE id = ?", &sqlitex.ExecOptions{
+		Args: []interface{}{docID},
+		ResultFunc: func(stmt *sqlite.Stmt) error {
+			currentLabelIDsStr = stmt.ColumnText(0)
+			return nil
+		},
+	})
+	if err != nil {
+		return fmt.Errorf("failed to find doc %s: %w", docID, err)
+	}
+
+	currentIDsMap := make(map[string]bool)
+	var currentIDsSlice []string
+	if currentLabelIDsStr != "" {
+		currentIDsSlice = strings.Split(currentLabelIDsStr, ",")
+		for _, idStr := range currentIDsSlice {
+			currentIDsMap[idStr] = true
+		}
+	}
+
+	modified := false
 	for _, label := range labels {
 		labelID, err := h.upsertLabel(conn, label)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to upsert label %s: %w", label, err)
 		}
 
-		err = sqlitex.Execute(conn, "INSERT OR IGNORE INTO doc_labels (doc_id, label_id) VALUES (?, ?)", &sqlitex.ExecOptions{
-			Args: []interface{}{docID, labelID},
-		})
-		if err != nil {
-			return err
+		labelIDStr := strconv.Itoa(labelID)
+		if !currentIDsMap[labelIDStr] {
+			currentIDsSlice = append(currentIDsSlice, labelIDStr)
+			currentIDsMap[labelIDStr] = true
+			modified = true
 		}
 
-		// Denormalize to sentence_labels
 		err = sqlitex.Execute(conn, `
 			INSERT OR IGNORE INTO sentence_labels (label_id, sentence_rowid)
 			SELECT ?, rowid FROM sentences WHERE doc_id = ?`,
@@ -419,7 +439,17 @@ func (h *DocStore) AddLabel(docID string, labels ...string) (err error) {
 				Args: []interface{}{labelID, docID},
 			})
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to insert sentence label %s: %w", label, err)
+		}
+	}
+
+	if modified {
+		newLabelIDsStr := strings.Join(currentIDsSlice, ",")
+		err = sqlitex.Execute(conn, "UPDATE docs SET label_ids = ? WHERE id = ?", &sqlitex.ExecOptions{
+			Args: []interface{}{newLabelIDsStr, docID},
+		})
+		if err != nil {
+			return fmt.Errorf("failed to update label_ids for doc %s: %w", docID, err)
 		}
 	}
 
