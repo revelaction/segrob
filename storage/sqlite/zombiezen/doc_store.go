@@ -353,17 +353,26 @@ func (h *DocStore) WriteNLP(docID string, sentences []storage.SentenceIngest) (e
 	// Start Transaction
 	defer sqlitex.Save(conn)(&err)
 
-	// Fetch existing label IDs for this doc
-	var labelIDs []int
-	err = sqlitex.Execute(conn, "SELECT label_id FROM doc_labels WHERE doc_id = ?", &sqlitex.ExecOptions{
+	// Fetch doc label IDs from docs.label_ids instead of doc_labels
+	var labelIDsStr string
+	err = sqlitex.Execute(conn, "SELECT label_ids FROM docs WHERE id = ?", &sqlitex.ExecOptions{
 		Args: []interface{}{docID},
 		ResultFunc: func(stmt *sqlite.Stmt) error {
-			labelIDs = append(labelIDs, stmt.ColumnInt(0))
+			labelIDsStr = stmt.ColumnText(0)
 			return nil
 		},
 	})
 	if err != nil {
-		return fmt.Errorf("failed to fetch label IDs: %w", err)
+		return fmt.Errorf("failed to fetch label_ids for doc %s: %w", docID, err)
+	}
+
+	var labelIDs []int
+	if labelIDsStr != "" {
+		for _, idStr := range strings.Split(labelIDsStr, ",") {
+			if id, err := strconv.Atoi(idStr); err == nil {
+				labelIDs = append(labelIDs, id)
+			}
+		}
 	}
 
 	for _, sentence := range sentences {
