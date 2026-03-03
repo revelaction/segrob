@@ -463,43 +463,72 @@ func (h *DocStore) RemoveLabel(docID string, labels ...string) (err error) {
 	}
 	defer h.pool.Put(conn)
 
-	// Start Transaction
 	defer sqlitex.Save(conn)(&err)
 
+	var currentLabelIDsStr string
+	err = sqlitex.Execute(conn, "SELECT label_ids FROM docs WHERE id = ?", &sqlitex.ExecOptions{
+		Args: []interface{}{docID},
+		ResultFunc: func(stmt *sqlite.Stmt) error {
+			currentLabelIDsStr = stmt.ColumnText(0)
+			return nil
+		},
+	})
+	if err != nil {
+		return fmt.Errorf("failed to find doc %s: %w", docID, err)
+	}
+
+	if currentLabelIDsStr == "" {
+		return nil
+	}
+
+	currentIDsSlice := strings.Split(currentLabelIDsStr, ",")
+	
+	modified := false
 	for _, label := range labels {
 		var labelID int
+		foundLabel := false
 		err = sqlitex.Execute(conn, "SELECT id FROM labels WHERE name = ?", &sqlitex.ExecOptions{
 			Args: []interface{}{label},
 			ResultFunc: func(stmt *sqlite.Stmt) error {
 				labelID = stmt.ColumnInt(0)
+				foundLabel = true
 				return nil
 			},
 		})
-		if err != nil {
-			return err
+		if err != nil || !foundLabel {
+			continue // Error reading or label not found, skip
 		}
-
-		if labelID == 0 {
-			continue // Label not found, nothing to remove
+		
+		labelIDStr := strconv.Itoa(labelID)
+		
+		var newIDsSlice []string
+		for _, idStr := range currentIDsSlice {
+			if idStr != labelIDStr {
+				newIDsSlice = append(newIDsSlice, idStr)
+			} else {
+			    modified = true
+			}
 		}
+		currentIDsSlice = newIDsSlice
 
-		err = sqlitex.Execute(conn, "DELETE FROM doc_labels WHERE doc_id = ? AND label_id = ?", &sqlitex.ExecOptions{
-			Args: []interface{}{docID, labelID},
-		})
-		if err != nil {
-			return err
-		}
-
-		// Denormalize removal: remove from sentence_labels
 		err = sqlitex.Execute(conn, `
 			DELETE FROM sentence_labels 
-			WHERE label_id = ? 
-			AND sentence_rowid IN (SELECT rowid FROM sentences WHERE doc_id = ?)`,
+			WHERE label_id = ? AND sentence_rowid IN (SELECT rowid FROM sentences WHERE doc_id = ?)`,
 			&sqlitex.ExecOptions{
 				Args: []interface{}{labelID, docID},
 			})
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to remove sentence label %s: %w", label, err)
+		}
+	}
+
+	if modified {
+		newLabelIDsStr := strings.Join(currentIDsSlice, ",")
+		err = sqlitex.Execute(conn, "UPDATE docs SET label_ids = ? WHERE id = ?", &sqlitex.ExecOptions{
+			Args: []interface{}{newLabelIDsStr, docID},
+		})
+		if err != nil {
+			return fmt.Errorf("failed to update label_ids for doc %s: %w", docID, err)
 		}
 	}
 
