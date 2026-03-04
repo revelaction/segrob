@@ -349,11 +349,11 @@ func runCommand(cmd string, args []string, ui UI) error {
 			}
 			return err
 		}
-		pool, err := setup.GetPool(opts.OutputDb)
+		pool, err := setup.GetPool(opts.DbPath)
 		if err != nil {
 			return err
 		}
-		repo, err := setup.NewCorpusRepository(opts.OutputDb)
+		repo, err := setup.NewCorpusRepository(opts.DbPath)
 		if err != nil {
 			return err
 		}

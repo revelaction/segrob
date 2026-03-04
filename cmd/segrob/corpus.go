@@ -18,6 +18,8 @@ import (
 )
 
 // sha256Hex returns the hex-encoded SHA-256 of data, truncated to n bytes.
+// Hex chars  Bytes   Bits   Collision probability 
+// 16         8       64     ~0.000000000003% 😅 overkill
 func sha256Hex(data []byte, n int) string {
 	h := sha256.Sum256(data)
 	return hex.EncodeToString(h[:n])
@@ -125,7 +127,8 @@ func corpusIterator(repo storage.CorpusRepository, epubPaths []string, ui UI) fu
 			}
 
 			// Compute hash early to skip duplicates before heavy work
-			id := sha256Hex(epubBytes, 16)
+            // 16 hex chars
+			id := sha256Hex(epubBytes, 8)
 
 			if seen[id] {
 				fmt.Fprintf(ui.Err, "[skip] %s (duplicate in batch)\n", name)

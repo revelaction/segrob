@@ -156,8 +156,8 @@ type RemoveLabelOptions struct {
 }
 
 type CorpusMetaOptions struct {
-	OutputDb string
-	Dir      string
+	DbPath string
+	Dir    string
 }
 
 type CatTxtOptions struct {
@@ -973,8 +973,7 @@ func parseCorpusMetaArgs(args []string, ui UI) (CorpusMetaOptions, error) {
 	fs.SetOutput(io.Discard)
 
 	var opts CorpusMetaOptions
-	fs.StringVar(&opts.OutputDb, "output-db", "corpus.db", "Output SQLite file for corpus data")
-	fs.StringVar(&opts.OutputDb, "o", "corpus.db", "alias for -output-db")
+	fs.StringVar(&opts.DbPath, "db", os.Getenv("SEGROB_CORPUS_PATH"), "Output SQLite file for corpus data")
 
 	fs.Usage = func() {
 		_, _ = fmt.Fprintf(fs.Output(), "Usage: %s corpus-meta [options] <dir>\n", os.Args[0])
@@ -1007,6 +1006,11 @@ func parseCorpusMetaArgs(args []string, ui UI) (CorpusMetaOptions, error) {
 	}
 
 	opts.Dir = dir
+
+	if opts.DbPath == "" {
+		return opts, errors.New("corpus database must be specified via --db or SEGROB_CORPUS_PATH")
+	}
+
 	return opts, nil
 }
 
