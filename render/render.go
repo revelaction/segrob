@@ -346,7 +346,7 @@ func (r *CLIRenderer) buildPrefixDoc(sentenceMatch *match.SentenceMatch) string 
 	}
 
 	// Default
-	return fmt.Sprintf("[%37s %s %5d:%2d] ✍  ", r.title(sentenceMatch.Sentence.DocId), sentenceMatch.Sentence.DocId, sentenceMatch.Sentence.SentenceId, sentenceMatch.NumExprs)
+	return fmt.Sprintf("[%37s %.6s %5d:%2d] ✍  ", r.title(sentenceMatch.Sentence.DocId), sentenceMatch.Sentence.DocId, sentenceMatch.Sentence.SentenceId, sentenceMatch.NumExprs)
 }
 
 func PrefixFuncEmpty(sentenceMatch *match.SentenceMatch) string {
