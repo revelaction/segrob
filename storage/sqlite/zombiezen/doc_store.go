@@ -459,63 +459,6 @@ func (h *DocStore) HasLemmaOptimization(id string) (bool, error) {
 	return has, err
 }
 
-// TODO shoudl be canonical only in sentences
-// TODO bring the labels avoid select
-// TODO split in transactions writnlp writeLemmaOPtimize, ...
-func (h *DocStore) WriteNLP(docID string, sentences []storage.SentenceIngest) (err error) {
-	conn, err := h.pool.Take(context.TODO())
-	if err != nil {
-		return err
-	}
-	defer h.pool.Put(conn)
-
-	// Start Transaction
-	defer sqlitex.Save(conn)(&err)
-
-	// Fetch doc label IDs from docs.label_ids instead of doc_labels
-	var labelIDsStr string
-	err = sqlitex.Execute(conn, "SELECT label_ids FROM docs WHERE id = ?", &sqlitex.ExecOptions{
-		Args: []interface{}{docID},
-		ResultFunc: func(stmt *sqlite.Stmt) error {
-			labelIDsStr = stmt.ColumnText(0)
-			return nil
-		},
-	})
-	if err != nil {
-		return fmt.Errorf("failed to fetch label_ids for doc %s: %w", docID, err)
-	}
-
-	var labelIDs []int
-	if labelIDsStr != "" {
-		for _, idStr := range strings.Split(labelIDsStr, ",") {
-			if id, err := strconv.Atoi(idStr); err == nil {
-				labelIDs = append(labelIDs, id)
-			}
-		}
-	}
-
-	for _, sentence := range sentences {
-		sentRowID, err := h.insertSentence(conn, docID, sentence)
-		if err != nil {
-			return fmt.Errorf("failed to insert sentence: %w", err)
-		}
-
-		for _, lemma := range sentence.Lemmas {
-			if err := h.insertLemmaOptimize(conn, sentRowID, lemma); err != nil {
-				return fmt.Errorf("failed to insert lemma: %w", err)
-			}
-		}
-
-		for _, labelID := range labelIDs {
-			if err := h.insertLabelOptimize(conn, sentRowID, labelID); err != nil {
-				return fmt.Errorf("failed to insert sentence label: %w", err)
-			}
-		}
-	}
-
-	return nil
-}
-
 func (h *DocStore) AddLabel(docID string, labels ...string) (err error) {
 	conn, err := h.pool.Take(context.TODO())
 	if err != nil {
