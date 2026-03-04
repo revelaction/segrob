@@ -299,8 +299,8 @@ func runCommand(cmd string, args []string, ui UI) error {
 		}
 		return importMetaCommand(corpusRepo, docRepo, opts, ui)
 
-	case "nlp":
-		opts, err := parseNlp(args)
+	case "corpus-nlp":
+		opts, err := parseCorpusNlp(args)
 		if err != nil {
 			if errors.Is(err, flag.ErrHelp) {
 				return nil
@@ -311,11 +311,7 @@ func runCommand(cmd string, args []string, ui UI) error {
 		if err != nil {
 			return err
 		}
-		docRepo, err := setup.NewDocRepository(opts.To)
-		if err != nil {
-			return err
-		}
-		return nlpCommand(corpusRepo, docRepo, opts, ui)
+		return corpusNlpCommand(corpusRepo, opts, ui)
 
 	case "add-label":
 		opts, err := parseAddLabelArgs(args, ui)

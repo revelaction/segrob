@@ -94,10 +94,9 @@ type ImportMetaOptions struct {
 	ID   string // positional arg: document id to import
 }
 
-type NlpOptions struct {
+type CorpusNlpOptions struct {
 	NlpScript string
-	From      string
-	To        string
+	From      string // corpus db path
 	ID        string
 }
 
@@ -864,13 +863,12 @@ func parseImportMetaArgs(args []string, ui UI) (ImportMetaOptions, error) {
 	return opts, nil
 }
 
-func parseNlp(args []string) (NlpOptions, error) {
-	fs := flag.NewFlagSet("nlp", flag.ContinueOnError)
-	var opts NlpOptions
+func parseCorpusNlp(args []string) (CorpusNlpOptions, error) {
+	fs := flag.NewFlagSet("corpus-nlp", flag.ContinueOnError)
+	var opts CorpusNlpOptions
 	fs.StringVar(&opts.NlpScript, "nlp-script", os.Getenv("SEGROB_NLP_SCRIPT"), "path to python NLP script")
 	fs.StringVar(&opts.NlpScript, "s", os.Getenv("SEGROB_NLP_SCRIPT"), "path to python NLP script (shorthand)")
 	fs.StringVar(&opts.From, "from", os.Getenv("SEGROB_CORPUS_PATH"), "path to corpus database")
-	fs.StringVar(&opts.To, "to", os.Getenv("SEGROB_DOC_PATH"), "path to segrob database")
 
 	if err := fs.Parse(args); err != nil {
 		return opts, err
@@ -881,9 +879,6 @@ func parseNlp(args []string) (NlpOptions, error) {
 	}
 	if opts.From == "" {
 		return opts, fmt.Errorf("--from must be supplied if SEGROB_CORPUS_PATH is not set")
-	}
-	if opts.To == "" {
-		return opts, fmt.Errorf("--to must be supplied if SEGROB_DOC_PATH is not set")
 	}
 
 	if fs.NArg() != 1 {
