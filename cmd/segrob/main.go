@@ -299,24 +299,6 @@ func runCommand(cmd string, args []string, ui UI) error {
 		}
 		return liveCommand(corpusRepo, docRepo, opts, ui)
 
-	case "import-meta":
-		opts, err := parseImportMetaArgs(args, ui)
-		if err != nil {
-			if errors.Is(err, flag.ErrHelp) {
-				return nil
-			}
-			return err
-		}
-		corpusRepo, err := setup.NewCorpusRepository(opts.From)
-		if err != nil {
-			return err
-		}
-		docRepo, err := setup.NewDocRepository(opts.To)
-		if err != nil {
-			return err
-		}
-		return importMetaCommand(corpusRepo, docRepo, opts, ui)
-
 	case "corpus-nlp":
 		opts, err := parseCorpusNlp(args)
 		if err != nil {

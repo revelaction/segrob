@@ -88,12 +88,6 @@ type InitDbOptions struct {
 	DbPath string
 }
 
-type ImportMetaOptions struct {
-	From string // corpus.db path (--from / SEGROB_CORPUS_PATH)
-	To   string // segrob.db path (--to / SEGROB_DOC_PATH)
-	ID   string // positional arg: document id to import
-}
-
 type CorpusNlpOptions struct {
 	NlpScript string
 	From      string // corpus db path
@@ -867,48 +861,6 @@ func parseInitDbArgs(args []string, ui UI) (InitDbOptions, error) {
 	}
 
 	opts.DbPath = fs.Arg(0)
-	return opts, nil
-}
-
-func parseImportMetaArgs(args []string, ui UI) (ImportMetaOptions, error) {
-	fs := flag.NewFlagSet("import-meta", flag.ContinueOnError)
-	fs.SetOutput(io.Discard)
-
-	var opts ImportMetaOptions
-	fs.StringVar(&opts.From, "from", os.Getenv("SEGROB_CORPUS_PATH"), "Source corpus SQLite file")
-	fs.StringVar(&opts.To, "to", os.Getenv("SEGROB_DOC_PATH"), "Target segrob SQLite file")
-
-	fs.Usage = func() {
-		_, _ = fmt.Fprintf(fs.Output(), "Usage: %s import-meta <id> [--from corpus.db] [--to segrob.db]\n", os.Args[0])
-		_, _ = fmt.Fprintf(fs.Output(), "\nDescription:\n")
-		_, _ = fmt.Fprintf(fs.Output(), "  Import document metadata from a corpus database into segrob.\n")
-		_, _ = fmt.Fprintf(fs.Output(), "\nOptions:\n")
-		fs.PrintDefaults()
-	}
-
-	if err := fs.Parse(args); err != nil {
-		if errors.Is(err, flag.ErrHelp) {
-			fs.SetOutput(ui.Out)
-			fs.Usage()
-			return opts, err
-		}
-		return opts, err
-	}
-
-	if fs.NArg() != 1 {
-		return opts, errors.New("import-meta requires exactly one argument: <id>")
-	}
-
-	opts.ID = fs.Arg(0)
-
-	if opts.From == "" {
-		return opts, errors.New("corpus source must be specified via --from or SEGROB_CORPUS_PATH")
-	}
-
-	if opts.To == "" {
-		return opts, errors.New("target db must be specified via --to or SEGROB_DOC_PATH")
-	}
-
 	return opts, nil
 }
 
