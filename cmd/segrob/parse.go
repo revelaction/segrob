@@ -90,7 +90,7 @@ type InitDbOptions struct {
 
 type CorpusNlpOptions struct {
 	NlpScript string
-	From      string // corpus db path
+	DbPath    string // corpus db path
 	ID        string
 }
 
@@ -869,7 +869,7 @@ func parseCorpusNlp(args []string) (CorpusNlpOptions, error) {
 	var opts CorpusNlpOptions
 	fs.StringVar(&opts.NlpScript, "nlp-script", os.Getenv("SEGROB_NLP_SCRIPT"), "path to python NLP script")
 	fs.StringVar(&opts.NlpScript, "s", os.Getenv("SEGROB_NLP_SCRIPT"), "path to python NLP script (shorthand)")
-	fs.StringVar(&opts.From, "from", os.Getenv("SEGROB_CORPUS_PATH"), "path to corpus database")
+	fs.StringVar(&opts.DbPath, "db", os.Getenv("SEGROB_CORPUS_PATH"), "path to corpus database")
 
 	if err := fs.Parse(args); err != nil {
 		return opts, err
@@ -878,8 +878,8 @@ func parseCorpusNlp(args []string) (CorpusNlpOptions, error) {
 	if opts.NlpScript == "" {
 		return opts, fmt.Errorf("--nlp-script must be supplied if SEGROB_NLP_SCRIPT is not set")
 	}
-	if opts.From == "" {
-		return opts, fmt.Errorf("--from must be supplied if SEGROB_CORPUS_PATH is not set")
+	if opts.DbPath == "" {
+		return opts, fmt.Errorf("--db must be supplied if SEGROB_CORPUS_PATH is not set")
 	}
 
 	if fs.NArg() != 1 {

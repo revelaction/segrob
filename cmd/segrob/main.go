@@ -307,7 +307,7 @@ func runCommand(cmd string, args []string, ui UI) error {
 			}
 			return err
 		}
-		corpusRepo, err := setup.NewCorpusRepository(opts.From)
+		corpusRepo, err := setup.NewCorpusRepository(opts.DbPath)
 		if err != nil {
 			return err
 		}
