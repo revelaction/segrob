@@ -27,7 +27,7 @@ import (
 // There are several Unicode categories of invisible/typesetting characters
 // that are all noise for NLP. Unicode defines a formal category Cf (Format
 // characters) that covers most of these. You can use it directly
-func cleanForNLP(s string) string {
+func CleanForNLP(s string) string {
 	s = norm.NFC.String(s)
 
 	var b strings.Builder

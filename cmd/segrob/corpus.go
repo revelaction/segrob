@@ -102,10 +102,10 @@ func processEpub(epubBytes []byte, name, id string) (storage.CorpusRecord, error
 		return record, fmt.Errorf("pandoc failed for %s: %w", name, err)
 	}
 
-	record.Txt = string(txtBytes)
+	record.Txt = epub.CleanForNLP(string(txtBytes))
 
-	// Hash the full text output (full 32 bytes = 64 hex chars)
-	record.TxtHash = sha256Hex(txtBytes, 32)
+	// Hash the cleaned full text output (full 32 bytes = 64 hex chars)
+	record.TxtHash = sha256Hex([]byte(record.Txt), 32)
 
 	return record, nil
 }
