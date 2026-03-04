@@ -97,6 +97,9 @@ type CorpusReader interface {
 	// ReadTxt retrieves the txt field for a given document ID as raw bytes.
 	ReadTxt(id string) ([]byte, error)
 
+	// ReadNlp retrieves the raw NLP JSON payload for a given document ID.
+	ReadNlp(id string) ([]byte, error)
+
 	// Exists returns true if a record with the given ID is present in the docs table.
 	Exists(id string) (bool, error)
 }
@@ -115,6 +118,12 @@ type CorpusRecord struct {
 type CorpusWriter interface {
 	// WriteStream inserts corpus records yielded by the iterator.
 	WriteStream(seq func(yield func(CorpusRecord, error) bool)) error
+
+	// WriteNlp stores the NLP JSON payload for the given document ID.
+	WriteNlp(id string, nlp []byte) error
+
+	// ClearNlp sets the nlp field to NULL for the given document ID.
+	ClearNlp(id string) error
 }
 
 // CorpusRepository combines read and write operations

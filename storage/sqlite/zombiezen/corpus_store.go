@@ -134,3 +134,63 @@ func (s *CorpusStore) ReadTxt(id string) ([]byte, error) {
 	}
 	return txt, nil
 }
+
+func (s *CorpusStore) WriteNlp(id string, nlp []byte) error {
+	conn, err := s.pool.Take(context.TODO())
+	if err != nil {
+		return err
+	}
+	defer s.pool.Put(conn)
+
+	return sqlitex.Execute(conn,
+		"UPDATE corpus SET nlp = ? WHERE id = ?",
+		&sqlitex.ExecOptions{
+			Args: []interface{}{string(nlp), id},
+		})
+}
+
+func (s *CorpusStore) ReadNlp(id string) ([]byte, error) {
+	conn, err := s.pool.Take(context.TODO())
+	if err != nil {
+		return nil, err
+	}
+	defer s.pool.Put(conn)
+
+	var nlp []byte
+	var found bool
+	err = sqlitex.Execute(conn,
+		"SELECT nlp FROM corpus WHERE id = ?",
+		&sqlitex.ExecOptions{
+			Args: []interface{}{id},
+			ResultFunc: func(stmt *sqlite.Stmt) error {
+				n := stmt.ColumnLen(0)
+				if n > 0 {
+					nlp = make([]byte, n)
+					stmt.ColumnBytes(0, nlp)
+				}
+				found = true
+				return nil
+			},
+		})
+	if err != nil {
+		return nil, err
+	}
+	if !found {
+		return nil, fmt.Errorf("document %s not found in corpus", id)
+	}
+	return nlp, nil
+}
+
+func (s *CorpusStore) ClearNlp(id string) error {
+	conn, err := s.pool.Take(context.TODO())
+	if err != nil {
+		return err
+	}
+	defer s.pool.Put(conn)
+
+	return sqlitex.Execute(conn,
+		"UPDATE corpus SET nlp = NULL WHERE id = ?",
+		&sqlitex.ExecOptions{
+			Args: []interface{}{id},
+		})
+}

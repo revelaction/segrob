@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS corpus (
     txt_reviewed_at  TEXT NOT NULL DEFAULT '',
     txt_reviewer     TEXT,
     txt_review_notes TEXT,
+    nlp              TEXT,
     deleted          BOOL DEFAULT false,
     deleted_at       TEXT NOT NULL DEFAULT ''
 );
