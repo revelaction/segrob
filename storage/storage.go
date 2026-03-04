@@ -57,6 +57,12 @@ type DocReader interface {
 	// HasSentences returns true if at least one sentence exists for the given doc ID.
 	HasSentences(id string) (bool, error)
 
+	// HasLabelsOptimization returns true if at least one sentence_labels row exists for the given doc ID.
+	HasLabelsOptimization(id string) (bool, error)
+
+	// HasLemmaOptimization returns true if at least one sentence_lemmas row exists for the given doc ID.
+	HasLemmaOptimization(id string) (bool, error)
+
 	// Exists returns true if a document with the given ID is present in the docs table.
 	Exists(id string) (bool, error)
 }
@@ -66,8 +72,14 @@ type DocWriter interface {
 	// WriteMeta persists document metadata (id, source) and its labels.
 	WriteMeta(id string, source string, labels []string) ([]int, error)
 
-	// WriteNLP persists sentences and updates lookup tables for the given docID.
-	WriteNLP(docID string, sentences []SentenceIngest) error
+	// WriteNlpData persists sentences for the given docID.
+	WriteNlpData(docID string, sentences []SentenceIngest) error
+
+	// WriteLabelsOptimization writes sentence_labels rows for the given docID.
+	WriteLabelsOptimization(docID string, labelIDs []int) error
+
+	// WriteLemmaOptimization writes sentence_lemmas rows for the given docID.
+	WriteLemmaOptimization(docID string, sentences []SentenceIngest) error
 
 	// AddLabel adds labels to a document and updates optimization tables.
 	AddLabel(docID string, labels ...string) error
