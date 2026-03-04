@@ -40,6 +40,31 @@ func (s *CorpusStore) Exists(id string) (bool, error) {
 	return exists, err
 }
 
+func (s *CorpusStore) List() ([]storage.CorpusRecord, error) {
+	conn, err := s.pool.Take(context.TODO())
+	if err != nil {
+		return nil, err
+	}
+	defer s.pool.Put(conn)
+
+	var records []storage.CorpusRecord
+	err = sqlitex.Execute(conn,
+		"SELECT id, labels FROM corpus",
+		&sqlitex.ExecOptions{
+			ResultFunc: func(stmt *sqlite.Stmt) error {
+				records = append(records, storage.CorpusRecord{
+					ID:     stmt.ColumnText(0),
+					Labels: stmt.ColumnText(1),
+				})
+				return nil
+			},
+		})
+	if err != nil {
+		return nil, err
+	}
+	return records, nil
+}
+
 // WriteStream inserts corpus records yielded by the iterator into
 // a single transaction. If the iterator yields an error or a DB insert
 // fails, the transaction is rolled back.

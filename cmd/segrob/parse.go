@@ -166,6 +166,11 @@ type CatTxtOptions struct {
 	ID     string // positional arg: document id
 }
 
+type CorpusLsOptions struct {
+	DbPath string // --db / SEGROB_CORPUS_PATH
+	Filter string // optional positional filter
+}
+
 // stringSliceFlag implements flag.Value for multi-value strings
 type stringSliceFlag []string
 
@@ -1052,6 +1057,41 @@ func parseCatTxtArgs(args []string, ui UI) (CatTxtOptions, error) {
 	return opts, nil
 }
 
+func parseCorpusLsArgs(args []string, ui UI) (CorpusLsOptions, error) {
+	fs := flag.NewFlagSet("corpus-ls", flag.ContinueOnError)
+	fs.SetOutput(io.Discard)
+
+	var opts CorpusLsOptions
+	fs.StringVar(&opts.DbPath, "db", os.Getenv("SEGROB_CORPUS_PATH"), "Corpus SQLite file")
+
+	fs.Usage = func() {
+		_, _ = fmt.Fprintf(fs.Output(), "Usage: %s corpus-ls [filter] [--db corpus.db]\n", os.Args[0])
+		_, _ = fmt.Fprintf(fs.Output(), "\nDescription:\n")
+		_, _ = fmt.Fprintf(fs.Output(), "  List all documents in the corpus staging database.\n")
+		_, _ = fmt.Fprintf(fs.Output(), "\nOptions:\n")
+		fs.PrintDefaults()
+	}
+
+	if err := fs.Parse(args); err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			fs.SetOutput(ui.Out)
+			fs.Usage()
+			return opts, err
+		}
+		return opts, err
+	}
+
+	if fs.NArg() > 0 {
+		opts.Filter = fs.Arg(0)
+	}
+
+	if opts.DbPath == "" {
+		return opts, errors.New("corpus database must be specified via --db or SEGROB_CORPUS_PATH")
+	}
+
+	return opts, nil
+}
+
 func setupUsage(fs *flag.FlagSet) {
 	fs.Usage = func() {
 		output := fs.Output()
@@ -1074,6 +1114,7 @@ func setupUsage(fs *flag.FlagSet) {
 		_, _ = fmt.Fprintf(output, "  init-db       Initialize a new SQLite database with the required schema\n")
 		_, _ = fmt.Fprintf(output, "  corpus-meta   Scan an epub directory and build a corpus database.\n")
 		_, _ = fmt.Fprintf(output, "  corpus-nlp    Process document text with NLP and store in corpus.\n")
+		_, _ = fmt.Fprintf(output, "  corpus-ls     List documents in the corpus staging database.\n")
 		_, _ = fmt.Fprintf(output, "  live          Move a document from corpus to live production tables.\n")
 		_, _ = fmt.Fprintf(output, "  add-label     Add one or more labels to a document.\n")
 		_, _ = fmt.Fprintf(output, "  remove-label  Remove one or more labels from a document.\n")

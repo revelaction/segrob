@@ -103,6 +103,9 @@ type CorpusMeta struct {
 
 // CorpusReader defines read operations for corpus storage
 type CorpusReader interface {
+	// List returns partially filled records (ID and Labels).
+	List() ([]CorpusRecord, error)
+
 	// ReadMeta retrieves id, epub, and labels for a given document ID.
 	ReadMeta(id string) (CorpusMeta, error)
 
