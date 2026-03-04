@@ -113,7 +113,7 @@ type RemoveLabelOptions struct {
 	DocPath string
 }
 
-type CorpusOptions struct {
+type CorpusMetaOptions struct {
 	OutputDb string
 	Dir      string
 }
@@ -972,16 +972,16 @@ func parseRemoveLabelArgs(args []string, ui UI) (RemoveLabelOptions, error) {
 	return opts, nil
 }
 
-func parseCorpusArgs(args []string, ui UI) (CorpusOptions, error) {
-	fs := flag.NewFlagSet("corpus", flag.ContinueOnError)
+func parseCorpusMetaArgs(args []string, ui UI) (CorpusMetaOptions, error) {
+	fs := flag.NewFlagSet("corpus-meta", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
 
-	var opts CorpusOptions
+	var opts CorpusMetaOptions
 	fs.StringVar(&opts.OutputDb, "output-db", "corpus.db", "Output SQLite file for corpus data")
 	fs.StringVar(&opts.OutputDb, "o", "corpus.db", "alias for -output-db")
 
 	fs.Usage = func() {
-		_, _ = fmt.Fprintf(fs.Output(), "Usage: %s corpus [options] <dir>\n", os.Args[0])
+		_, _ = fmt.Fprintf(fs.Output(), "Usage: %s corpus-meta [options] <dir>\n", os.Args[0])
 		_, _ = fmt.Fprintf(fs.Output(), "\nDescription:\n")
 		_, _ = fmt.Fprintf(fs.Output(), "  Scan a directory for epub files and build a corpus database.\n")
 		_, _ = fmt.Fprintf(fs.Output(), "\nOptions:\n")
@@ -998,7 +998,7 @@ func parseCorpusArgs(args []string, ui UI) (CorpusOptions, error) {
 	}
 
 	if fs.NArg() != 1 {
-		return opts, errors.New("corpus requires exactly one directory argument")
+		return opts, errors.New("corpus-meta requires exactly one directory argument")
 	}
 
 	dir := fs.Arg(0)

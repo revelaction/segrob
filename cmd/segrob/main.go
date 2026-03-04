@@ -345,8 +345,8 @@ func runCommand(cmd string, args []string, ui UI) error {
 		}
 		return removeLabelCommand(repo, opts, ui)
 
-	case "corpus":
-		opts, err := parseCorpusArgs(args, ui)
+	case "corpus-meta":
+		opts, err := parseCorpusMetaArgs(args, ui)
 		if err != nil {
 			if errors.Is(err, flag.ErrHelp) {
 				return nil
@@ -361,7 +361,7 @@ func runCommand(cmd string, args []string, ui UI) error {
 		if err != nil {
 			return err
 		}
-		return corpusCommand(pool, repo, opts, ui)
+		return corpusMetaCommand(pool, repo, opts, ui)
 
 	case "cat-txt":
 		opts, err := parseCatTxtArgs(args, ui)
