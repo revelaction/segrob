@@ -1,9 +1,12 @@
 package main
 
 import (
+	"fmt"
+	"os"
 	"path/filepath"
 
 	"github.com/revelaction/segrob/storage"
+	"github.com/revelaction/segrob/storage/filesystem"
 	"github.com/revelaction/segrob/storage/sqlite/zombiezen"
 	"zombiezen.com/go/sqlite/sqlitex"
 )
@@ -56,6 +59,15 @@ func (s *Setup) NewCorpusRepository(path string) (storage.CorpusRepository, erro
 }
 
 func (s *Setup) NewTopicRepository(path string) (storage.TopicRepository, error) {
+	info, err := os.Stat(path)
+	if err != nil {
+		return nil, fmt.Errorf("topic repository not found: %w", err)
+	}
+
+	if info.IsDir() {
+		return filesystem.NewTopicStore(path), nil
+	}
+
 	pool, err := s.GetPool(path)
 	if err != nil {
 		return nil, err
