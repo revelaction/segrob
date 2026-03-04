@@ -26,7 +26,7 @@ import (
 //
 // There are several Unicode categories of invisible/typesetting characters
 // that are all noise for NLP. Unicode defines a formal category Cf (Format
-// characters) that covers most of these. You can use it directly
+// characters) that covers most of these.
 func CleanForNLP(s string) string {
 	s = norm.NFC.String(s)
 
