@@ -100,6 +100,55 @@ type CorpusNlpOptions struct {
 	ID        string
 }
 
+type LiveOptions struct {
+	From string // corpus.db path (--from / SEGROB_CORPUS_PATH)
+	To   string // segrob.db path (--to / SEGROB_DOC_PATH)
+	ID   string // positional arg: document id
+	Move bool   // -m/--move: delete nlp from corpus after success
+}
+
+func parseLiveArgs(args []string, ui UI) (LiveOptions, error) {
+	fs := flag.NewFlagSet("live", flag.ContinueOnError)
+	fs.SetOutput(io.Discard)
+
+	var opts LiveOptions
+	fs.StringVar(&opts.From, "from", os.Getenv("SEGROB_CORPUS_PATH"), "Source corpus SQLite file")
+	fs.StringVar(&opts.To, "to", os.Getenv("SEGROB_DOC_PATH"), "Target segrob SQLite file")
+	fs.BoolVar(&opts.Move, "move", false, "Delete nlp data from corpus after successful live")
+	fs.BoolVar(&opts.Move, "m", false, "alias for -move")
+
+	fs.Usage = func() {
+		_, _ = fmt.Fprintf(fs.Output(), "Usage: %s live <id> [--from corpus.db] [--to segrob.db] [-m] [--keep-nlp]\n", os.Args[0])
+		_, _ = fmt.Fprintf(fs.Output(), "\nDescription:\n")
+		_, _ = fmt.Fprintf(fs.Output(), "  Move a document from corpus staging to live production tables.\n")
+		_, _ = fmt.Fprintf(fs.Output(), "\nOptions:\n")
+		fs.PrintDefaults()
+	}
+
+	if err := fs.Parse(args); err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			fs.SetOutput(ui.Out)
+			fs.Usage()
+			return opts, err
+		}
+		return opts, err
+	}
+
+	if fs.NArg() != 1 {
+		return opts, errors.New("live requires exactly one argument: <id>")
+	}
+	opts.ID = fs.Arg(0)
+
+	if opts.From == "" {
+		return opts, errors.New("corpus source must be specified via --from or SEGROB_CORPUS_PATH")
+	}
+	if opts.To == "" {
+		return opts, errors.New("target db must be specified via --to or SEGROB_DOC_PATH")
+	}
+
+	return opts, nil
+}
+
 type AddLabelOptions struct {
 	DocID   string
 	Labels  []string
