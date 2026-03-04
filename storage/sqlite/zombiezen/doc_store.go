@@ -341,6 +341,124 @@ func (h *DocStore) WriteMeta(id string, source string, labels []string) (labelID
 	return labelIDs, nil
 }
 
+func (h *DocStore) WriteNlpData(docID string, sentences []storage.SentenceIngest) (err error) {
+	conn, err := h.pool.Take(context.TODO())
+	if err != nil {
+		return err
+	}
+	defer h.pool.Put(conn)
+
+	defer sqlitex.Save(conn)(&err)
+
+	for _, sentence := range sentences {
+		_, err := h.insertSentence(conn, docID, sentence)
+		if err != nil {
+			return fmt.Errorf("failed to insert sentence: %w", err)
+		}
+	}
+	return nil
+}
+
+// Signature change: receives labelIDs directly from WriteMeta
+func (h *DocStore) WriteLabelsOptimization(docID string, labelIDs []int) (err error) {
+	conn, err := h.pool.Take(context.TODO())
+	if err != nil {
+		return err
+	}
+	defer h.pool.Put(conn)
+
+	defer sqlitex.Save(conn)(&err)
+
+	for _, labelID := range labelIDs {
+		err = sqlitex.Execute(conn,
+			`INSERT INTO sentence_labels (label_id, sentence_rowid)
+             SELECT ?, rowid FROM sentences WHERE doc_id = ?`,
+			&sqlitex.ExecOptions{
+				Args: []interface{}{labelID, docID},
+			})
+		if err != nil {
+			return fmt.Errorf("failed to insert sentence labels: %w", err)
+		}
+	}
+
+	return nil
+}
+
+func (h *DocStore) WriteLemmaOptimization(docID string, sentences []storage.SentenceIngest) (err error) {
+	conn, err := h.pool.Take(context.TODO())
+	if err != nil {
+		return err
+	}
+	defer h.pool.Put(conn)
+
+	defer sqlitex.Save(conn)(&err)
+
+	// Build a map: sentence_id -> lemmas from the ingest data
+	lemmaMap := make(map[int][]string)
+	for _, s := range sentences {
+		lemmaMap[s.ID] = s.Lemmas
+	}
+
+	// Fetch sentence rowids and sentence_ids
+	err = sqlitex.Execute(conn, "SELECT rowid, sentence_id FROM sentences WHERE doc_id = ?", &sqlitex.ExecOptions{
+		Args: []interface{}{docID},
+		ResultFunc: func(stmt *sqlite.Stmt) error {
+			rowID := stmt.ColumnInt64(0)
+			sentID := stmt.ColumnInt(1)
+			lemmas, ok := lemmaMap[sentID]
+			if !ok {
+				return nil
+			}
+			for _, lemma := range lemmas {
+				if err := h.insertLemmaOptimize(conn, rowID, lemma); err != nil {
+					return fmt.Errorf("failed to insert lemma: %w", err)
+				}
+			}
+			return nil
+		},
+	})
+
+	return err
+}
+
+func (h *DocStore) HasLabelsOptimization(id string) (bool, error) {
+	conn, err := h.pool.Take(context.TODO())
+	if err != nil {
+		return false, err
+	}
+	defer h.pool.Put(conn)
+
+	var has bool
+	err = sqlitex.Execute(conn,
+		`SELECT 1 FROM sentence_labels
+         WHERE sentence_rowid IN (SELECT rowid FROM sentences WHERE doc_id = ?)
+         LIMIT 1`,
+		&sqlitex.ExecOptions{
+			Args:       []interface{}{id},
+			ResultFunc: func(stmt *sqlite.Stmt) error { has = true; return nil },
+		})
+	return has, err
+}
+
+func (h *DocStore) HasLemmaOptimization(id string) (bool, error) {
+	conn, err := h.pool.Take(context.TODO())
+	if err != nil {
+		return false, err
+	}
+	defer h.pool.Put(conn)
+
+	var has bool
+	err = sqlitex.Execute(conn,
+		`SELECT 1 FROM sentence_lemmas
+         WHERE sentence_rowid IN (SELECT rowid FROM sentences WHERE doc_id = ?)
+         LIMIT 1`,
+		&sqlitex.ExecOptions{
+			Args:       []interface{}{id},
+			ResultFunc: func(stmt *sqlite.Stmt) error { has = true; return nil },
+		})
+	return has, err
+}
+
 // TODO shoudl be canonical only in sentences
 // TODO bring the labels avoid select
 // TODO split in transactions writnlp writeLemmaOPtimize, ...
