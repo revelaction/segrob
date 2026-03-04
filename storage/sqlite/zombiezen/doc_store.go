@@ -310,10 +310,10 @@ func (h *DocStore) buildListLabelsQuery(labelSubStr string) (string, []interface
 	return queryBuilder.String(), args
 }
 
-func (h *DocStore) WriteMeta(id string, source string, labels []string) (err error) {
+func (h *DocStore) WriteMeta(id string, source string, labels []string) (labelIDs []int, err error) {
 	conn, err := h.pool.Take(context.TODO())
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer h.pool.Put(conn)
 
@@ -323,8 +323,9 @@ func (h *DocStore) WriteMeta(id string, source string, labels []string) (err err
 	for _, label := range labels {
 		labelID, err := h.upsertLabel(conn, label)
 		if err != nil {
-			return fmt.Errorf("failed to upsert label %s: %w", label, err)
+			return nil, fmt.Errorf("failed to upsert label %s: %w", label, err)
 		}
+		labelIDs = append(labelIDs, labelID)
 		labelIDStrs = append(labelIDStrs, strconv.Itoa(labelID))
 	}
 
@@ -334,10 +335,10 @@ func (h *DocStore) WriteMeta(id string, source string, labels []string) (err err
 		Args: []interface{}{id, source, labelIDsStr},
 	})
 	if err != nil {
-		return fmt.Errorf("failed to insert doc %s: %w", id, err)
+		return nil, fmt.Errorf("failed to insert doc %s: %w", id, err)
 	}
 
-	return nil
+	return labelIDs, nil
 }
 
 // TODO shoudl be canonical only in sentences

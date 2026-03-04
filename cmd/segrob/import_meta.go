@@ -31,7 +31,7 @@ func importMetaCommand(corpusRepo storage.CorpusRepository, docRepo storage.DocR
 	}
 
 	// Write to segrob.db; source is the epub basename
-	if err := docRepo.WriteMeta(meta.ID, meta.Epub, labels); err != nil {
+	if _, err := docRepo.WriteMeta(meta.ID, meta.Epub, labels); err != nil {
 		return fmt.Errorf("failed to write meta for %s: %w", meta.ID, err)
 	}
 

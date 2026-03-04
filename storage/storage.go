@@ -64,7 +64,7 @@ type DocReader interface {
 // DocWriter defines write operations for document storage
 type DocWriter interface {
 	// WriteMeta persists document metadata (id, source) and its labels.
-	WriteMeta(id string, source string, labels []string) error
+	WriteMeta(id string, source string, labels []string) ([]int, error)
 
 	// WriteNLP persists sentences and updates lookup tables for the given docID.
 	WriteNLP(docID string, sentences []SentenceIngest) error

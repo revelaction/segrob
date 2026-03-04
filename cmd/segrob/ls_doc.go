@@ -13,18 +13,25 @@ func lsDocCommand(repo storage.DocRepository, opts LsDocOptions, ui UI) error {
 		return err
 	}
 
-	for _, doc := range docs {
-		labels, err := repo.Labels(doc.Id)
-		if err != nil {
-			return err
-		}
+	allLabels, err := repo.ListLabels("")
+	if err != nil {
+		return err
+	}
 
+	labelMap := make(map[int]string)
+	for _, l := range allLabels {
+		labelMap[l.ID] = l.Name
+	}
+
+	for _, doc := range docs {
 		var labelNames []string
 		matchFound := (opts.Match == "")
-		for _, l := range labels {
-			labelNames = append(labelNames, l.Name)
-			if opts.Match != "" && strings.Contains(l.Name, opts.Match) {
-				matchFound = true
+		for _, id := range doc.LabelIDs {
+			if name, ok := labelMap[id]; ok {
+				labelNames = append(labelNames, name)
+				if opts.Match != "" && strings.Contains(name, opts.Match) {
+					matchFound = true
+				}
 			}
 		}
 
