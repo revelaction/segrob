@@ -49,12 +49,15 @@ func (s *CorpusStore) List() ([]storage.CorpusRecord, error) {
 
 	var records []storage.CorpusRecord
 	err = sqlitex.Execute(conn,
-		"SELECT id, labels FROM corpus",
+		"SELECT id, labels, txt_hash FROM corpus",
 		&sqlitex.ExecOptions{
 			ResultFunc: func(stmt *sqlite.Stmt) error {
 				records = append(records, storage.CorpusRecord{
-					ID:     stmt.ColumnText(0),
-					Labels: stmt.ColumnText(1),
+					CorpusMeta: storage.CorpusMeta{
+						ID:     stmt.ColumnText(0),
+						Labels: stmt.ColumnText(1),
+					},
+					TxtHash: stmt.ColumnText(2),
 				})
 				return nil
 			},

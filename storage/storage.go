@@ -122,11 +122,13 @@ type CorpusReader interface {
 // CorpusRecord holds all data collected for a single epub that will be
 // inserted as one row in the corpus docs table.
 type CorpusRecord struct {
-	ID      string // SHA-256 truncated hex of epub bytes
-	Labels  string // comma-separated DC labels
-	Epub    string // epub file name (basename)
+	CorpusMeta
 	Txt     string // full plain text from pandoc
 	TxtHash string // SHA-256 hex of txt bytes
+}
+
+func (r CorpusRecord) HasTxt() bool {
+	return r.TxtHash != ""
 }
 
 // CorpusWriter defines write operations for corpus storage
