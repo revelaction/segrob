@@ -84,8 +84,8 @@ func (s *CorpusStore) WriteStream(seq func(yield func(storage.CorpusRecord, erro
 		}
 
 		err = sqlitex.Execute(conn,
-			`INSERT INTO corpus (id, labels, epub, txt, txt_hash, txt_reviewed, txt_reviewed_at, txt_reviewer, txt_review_notes, deleted, deleted_at)
-			 VALUES (?, ?, ?, ?, ?, false, '', '', '', false, '')`,
+			`INSERT INTO corpus (id, labels, epub, txt, txt_hash, txt_edited, txt_edited_at, txt_editor, txt_edit_notes, nlp_reviewed, nlp_reviewed_at, nlp_reviewer, nlp_review_notes, deleted, deleted_at)
+			 VALUES (?, ?, ?, ?, ?, false, '', '', '', false, '', '', '', false, '')`,
 			&sqlitex.ExecOptions{
 				Args: []interface{}{record.ID, record.Labels, record.Epub, record.Txt, record.TxtHash},
 			})
