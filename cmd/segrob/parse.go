@@ -13,6 +13,24 @@ import (
 	"github.com/revelaction/segrob/render"
 )
 
+// Column widths for all help output sections.
+// Adjust these to change the layout globally.
+const (
+	helpCmdFmt = "  %-14s %s\n" // commands:  "corpus-meta    description"
+	helpOptFmt = "  %-28s %s\n" // options:   "-d, --doc-path PATH    description"
+	helpArgFmt = "  %-28s %s\n" // arguments: "doc_id                 description"
+)
+
+// printOpt prints one option line: flags + optional meta value + description.
+// Example: printOpt(w, "-s, --start", "INDEX", "Index of first sentence (default: 0)")
+func printOpt(w io.Writer, flags, meta, desc string) {
+	left := flags
+	if meta != "" {
+		left = flags + " " + meta
+	}
+	fmt.Fprintf(w, helpOptFmt, left, desc)
+}
+
 // Option structs for subcommands that have flags
 type ExprOptions struct {
 	Labels    []string
@@ -112,11 +130,15 @@ func parseLiveArgs(args []string, ui UI) (LiveOptions, error) {
 	fs.BoolVar(&opts.Move, "m", false, "alias for -move")
 
 	fs.Usage = func() {
-		_, _ = fmt.Fprintf(fs.Output(), "Usage: %s live <id> [--from corpus.db] [--to segrob.db] [-m] [--keep-nlp]\n", os.Args[0])
-		_, _ = fmt.Fprintf(fs.Output(), "\nDescription:\n")
-		_, _ = fmt.Fprintf(fs.Output(), "  Move a document from corpus staging to live production tables.\n")
-		_, _ = fmt.Fprintf(fs.Output(), "\nOptions:\n")
-		fs.PrintDefaults()
+		w := fs.Output()
+		fmt.Fprintf(w, "Usage: %s live [options] <id>\n\n", os.Args[0])
+		fmt.Fprintf(w, "  Move a document from corpus staging to live production tables.\n")
+		fmt.Fprintf(w, "\nArguments:\n")
+		fmt.Fprintf(w, helpArgFmt, "id", "Document ID to move to production")
+		fmt.Fprintf(w, "\nOptions:\n")
+		printOpt(w, "--from", "PATH", "Source corpus SQLite file (or SEGROB_CORPUS_PATH)")
+		printOpt(w, "--to", "PATH", "Target segrob SQLite file (or SEGROB_DOC_PATH)")
+		printOpt(w, "-m, --move", "", "Delete NLP data from corpus after successful live")
 	}
 
 	if err := fs.Parse(args); err != nil {
@@ -267,22 +289,26 @@ func parseDocArgs(args []string, ui UI) (DocOptions, string, error) {
 	fs.SetOutput(io.Discard)
 
 	var opts DocOptions
-	fs.IntVar(&opts.Start, "start", 0, "Index of the first sentence to show")
-	fs.IntVar(&opts.Start, "s", 0, "alias for -start")
+	fs.IntVar(&opts.Start, "start", 0, "")
+	fs.IntVar(&opts.Start, "s", 0, "")
 
 	var countOpt optionalInt
-	fs.Var(&countOpt, "number", "Number of sentences to show")
-	fs.Var(&countOpt, "n", "alias for -number")
+	fs.Var(&countOpt, "number", "")
+	fs.Var(&countOpt, "n", "")
 
-	fs.StringVar(&opts.DocPath, "doc-path", os.Getenv("SEGROB_DOC_PATH"), "Path to docs directory or SQLite file")
-	fs.StringVar(&opts.DocPath, "d", os.Getenv("SEGROB_DOC_PATH"), "alias for -doc-path")
+	fs.StringVar(&opts.DocPath, "doc-path", os.Getenv("SEGROB_DOC_PATH"), "")
+	fs.StringVar(&opts.DocPath, "d", os.Getenv("SEGROB_DOC_PATH"), "")
 
 	fs.Usage = func() {
-		_, _ = fmt.Fprintf(fs.Output(), "Usage: %s doc [options] <doc_id>\n", os.Args[0])
-		_, _ = fmt.Fprintf(fs.Output(), "\nDescription:\n")
-		_, _ = fmt.Fprintf(fs.Output(), "  Show contents of a document from the configured repository.\n")
-		_, _ = fmt.Fprintf(fs.Output(), "\nOptions:\n")
-		fs.PrintDefaults()
+		w := fs.Output()
+		fmt.Fprintf(w, "Usage: %s doc [options] <doc_id>\n\n", os.Args[0])
+		fmt.Fprintf(w, "  Show contents of a document from the configured repository.\n")
+		fmt.Fprintf(w, "\nArguments:\n")
+		fmt.Fprintf(w, helpArgFmt, "doc_id", "ID of the document to show")
+		fmt.Fprintf(w, "\nOptions:\n")
+		printOpt(w, "-s, --start", "INDEX", "Index of the first sentence to show (default: 0)")
+		printOpt(w, "-n, --number", "N", "Number of sentences to show")
+		printOpt(w, "-d, --doc-path", "PATH", "Path to docs directory or SQLite file (or SEGROB_DOC_PATH)")
 	}
 
 	if err := fs.Parse(args); err != nil {
@@ -313,17 +339,18 @@ func parseDocLsArgs(args []string, ui UI) (DocLsOptions, bool, error) {
 	fs.SetOutput(io.Discard)
 
 	var opts DocLsOptions
-	fs.StringVar(&opts.DocPath, "doc-path", os.Getenv("SEGROB_DOC_PATH"), "Path to docs directory or SQLite file")
-	fs.StringVar(&opts.DocPath, "d", os.Getenv("SEGROB_DOC_PATH"), "alias for -doc-path")
-	fs.StringVar(&opts.Match, "match", "", "Retrieve only documents with at least one label containing this string")
-	fs.StringVar(&opts.Match, "m", "", "alias for -match")
+	fs.StringVar(&opts.DocPath, "doc-path", os.Getenv("SEGROB_DOC_PATH"), "")
+	fs.StringVar(&opts.DocPath, "d", os.Getenv("SEGROB_DOC_PATH"), "")
+	fs.StringVar(&opts.Match, "match", "", "")
+	fs.StringVar(&opts.Match, "m", "", "")
 
 	fs.Usage = func() {
-		_, _ = fmt.Fprintf(fs.Output(), "Usage: %s doc-ls [options]\n", os.Args[0])
-		_, _ = fmt.Fprintf(fs.Output(), "\nDescription:\n")
-		_, _ = fmt.Fprintf(fs.Output(), "  List all documents in the repository.\n")
-		_, _ = fmt.Fprintf(fs.Output(), "\nOptions:\n")
-		fs.PrintDefaults()
+		w := fs.Output()
+		fmt.Fprintf(w, "Usage: %s doc-ls [options]\n\n", os.Args[0])
+		fmt.Fprintf(w, "  List all documents in the repository.\n")
+		fmt.Fprintf(w, "\nOptions:\n")
+		printOpt(w, "-d, --doc-path", "PATH", "Path to docs directory or SQLite file (or SEGROB_DOC_PATH)")
+		printOpt(w, "-m, --match", "STRING", "Only list documents with at least one label containing STRING")
 	}
 
 	if err := fs.Parse(args); err != nil {
@@ -355,17 +382,18 @@ func parseLabelLsArgs(args []string, ui UI) (LabelLsOptions, error) {
 	fs.SetOutput(io.Discard)
 
 	var opts LabelLsOptions
-	fs.StringVar(&opts.DocPath, "doc-path", os.Getenv("SEGROB_DOC_PATH"), "Path to docs directory or SQLite file")
-	fs.StringVar(&opts.DocPath, "d", os.Getenv("SEGROB_DOC_PATH"), "alias for -doc-path")
-	fs.StringVar(&opts.Match, "match", "", "Retrieve only labels containing this string")
-	fs.StringVar(&opts.Match, "m", "", "alias for -match")
+	fs.StringVar(&opts.DocPath, "doc-path", os.Getenv("SEGROB_DOC_PATH"), "")
+	fs.StringVar(&opts.DocPath, "d", os.Getenv("SEGROB_DOC_PATH"), "")
+	fs.StringVar(&opts.Match, "match", "", "")
+	fs.StringVar(&opts.Match, "m", "", "")
 
 	fs.Usage = func() {
-		_, _ = fmt.Fprintf(fs.Output(), "Usage: %s label-ls [options]\n", os.Args[0])
-		_, _ = fmt.Fprintf(fs.Output(), "\nDescription:\n")
-		_, _ = fmt.Fprintf(fs.Output(), "  List all unique labels in the repository.\n")
-		_, _ = fmt.Fprintf(fs.Output(), "\nOptions:\n")
-		fs.PrintDefaults()
+		w := fs.Output()
+		fmt.Fprintf(w, "Usage: %s label-ls [options]\n\n", os.Args[0])
+		fmt.Fprintf(w, "  List all unique labels in the repository.\n")
+		fmt.Fprintf(w, "\nOptions:\n")
+		printOpt(w, "-d, --doc-path", "PATH", "Path to docs directory or SQLite file (or SEGROB_DOC_PATH)")
+		printOpt(w, "-m, --match", "STRING", "Only list labels containing STRING")
 	}
 
 	if err := fs.Parse(args); err != nil {
@@ -392,15 +420,18 @@ func parseSentenceArgs(args []string, ui UI) (SentenceOptions, string, int, erro
 	fs.SetOutput(io.Discard)
 
 	var opts SentenceOptions
-	fs.StringVar(&opts.DocPath, "doc-path", os.Getenv("SEGROB_DOC_PATH"), "Path to docs directory or SQLite file")
-	fs.StringVar(&opts.DocPath, "d", os.Getenv("SEGROB_DOC_PATH"), "alias for -doc-path")
+	fs.StringVar(&opts.DocPath, "doc-path", os.Getenv("SEGROB_DOC_PATH"), "")
+	fs.StringVar(&opts.DocPath, "d", os.Getenv("SEGROB_DOC_PATH"), "")
 
 	fs.Usage = func() {
-		_, _ = fmt.Fprintf(fs.Output(), "Usage: %s sentence [options] <doc_id> <sentence_id>\n", os.Args[0])
-		_, _ = fmt.Fprintf(fs.Output(), "\nDescription:\n")
-		_, _ = fmt.Fprintf(fs.Output(), "  Show a specific sentence details from the configured repository.\n")
-		_, _ = fmt.Fprintf(fs.Output(), "\nOptions:\n")
-		fs.PrintDefaults()
+		w := fs.Output()
+		fmt.Fprintf(w, "Usage: %s sentence [options] <doc_id> <sentence_id>\n\n", os.Args[0])
+		fmt.Fprintf(w, "  Show details of a specific sentence from the configured repository.\n")
+		fmt.Fprintf(w, "\nArguments:\n")
+		fmt.Fprintf(w, helpArgFmt, "doc_id", "ID of the document")
+		fmt.Fprintf(w, helpArgFmt, "sentence_id", "Index of the sentence")
+		fmt.Fprintf(w, "\nOptions:\n")
+		printOpt(w, "-d, --doc-path", "PATH", "Path to docs directory or SQLite file (or SEGROB_DOC_PATH)")
 	}
 
 	if err := fs.Parse(args); err != nil {
@@ -435,23 +466,28 @@ func parseTopicsArgs(args []string, ui UI) (TopicsOptions, string, int, error) {
 	fs.SetOutput(io.Discard)
 
 	var opts TopicsOptions
-	fs.StringVar(&opts.TopicPath, "topic-path", os.Getenv("SEGROB_TOPIC_PATH"), "Path to topics directory or SQLite file")
-	fs.StringVar(&opts.TopicPath, "t", os.Getenv("SEGROB_TOPIC_PATH"), "alias for -topic-path")
+	fs.StringVar(&opts.TopicPath, "topic-path", os.Getenv("SEGROB_TOPIC_PATH"), "")
+	fs.StringVar(&opts.TopicPath, "t", os.Getenv("SEGROB_TOPIC_PATH"), "")
 
-	fs.StringVar(&opts.DocPath, "doc-path", os.Getenv("SEGROB_DOC_PATH"), "Path to docs directory or SQLite file")
-	fs.StringVar(&opts.DocPath, "d", os.Getenv("SEGROB_DOC_PATH"), "alias for -doc-path")
+	fs.StringVar(&opts.DocPath, "doc-path", os.Getenv("SEGROB_DOC_PATH"), "")
+	fs.StringVar(&opts.DocPath, "d", os.Getenv("SEGROB_DOC_PATH"), "")
 
 	opts.Format = render.Defaultformat
 	formatFlag := &enumFlag{allowed: render.SupportedFormats(), value: &opts.Format}
-	fs.Var(formatFlag, "format", "Show whole sentence (all), only surrounding of matched words (part) or only matches words (lemma)")
-	fs.Var(formatFlag, "f", "alias for -format")
+	fs.Var(formatFlag, "format", "")
+	fs.Var(formatFlag, "f", "")
 
 	fs.Usage = func() {
-		_, _ = fmt.Fprintf(fs.Output(), "Usage: %s topics [options] <doc_id> <sentence_id>\n", os.Args[0])
-		_, _ = fmt.Fprintf(fs.Output(), "\nDescription:\n")
-		_, _ = fmt.Fprintf(fs.Output(), "  Show topics for a specific sentence from the configured repository.\n")
-		_, _ = fmt.Fprintf(fs.Output(), "\nOptions:\n")
-		fs.PrintDefaults()
+		w := fs.Output()
+		fmt.Fprintf(w, "Usage: %s topics [options] <doc_id> <sentence_id>\n\n", os.Args[0])
+		fmt.Fprintf(w, "  Show topics for a specific sentence from the configured repository.\n")
+		fmt.Fprintf(w, "\nArguments:\n")
+		fmt.Fprintf(w, helpArgFmt, "doc_id", "ID of the document")
+		fmt.Fprintf(w, helpArgFmt, "sentence_id", "Index of the sentence")
+		fmt.Fprintf(w, "\nOptions:\n")
+		printOpt(w, "-d, --doc-path", "PATH", "Path to docs directory or SQLite file (or SEGROB_DOC_PATH)")
+		printOpt(w, "-t, --topic-path", "PATH", "Path to topics directory or SQLite file (or SEGROB_TOPIC_PATH)")
+		printOpt(w, "-f, --format", "FORMAT", "Output format: all, part, or lemma (default: "+render.Defaultformat+")")
 	}
 
 	if err := fs.Parse(args); err != nil {
@@ -495,40 +531,50 @@ func parseExprArgs(args []string, ui UI) (ExprOptions, []string, bool, error) {
 
 	var opts ExprOptions
 	labels := (*stringSliceFlag)(&opts.Labels)
-	fs.Var(labels, "label", "Only scan those token files that match the labels (EXACT match, ALL labels required)")
-	fs.Var(labels, "l", "alias for -label")
+	fs.Var(labels, "label", "")
+	fs.Var(labels, "l", "")
 
-	fs.BoolVar(&opts.NoColor, "no-color", false, "Show matched sentences without formatting (color)")
-	fs.BoolVar(&opts.NoColor, "c", false, "alias for -no-color")
+	fs.BoolVar(&opts.NoColor, "no-color", false, "")
+	fs.BoolVar(&opts.NoColor, "c", false, "")
 
-	fs.BoolVar(&opts.NoPrefix, "no-prefix", false, "Show matched sentences without prefixes with metadata")
-	fs.BoolVar(&opts.NoPrefix, "x", false, "alias for -no-prefix")
+	fs.BoolVar(&opts.NoPrefix, "no-prefix", false, "")
+	fs.BoolVar(&opts.NoPrefix, "x", false, "")
 
-	fs.IntVar(&opts.NMatches, "nmatches", 0, "Only show matched sentences with score greater than this number")
-	fs.IntVar(&opts.NMatches, "n", 0, "alias for -nmatches")
+	fs.IntVar(&opts.NMatches, "nmatches", 0, "")
+	fs.IntVar(&opts.NMatches, "n", 0, "")
 
 	opts.Format = render.Defaultformat
 	formatFlag := &enumFlag{allowed: render.SupportedFormats(), value: &opts.Format}
-	fs.Var(formatFlag, "format", "Show whole sentence (all), only surrounding of matched words (part) or only matches words (lemma)")
-	fs.Var(formatFlag, "f", "alias for -format")
+	fs.Var(formatFlag, "format", "")
+	fs.Var(formatFlag, "f", "")
 
-	fs.StringVar(&opts.DocPath, "doc-path", os.Getenv("SEGROB_DOC_PATH"), "Path to docs directory or SQLite file")
-	fs.StringVar(&opts.DocPath, "d", os.Getenv("SEGROB_DOC_PATH"), "alias for -doc-path")
+	fs.StringVar(&opts.DocPath, "doc-path", os.Getenv("SEGROB_DOC_PATH"), "")
+	fs.StringVar(&opts.DocPath, "d", os.Getenv("SEGROB_DOC_PATH"), "")
 
-	fs.StringVar(&opts.TopicPath, "topic-path", os.Getenv("SEGROB_TOPIC_PATH"), "Path to topics directory or SQLite file")
-	fs.StringVar(&opts.TopicPath, "t", os.Getenv("SEGROB_TOPIC_PATH"), "alias for -topic-path")
+	fs.StringVar(&opts.TopicPath, "topic-path", os.Getenv("SEGROB_TOPIC_PATH"), "")
+	fs.StringVar(&opts.TopicPath, "t", os.Getenv("SEGROB_TOPIC_PATH"), "")
 
-	fs.BoolVar(&opts.JSON, "json", false, "Output results as JSON")
-	fs.BoolVar(&opts.JSON, "j", false, "alias for -json")
+	fs.BoolVar(&opts.JSON, "json", false, "")
+	fs.BoolVar(&opts.JSON, "j", false, "")
 
-	fs.IntVar(&opts.Limit, "limit", 0, "Maximum number of matched results to return (0 = unlimited)")
+	fs.IntVar(&opts.Limit, "limit", 0, "")
 
 	fs.Usage = func() {
-		_, _ = fmt.Fprintf(fs.Output(), "Usage: %s expr [options] <topic expr item> ...\n", os.Args[0])
-		_, _ = fmt.Fprintf(fs.Output(), "\nDescription:\n")
-		_, _ = fmt.Fprintf(fs.Output(), "  Evaluate a topic expression.\n")
-		_, _ = fmt.Fprintf(fs.Output(), "\nOptions:\n")
-		fs.PrintDefaults()
+		w := fs.Output()
+		fmt.Fprintf(w, "Usage: %s expr [options] <expr>...\n\n", os.Args[0])
+		fmt.Fprintf(w, "  Evaluate a topic expression.\n")
+		fmt.Fprintf(w, "\nArguments:\n")
+		fmt.Fprintf(w, helpArgFmt, "expr", "One or more topic expression items")
+		fmt.Fprintf(w, "\nOptions:\n")
+		printOpt(w, "-d, --doc-path", "PATH", "Path to docs directory or SQLite file (or SEGROB_DOC_PATH)")
+		printOpt(w, "-t, --topic-path", "PATH", "Path to topics directory or SQLite file (or SEGROB_TOPIC_PATH)")
+		printOpt(w, "-l, --label", "LABEL", "Only scan documents matching this label (repeatable, all required)")
+		printOpt(w, "-f, --format", "FORMAT", "Output format: all, part, or lemma (default: "+render.Defaultformat+")")
+		printOpt(w, "-n, --nmatches", "N", "Only show sentences with match score greater than N (default: 0)")
+		printOpt(w, "--limit", "N", "Maximum number of results to return (default: 0 = unlimited)")
+		printOpt(w, "-c, --no-color", "", "Disable color formatting in output")
+		printOpt(w, "-x, --no-prefix", "", "Omit metadata prefixes from output")
+		printOpt(w, "-j, --json", "", "Output results as JSON")
 	}
 
 	if err := fs.Parse(args); err != nil {
@@ -567,37 +613,41 @@ func parseQueryArgs(args []string, ui UI) (QueryOptions, bool, bool, error) {
 
 	var opts QueryOptions
 	labels := (*stringSliceFlag)(&opts.Labels)
-	fs.Var(labels, "label", "Only scan those token files that match the labels (EXACT match, ALL labels required)")
-	fs.Var(labels, "l", "alias for -label")
+	fs.Var(labels, "label", "")
+	fs.Var(labels, "l", "")
 
-	fs.BoolVar(&opts.NoColor, "no-color", false, "Show matched sentences without formatting (color)")
-	fs.BoolVar(&opts.NoColor, "c", false, "alias for -no-color")
+	fs.BoolVar(&opts.NoColor, "no-color", false, "")
+	fs.BoolVar(&opts.NoColor, "c", false, "")
 
-	fs.BoolVar(&opts.NoPrefix, "no-prefix", false, "Show matched sentences without prefixes with metadata")
-	fs.BoolVar(&opts.NoPrefix, "x", false, "alias for -no-prefix")
+	fs.BoolVar(&opts.NoPrefix, "no-prefix", false, "")
+	fs.BoolVar(&opts.NoPrefix, "x", false, "")
 
-	fs.IntVar(&opts.NMatches, "nmatches", 0, "Only show matched sentences with score greater than this number")
-	fs.IntVar(&opts.NMatches, "n", 0, "alias for -nmatches")
+	fs.IntVar(&opts.NMatches, "nmatches", 0, "")
+	fs.IntVar(&opts.NMatches, "n", 0, "")
 
 	opts.Format = render.Defaultformat
 	formatFlag := &enumFlag{allowed: render.SupportedFormats(), value: &opts.Format}
-	fs.Var(formatFlag, "format", "Show whole sentence (all), only surrounding of matched words (part) or only matches words (lemma)")
-	fs.Var(formatFlag, "f", "alias for -format")
+	fs.Var(formatFlag, "format", "")
+	fs.Var(formatFlag, "f", "")
 
-	fs.StringVar(&opts.TopicPath, "topic-path", os.Getenv("SEGROB_TOPIC_PATH"), "Path to topics directory or SQLite file")
-	fs.StringVar(&opts.TopicPath, "t", os.Getenv("SEGROB_TOPIC_PATH"), "alias for -topic-path")
+	fs.StringVar(&opts.TopicPath, "topic-path", os.Getenv("SEGROB_TOPIC_PATH"), "")
+	fs.StringVar(&opts.TopicPath, "t", os.Getenv("SEGROB_TOPIC_PATH"), "")
 
-	fs.StringVar(&opts.DocPath, "doc-path", os.Getenv("SEGROB_DOC_PATH"), "Path to docs directory or SQLite file")
-	fs.StringVar(&opts.DocPath, "d", os.Getenv("SEGROB_DOC_PATH"), "alias for -doc-path")
+	fs.StringVar(&opts.DocPath, "doc-path", os.Getenv("SEGROB_DOC_PATH"), "")
+	fs.StringVar(&opts.DocPath, "d", os.Getenv("SEGROB_DOC_PATH"), "")
 
 	fs.Usage = func() {
-		_, _ = fmt.Fprintf(fs.Output(), "Usage: %s query [options]\n", os.Args[0])
-		_, _ = fmt.Fprintf(fs.Output(), "\nDescription:\n")
-		_, _ = fmt.Fprintf(fs.Output(), "  Enter interactive query mode.\n")
-		_, _ = fmt.Fprintf(fs.Output(), "\nOptions:\n")
-		fs.PrintDefaults()
-		_, _ = fmt.Fprintf(fs.Output(), "  -t, --topic-path    Path to topics directory or SQLite file (required, or set SEGROB_TOPIC_PATH)\n")
-		_, _ = fmt.Fprintf(fs.Output(), "  -d, --doc-path      Path to docs directory or SQLite file (required, or set SEGROB_DOC_PATH)\n")
+		w := fs.Output()
+		fmt.Fprintf(w, "Usage: %s query [options]\n\n", os.Args[0])
+		fmt.Fprintf(w, "  Enter interactive query mode.\n")
+		fmt.Fprintf(w, "\nOptions:\n")
+		printOpt(w, "-d, --doc-path", "PATH", "Path to docs directory or SQLite file (or SEGROB_DOC_PATH)")
+		printOpt(w, "-t, --topic-path", "PATH", "Path to topics directory or SQLite file (or SEGROB_TOPIC_PATH)")
+		printOpt(w, "-l, --label", "LABEL", "Only scan documents matching this label (repeatable, all required)")
+		printOpt(w, "-f, --format", "FORMAT", "Output format: all, part, or lemma (default: "+render.Defaultformat+")")
+		printOpt(w, "-n, --nmatches", "N", "Only show sentences with match score greater than N (default: 0)")
+		printOpt(w, "-c, --no-color", "", "Disable color formatting in output")
+		printOpt(w, "-x, --no-prefix", "", "Omit metadata prefixes from output")
 	}
 
 	if err := fs.Parse(args); err != nil {
@@ -642,15 +692,15 @@ func parseEditArgs(args []string, ui UI) (EditOptions, bool, error) {
 	fs.SetOutput(io.Discard)
 
 	var opts EditOptions
-	fs.StringVar(&opts.TopicPath, "topic-path", os.Getenv("SEGROB_TOPIC_PATH"), "Path to topics directory or SQLite file")
-	fs.StringVar(&opts.TopicPath, "t", os.Getenv("SEGROB_TOPIC_PATH"), "alias for -topic-path")
+	fs.StringVar(&opts.TopicPath, "topic-path", os.Getenv("SEGROB_TOPIC_PATH"), "")
+	fs.StringVar(&opts.TopicPath, "t", os.Getenv("SEGROB_TOPIC_PATH"), "")
 
 	fs.Usage = func() {
-		_, _ = fmt.Fprintf(fs.Output(), "Usage: %s edit [options]\n", os.Args[0])
-		_, _ = fmt.Fprintf(fs.Output(), "\nDescription:\n")
-		_, _ = fmt.Fprintf(fs.Output(), "  Enter interactive edit mode.\n")
-		_, _ = fmt.Fprintf(fs.Output(), "\nOptions:\n")
-		_, _ = fmt.Fprintf(fs.Output(), "  -t, --topic-path    Path to topics directory or SQLite file (required, or set SEGROB_TOPIC_PATH)\n")
+		w := fs.Output()
+		fmt.Fprintf(w, "Usage: %s edit [options]\n\n", os.Args[0])
+		fmt.Fprintf(w, "  Enter interactive edit mode.\n")
+		fmt.Fprintf(w, "\nOptions:\n")
+		printOpt(w, "-t, --topic-path", "PATH", "Path to topics directory or SQLite file (or SEGROB_TOPIC_PATH)")
 	}
 
 	if err := fs.Parse(args); err != nil {
@@ -682,15 +732,17 @@ func parseTopicArgs(args []string, ui UI) (TopicOptions, string, bool, error) {
 	fs.SetOutput(io.Discard)
 
 	var opts TopicOptions
-	fs.StringVar(&opts.TopicPath, "topic-path", os.Getenv("SEGROB_TOPIC_PATH"), "Path to topics directory or SQLite file")
-	fs.StringVar(&opts.TopicPath, "t", os.Getenv("SEGROB_TOPIC_PATH"), "alias for -topic-path")
+	fs.StringVar(&opts.TopicPath, "topic-path", os.Getenv("SEGROB_TOPIC_PATH"), "")
+	fs.StringVar(&opts.TopicPath, "t", os.Getenv("SEGROB_TOPIC_PATH"), "")
 
 	fs.Usage = func() {
-		_, _ = fmt.Fprintf(fs.Output(), "Usage: %s topic [options] [name]\n", os.Args[0])
-		_, _ = fmt.Fprintf(fs.Output(), "\nDescription:\n")
-		_, _ = fmt.Fprintf(fs.Output(), "  List topics or show expressions of a topic.\n")
-		_, _ = fmt.Fprintf(fs.Output(), "\nOptions:\n")
-		_, _ = fmt.Fprintf(fs.Output(), "  -t, --topic-path    Path to topics directory or SQLite file (required, or set SEGROB_TOPIC_PATH)\n")
+		w := fs.Output()
+		fmt.Fprintf(w, "Usage: %s topic [options] [name]\n\n", os.Args[0])
+		fmt.Fprintf(w, "  List topics or show expressions of a named topic.\n")
+		fmt.Fprintf(w, "\nArguments:\n")
+		fmt.Fprintf(w, helpArgFmt, "name", "Topic name to inspect (optional; lists all topics if omitted)")
+		fmt.Fprintf(w, "\nOptions:\n")
+		printOpt(w, "-t, --topic-path", "PATH", "Path to topics directory or SQLite file (or SEGROB_TOPIC_PATH)")
 	}
 
 	if err := fs.Parse(args); err != nil {
@@ -727,15 +779,18 @@ func parseStatArgs(args []string, ui UI) (StatOptions, string, *int, error) {
 	fs.SetOutput(io.Discard)
 
 	var opts StatOptions
-	fs.StringVar(&opts.DocPath, "doc-path", os.Getenv("SEGROB_DOC_PATH"), "Path to docs directory or SQLite file")
-	fs.StringVar(&opts.DocPath, "d", os.Getenv("SEGROB_DOC_PATH"), "alias for -doc-path")
+	fs.StringVar(&opts.DocPath, "doc-path", os.Getenv("SEGROB_DOC_PATH"), "")
+	fs.StringVar(&opts.DocPath, "d", os.Getenv("SEGROB_DOC_PATH"), "")
 
 	fs.Usage = func() {
-		_, _ = fmt.Fprintf(fs.Output(), "Usage: %s stat [options] <doc_id> [sentence_id]\n", os.Args[0])
-		_, _ = fmt.Fprintf(fs.Output(), "\nDescription:\n")
-		_, _ = fmt.Fprintf(fs.Output(), "  Show statistics for a document or sentence from the configured repository.\n")
-		_, _ = fmt.Fprintf(fs.Output(), "\nOptions:\n")
-		fs.PrintDefaults()
+		w := fs.Output()
+		fmt.Fprintf(w, "Usage: %s stat [options] <doc_id> [sentence_id]\n\n", os.Args[0])
+		fmt.Fprintf(w, "  Show statistics for a document or sentence from the configured repository.\n")
+		fmt.Fprintf(w, "\nArguments:\n")
+		fmt.Fprintf(w, helpArgFmt, "doc_id", "ID of the document")
+		fmt.Fprintf(w, helpArgFmt, "sentence_id", "Index of the sentence (optional)")
+		fmt.Fprintf(w, "\nOptions:\n")
+		printOpt(w, "-d, --doc-path", "PATH", "Path to docs directory or SQLite file (or SEGROB_DOC_PATH)")
 	}
 
 	if err := fs.Parse(args); err != nil {
@@ -772,10 +827,11 @@ func parseStatArgs(args []string, ui UI) (StatOptions, string, *int, error) {
 func parseBashArgs(args []string, ui UI) error {
 	fs := flag.NewFlagSet("bash", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
+
 	fs.Usage = func() {
-		_, _ = fmt.Fprintf(fs.Output(), "Usage: %s bash\n", os.Args[0])
-		_, _ = fmt.Fprintf(fs.Output(), "\nDescription:\n")
-		_, _ = fmt.Fprintf(fs.Output(), "  Output bash completion script.\n")
+		w := fs.Output()
+		fmt.Fprintf(w, "Usage: %s bash\n\n", os.Args[0])
+		fmt.Fprintf(w, "  Output bash completion script.\n")
 	}
 
 	if err := fs.Parse(args); err != nil {
@@ -791,6 +847,7 @@ func parseBashArgs(args []string, ui UI) error {
 	}
 	return nil
 }
+
 func parseCompleteArgs(args []string, ui UI) ([]string, error) {
 	fs := flag.NewFlagSet("complete", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
@@ -807,11 +864,16 @@ func parseImportTopicArgs(args []string, ui UI) (ImportTopicOptions, error) {
 	fs.SetOutput(io.Discard)
 
 	var opts ImportTopicOptions
-	fs.StringVar(&opts.From, "from", "", "Source directory with JSON topics")
-	fs.StringVar(&opts.To, "to", "", "Target SQLite database file")
+	fs.StringVar(&opts.From, "from", "", "")
+	fs.StringVar(&opts.To, "to", "", "")
 
 	fs.Usage = func() {
-		_, _ = fmt.Fprintf(fs.Output(), "Usage: %s import-topic --from <dir> --to <sqlite_file>\n", os.Args[0])
+		w := fs.Output()
+		fmt.Fprintf(w, "Usage: %s import-topic --from <dir> --to <sqlite_file>\n\n", os.Args[0])
+		fmt.Fprintf(w, "  Import topics from a JSON directory into a SQLite database.\n")
+		fmt.Fprintf(w, "\nOptions:\n")
+		printOpt(w, "--from", "DIR", "Source directory containing JSON topic files")
+		printOpt(w, "--to", "FILE", "Target SQLite database file")
 	}
 
 	if err := fs.Parse(args); err != nil {
@@ -830,11 +892,16 @@ func parseExportTopicArgs(args []string, ui UI) (ExportTopicOptions, error) {
 	fs.SetOutput(io.Discard)
 
 	var opts ExportTopicOptions
-	fs.StringVar(&opts.From, "from", "", "Source SQLite database file")
-	fs.StringVar(&opts.To, "to", "", "Target directory for JSON topics")
+	fs.StringVar(&opts.From, "from", "", "")
+	fs.StringVar(&opts.To, "to", "", "")
 
 	fs.Usage = func() {
-		_, _ = fmt.Fprintf(fs.Output(), "Usage: %s export-topic --from <sqlite_file> --to <dir>\n", os.Args[0])
+		w := fs.Output()
+		fmt.Fprintf(w, "Usage: %s export-topic --from <sqlite_file> --to <dir>\n\n", os.Args[0])
+		fmt.Fprintf(w, "  Export topics from a SQLite database to a JSON directory.\n")
+		fmt.Fprintf(w, "\nOptions:\n")
+		printOpt(w, "--from", "FILE", "Source SQLite database file")
+		printOpt(w, "--to", "DIR", "Target directory for JSON topic files")
 	}
 
 	if err := fs.Parse(args); err != nil {
@@ -853,10 +920,13 @@ func parseInitDbArgs(args []string, ui UI) (InitDbOptions, error) {
 	fs.SetOutput(io.Discard)
 
 	var opts InitDbOptions
+
 	fs.Usage = func() {
-		_, _ = fmt.Fprintf(fs.Output(), "Usage: %s init-db <db>\n", os.Args[0])
-		_, _ = fmt.Fprintf(fs.Output(), "\nDescription:\n")
-		_, _ = fmt.Fprintf(fs.Output(), "  Initialize a new SQLite database with the required schema.\n")
+		w := fs.Output()
+		fmt.Fprintf(w, "Usage: %s init-db <db>\n\n", os.Args[0])
+		fmt.Fprintf(w, "  Initialize a new SQLite database with the required schema.\n")
+		fmt.Fprintf(w, "\nArguments:\n")
+		fmt.Fprintf(w, helpArgFmt, "db", "Path to the SQLite file to create")
 	}
 
 	if err := fs.Parse(args); err != nil {
@@ -878,10 +948,23 @@ func parseInitDbArgs(args []string, ui UI) (InitDbOptions, error) {
 
 func parseCorpusNlp(args []string) (CorpusNlpOptions, error) {
 	fs := flag.NewFlagSet("corpus-nlp", flag.ContinueOnError)
+	fs.SetOutput(io.Discard)
+
 	var opts CorpusNlpOptions
-	fs.StringVar(&opts.NlpScript, "nlp-script", os.Getenv("SEGROB_NLP_SCRIPT"), "path to python NLP script")
-	fs.StringVar(&opts.NlpScript, "s", os.Getenv("SEGROB_NLP_SCRIPT"), "path to python NLP script (shorthand)")
-	fs.StringVar(&opts.DbPath, "db", os.Getenv("SEGROB_CORPUS_PATH"), "path to corpus database")
+	fs.StringVar(&opts.NlpScript, "nlp-script", os.Getenv("SEGROB_NLP_SCRIPT"), "")
+	fs.StringVar(&opts.NlpScript, "s", os.Getenv("SEGROB_NLP_SCRIPT"), "")
+	fs.StringVar(&opts.DbPath, "db", os.Getenv("SEGROB_CORPUS_PATH"), "")
+
+	fs.Usage = func() {
+		w := fs.Output()
+		fmt.Fprintf(w, "Usage: %s corpus-nlp [options] <id>\n\n", os.Args[0])
+		fmt.Fprintf(w, "  Process document text with NLP and store results in the corpus.\n")
+		fmt.Fprintf(w, "\nArguments:\n")
+		fmt.Fprintf(w, helpArgFmt, "id", "Document ID to process")
+		fmt.Fprintf(w, "\nOptions:\n")
+		printOpt(w, "-s, --nlp-script", "PATH", "Path to the Python NLP script (or SEGROB_NLP_SCRIPT)")
+		printOpt(w, "--db", "FILE", "Path to the corpus SQLite database (or SEGROB_CORPUS_PATH)")
+	}
 
 	if err := fs.Parse(args); err != nil {
 		return opts, err
@@ -907,15 +990,18 @@ func parseAddLabelArgs(args []string, ui UI) (AddLabelOptions, error) {
 	fs.SetOutput(io.Discard)
 
 	var opts AddLabelOptions
-	fs.StringVar(&opts.DocPath, "doc-path", os.Getenv("SEGROB_DOC_PATH"), "Path to SQLite file")
-	fs.StringVar(&opts.DocPath, "d", os.Getenv("SEGROB_DOC_PATH"), "alias for -doc-path")
+	fs.StringVar(&opts.DocPath, "doc-path", os.Getenv("SEGROB_DOC_PATH"), "")
+	fs.StringVar(&opts.DocPath, "d", os.Getenv("SEGROB_DOC_PATH"), "")
 
 	fs.Usage = func() {
-		_, _ = fmt.Fprintf(fs.Output(), "Usage: %s add-label [options] <doc_id> <label> [<label>...]\n", os.Args[0])
-		_, _ = fmt.Fprintf(fs.Output(), "\nDescription:\n")
-		_, _ = fmt.Fprintf(fs.Output(), "  Add one or more labels to a document.\n")
-		_, _ = fmt.Fprintf(fs.Output(), "\nOptions:\n")
-		fs.PrintDefaults()
+		w := fs.Output()
+		fmt.Fprintf(w, "Usage: %s add-label [options] <doc_id> <label> [<label>...]\n\n", os.Args[0])
+		fmt.Fprintf(w, "  Add one or more labels to a document.\n")
+		fmt.Fprintf(w, "\nArguments:\n")
+		fmt.Fprintf(w, helpArgFmt, "doc_id", "ID of the document")
+		fmt.Fprintf(w, helpArgFmt, "label", "One or more labels to add")
+		fmt.Fprintf(w, "\nOptions:\n")
+		printOpt(w, "-d, --doc-path", "PATH", "Path to SQLite file (or SEGROB_DOC_PATH)")
 	}
 
 	if err := fs.Parse(args); err != nil {
@@ -946,15 +1032,18 @@ func parseRemoveLabelArgs(args []string, ui UI) (RemoveLabelOptions, error) {
 	fs.SetOutput(io.Discard)
 
 	var opts RemoveLabelOptions
-	fs.StringVar(&opts.DocPath, "doc-path", os.Getenv("SEGROB_DOC_PATH"), "Path to SQLite file")
-	fs.StringVar(&opts.DocPath, "d", os.Getenv("SEGROB_DOC_PATH"), "alias for -doc-path")
+	fs.StringVar(&opts.DocPath, "doc-path", os.Getenv("SEGROB_DOC_PATH"), "")
+	fs.StringVar(&opts.DocPath, "d", os.Getenv("SEGROB_DOC_PATH"), "")
 
 	fs.Usage = func() {
-		_, _ = fmt.Fprintf(fs.Output(), "Usage: %s remove-label [options] <doc_id> <label> [<label>...]\n", os.Args[0])
-		_, _ = fmt.Fprintf(fs.Output(), "\nDescription:\n")
-		_, _ = fmt.Fprintf(fs.Output(), "  Remove one or more labels from a document.\n")
-		_, _ = fmt.Fprintf(fs.Output(), "\nOptions:\n")
-		fs.PrintDefaults()
+		w := fs.Output()
+		fmt.Fprintf(w, "Usage: %s remove-label [options] <doc_id> <label> [<label>...]\n\n", os.Args[0])
+		fmt.Fprintf(w, "  Remove one or more labels from a document.\n")
+		fmt.Fprintf(w, "\nArguments:\n")
+		fmt.Fprintf(w, helpArgFmt, "doc_id", "ID of the document")
+		fmt.Fprintf(w, helpArgFmt, "label", "One or more labels to remove")
+		fmt.Fprintf(w, "\nOptions:\n")
+		printOpt(w, "-d, --doc-path", "PATH", "Path to SQLite file (or SEGROB_DOC_PATH)")
 	}
 
 	if err := fs.Parse(args); err != nil {
@@ -985,14 +1074,16 @@ func parseCorpusMetaArgs(args []string, ui UI) (CorpusMetaOptions, error) {
 	fs.SetOutput(io.Discard)
 
 	var opts CorpusMetaOptions
-	fs.StringVar(&opts.DbPath, "db", os.Getenv("SEGROB_CORPUS_PATH"), "Output SQLite file for corpus data")
+	fs.StringVar(&opts.DbPath, "db", os.Getenv("SEGROB_CORPUS_PATH"), "")
 
 	fs.Usage = func() {
-		_, _ = fmt.Fprintf(fs.Output(), "Usage: %s corpus-meta [options] <dir>\n", os.Args[0])
-		_, _ = fmt.Fprintf(fs.Output(), "\nDescription:\n")
-		_, _ = fmt.Fprintf(fs.Output(), "  Scan a directory for epub files and build a corpus database.\n")
-		_, _ = fmt.Fprintf(fs.Output(), "\nOptions:\n")
-		fs.PrintDefaults()
+		w := fs.Output()
+		fmt.Fprintf(w, "Usage: %s corpus-meta [options] <dir>\n\n", os.Args[0])
+		fmt.Fprintf(w, "  Scan a directory for epub files and build a corpus database.\n")
+		fmt.Fprintf(w, "\nArguments:\n")
+		fmt.Fprintf(w, helpArgFmt, "dir", "Directory to scan for epub files")
+		fmt.Fprintf(w, "\nOptions:\n")
+		printOpt(w, "--db", "FILE", "Output SQLite file for corpus data (or SEGROB_CORPUS_PATH)")
 	}
 
 	if err := fs.Parse(args); err != nil {
@@ -1031,15 +1122,18 @@ func parseCatTxtArgs(args []string, ui UI) (CatTxtOptions, error) {
 	fs.SetOutput(io.Discard)
 
 	var opts CatTxtOptions
-	fs.StringVar(&opts.DbPath, "db", os.Getenv("SEGROB_CORPUS_PATH"), "Corpus SQLite file")
-	fs.StringVar(&opts.Output, "output", "", "Output file path (default: stdout)")
+	fs.StringVar(&opts.DbPath, "db", os.Getenv("SEGROB_CORPUS_PATH"), "")
+	fs.StringVar(&opts.Output, "output", "", "")
 
 	fs.Usage = func() {
-		_, _ = fmt.Fprintf(fs.Output(), "Usage: %s cat-txt <id> [--db corpus.db] [--output file.txt]\n", os.Args[0])
-		_, _ = fmt.Fprintf(fs.Output(), "\nDescription:\n")
-		_, _ = fmt.Fprintf(fs.Output(), "  Output the txt field of a corpus document byte-exact.\n")
-		_, _ = fmt.Fprintf(fs.Output(), "\nOptions:\n")
-		fs.PrintDefaults()
+		w := fs.Output()
+		fmt.Fprintf(w, "Usage: %s cat-txt [options] <id>\n\n", os.Args[0])
+		fmt.Fprintf(w, "  Output the txt field of a corpus document byte-exact.\n")
+		fmt.Fprintf(w, "\nArguments:\n")
+		fmt.Fprintf(w, helpArgFmt, "id", "Document ID")
+		fmt.Fprintf(w, "\nOptions:\n")
+		printOpt(w, "--db", "FILE", "Corpus SQLite file (or SEGROB_CORPUS_PATH)")
+		printOpt(w, "--output", "FILE", "Write output to FILE instead of stdout")
 	}
 
 	if err := fs.Parse(args); err != nil {
@@ -1069,16 +1163,19 @@ func parseCatNlpArgs(args []string, ui UI) (CatNlpOptions, error) {
 	fs.SetOutput(io.Discard)
 
 	var opts CatNlpOptions
-	fs.StringVar(&opts.DbPath, "db", os.Getenv("SEGROB_CORPUS_PATH"), "Corpus SQLite file")
-	fs.BoolVar(&opts.NoLemmas, "no-lemmas", false, "Remove lemmas from the JSON payload")
-	fs.BoolVar(&opts.NoLemmas, "n", false, "alias for -no-lemmas")
+	fs.StringVar(&opts.DbPath, "db", os.Getenv("SEGROB_CORPUS_PATH"), "")
+	fs.BoolVar(&opts.NoLemmas, "no-lemmas", false, "")
+	fs.BoolVar(&opts.NoLemmas, "n", false, "")
 
 	fs.Usage = func() {
-		_, _ = fmt.Fprintf(fs.Output(), "Usage: %s cat-nlp <id> [--db corpus.db] [-n|--no-lemmas]\n", os.Args[0])
-		_, _ = fmt.Fprintf(fs.Output(), "\nDescription:\n")
-		_, _ = fmt.Fprintf(fs.Output(), "  Output the nlp field of a corpus document.\n")
-		_, _ = fmt.Fprintf(fs.Output(), "\nOptions:\n")
-		fs.PrintDefaults()
+		w := fs.Output()
+		fmt.Fprintf(w, "Usage: %s cat-nlp [options] <id>\n\n", os.Args[0])
+		fmt.Fprintf(w, "  Output the nlp field of a corpus document.\n")
+		fmt.Fprintf(w, "\nArguments:\n")
+		fmt.Fprintf(w, helpArgFmt, "id", "Document ID")
+		fmt.Fprintf(w, "\nOptions:\n")
+		printOpt(w, "--db", "FILE", "Corpus SQLite file (or SEGROB_CORPUS_PATH)")
+		printOpt(w, "-n, --no-lemmas", "", "Strip lemmas from the JSON payload")
 	}
 
 	if err := fs.Parse(args); err != nil {
@@ -1103,16 +1200,19 @@ func parseCorpusLsArgs(args []string, ui UI) (CorpusLsOptions, error) {
 	fs.SetOutput(io.Discard)
 
 	var opts CorpusLsOptions
-	fs.StringVar(&opts.DbPath, "db", os.Getenv("SEGROB_CORPUS_PATH"), "Corpus SQLite file")
-	fs.BoolVar(&opts.WithNlp, "with-nlp", false, "Only return records that have NLP data")
-	fs.BoolVar(&opts.WithNlp, "n", false, "alias for -with-nlp")
+	fs.StringVar(&opts.DbPath, "db", os.Getenv("SEGROB_CORPUS_PATH"), "")
+	fs.BoolVar(&opts.WithNlp, "with-nlp", false, "")
+	fs.BoolVar(&opts.WithNlp, "n", false, "")
 
 	fs.Usage = func() {
-		_, _ = fmt.Fprintf(fs.Output(), "Usage: %s corpus-ls [filter] [--db corpus.db] [-n|--with-nlp]\n", os.Args[0])
-		_, _ = fmt.Fprintf(fs.Output(), "\nDescription:\n")
-		_, _ = fmt.Fprintf(fs.Output(), "  List all documents in the corpus staging database.\n")
-		_, _ = fmt.Fprintf(fs.Output(), "\nOptions:\n")
-		fs.PrintDefaults()
+		w := fs.Output()
+		fmt.Fprintf(w, "Usage: %s corpus-ls [options] [filter]\n\n", os.Args[0])
+		fmt.Fprintf(w, "  List all documents in the corpus staging database.\n")
+		fmt.Fprintf(w, "\nArguments:\n")
+		fmt.Fprintf(w, helpArgFmt, "filter", "Optional substring filter on document ID")
+		fmt.Fprintf(w, "\nOptions:\n")
+		printOpt(w, "--db", "FILE", "Corpus SQLite file (or SEGROB_CORPUS_PATH)")
+		printOpt(w, "-n, --with-nlp", "", "Only list records that have NLP data")
 	}
 
 	if err := fs.Parse(args); err != nil {
@@ -1137,44 +1237,41 @@ func parseCorpusLsArgs(args []string, ui UI) (CorpusLsOptions, error) {
 
 func setupUsage(fs *flag.FlagSet) {
 	fs.Usage = func() {
-		output := fs.Output()
-		const cmdFmt = "  %-14s %s\n"
-		
-		_, _ = fmt.Fprintf(output, "Usage: %s command [command options] [arguments...]\n", os.Args[0])
-		_, _ = fmt.Fprintf(output, "\nDescription:\n")
-		_, _ = fmt.Fprintf(output, "  Sentence dictionary based on NLP topics\n")
+		w := fs.Output()
+		fmt.Fprintf(w, "Usage: %s command [command options] [arguments...]\n\n", os.Args[0])
+		fmt.Fprintf(w, "  Sentence dictionary based on NLP topics\n")
 
-		_, _ = fmt.Fprintf(output, "\nCommands: Corpus - Stage\n")
-		_, _ = fmt.Fprintf(output, cmdFmt, "corpus-meta", "Scan an epub directory and build a corpus database.")
-		_, _ = fmt.Fprintf(output, cmdFmt, "corpus-nlp", "Process document text with NLP and store in corpus.")
-		_, _ = fmt.Fprintf(output, cmdFmt, "corpus-ls", "List documents in the corpus staging database.")
-		_, _ = fmt.Fprintf(output, cmdFmt, "cat-txt", "Output the txt field of a corpus document.")
-		_, _ = fmt.Fprintf(output, cmdFmt, "cat-nlp", "Output the nlp field of a corpus document.")
+		fmt.Fprintf(w, "\nCommands: Corpus - Stage\n")
+		fmt.Fprintf(w, helpCmdFmt, "corpus-meta", "Scan an epub directory and build a corpus database.")
+		fmt.Fprintf(w, helpCmdFmt, "corpus-nlp", "Process document text with NLP and store in corpus.")
+		fmt.Fprintf(w, helpCmdFmt, "corpus-ls", "List documents in the corpus staging database.")
+		fmt.Fprintf(w, helpCmdFmt, "cat-txt", "Output the txt field of a corpus document.")
+		fmt.Fprintf(w, helpCmdFmt, "cat-nlp", "Output the nlp field of a corpus document.")
 
-		_, _ = fmt.Fprintf(output, "\nCommands: Doc - Live - Production\n")
-		_, _ = fmt.Fprintf(output, cmdFmt, "live", "Move a document from corpus to live production tables.")
-		_, _ = fmt.Fprintf(output, cmdFmt, "doc", "Show contents of a document file or DB entry.")
-		_, _ = fmt.Fprintf(output, cmdFmt, "doc-ls", "List all documents in the repository.")
-		_, _ = fmt.Fprintf(output, cmdFmt, "label-ls", "List all unique labels in the repository.")
-		_, _ = fmt.Fprintf(output, cmdFmt, "add-label", "Add one or more labels to a document.")
-		_, _ = fmt.Fprintf(output, cmdFmt, "remove-label", "Remove one or more labels from a document.")
-		_, _ = fmt.Fprintf(output, cmdFmt, "sentence", "Show a specific sentence details.")
-		_, _ = fmt.Fprintf(output, cmdFmt, "topics", "Show topics for a specific sentence.")
-		_, _ = fmt.Fprintf(output, cmdFmt, "expr", "Evaluate a topic expression.")
-		_, _ = fmt.Fprintf(output, cmdFmt, "query", "Enter interactive query mode.")
-		_, _ = fmt.Fprintf(output, cmdFmt, "edit", "Enter interactive edit mode.")
-		_, _ = fmt.Fprintf(output, cmdFmt, "topic", "List topics or show expressions of a topic.")
-		_, _ = fmt.Fprintf(output, cmdFmt, "stat", "Show statistics for a document or sentence.")
-		_, _ = fmt.Fprintf(output, cmdFmt, "import-topic", "Import topics from filesystem to SQLite.")
-		_, _ = fmt.Fprintf(output, cmdFmt, "export-topic", "Export topics from SQLite to filesystem.")
-		_, _ = fmt.Fprintf(output, cmdFmt, "init-db", "Initialize a new SQLite database with the required schema.")
+		fmt.Fprintf(w, "\nCommands: Doc - Live - Production\n")
+		fmt.Fprintf(w, helpCmdFmt, "live", "Move a document from corpus to live production tables.")
+		fmt.Fprintf(w, helpCmdFmt, "doc", "Show contents of a document file or DB entry.")
+		fmt.Fprintf(w, helpCmdFmt, "doc-ls", "List all documents in the repository.")
+		fmt.Fprintf(w, helpCmdFmt, "label-ls", "List all unique labels in the repository.")
+		fmt.Fprintf(w, helpCmdFmt, "add-label", "Add one or more labels to a document.")
+		fmt.Fprintf(w, helpCmdFmt, "remove-label", "Remove one or more labels from a document.")
+		fmt.Fprintf(w, helpCmdFmt, "sentence", "Show a specific sentence details.")
+		fmt.Fprintf(w, helpCmdFmt, "topics", "Show topics for a specific sentence.")
+		fmt.Fprintf(w, helpCmdFmt, "expr", "Evaluate a topic expression.")
+		fmt.Fprintf(w, helpCmdFmt, "query", "Enter interactive query mode.")
+		fmt.Fprintf(w, helpCmdFmt, "edit", "Enter interactive edit mode.")
+		fmt.Fprintf(w, helpCmdFmt, "topic", "List topics or show expressions of a topic.")
+		fmt.Fprintf(w, helpCmdFmt, "stat", "Show statistics for a document or sentence.")
+		fmt.Fprintf(w, helpCmdFmt, "import-topic", "Import topics from filesystem to SQLite.")
+		fmt.Fprintf(w, helpCmdFmt, "export-topic", "Export topics from SQLite to filesystem.")
+		fmt.Fprintf(w, helpCmdFmt, "init-db", "Initialize a new SQLite database with the required schema.")
 
-		_, _ = fmt.Fprintf(output, "\nCommands: Other\n")
-		_, _ = fmt.Fprintf(output, cmdFmt, "bash", "Output bash completion script.")
-		_, _ = fmt.Fprintf(output, cmdFmt, "version", "Show version information.")
-		_, _ = fmt.Fprintf(output, cmdFmt, "help", "Show help for a command.")
+		fmt.Fprintf(w, "\nCommands: Other\n")
+		fmt.Fprintf(w, helpCmdFmt, "bash", "Output bash completion script.")
+		fmt.Fprintf(w, helpCmdFmt, "version", "Show version information.")
+		fmt.Fprintf(w, helpCmdFmt, "help", "Show help for a command.")
 
-		_, _ = fmt.Fprintf(output, "\nVersion: %s, commit %s\n", BuildTag, BuildCommit)
+		fmt.Fprintf(w, "\nVersion: %s, commit %s\n", BuildTag, BuildCommit)
 	}
 }
 
