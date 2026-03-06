@@ -17,6 +17,9 @@ func corpusLsCommand(repo storage.CorpusReader, opts CorpusLsOptions, ui UI) err
 		if opts.Filter != "" && !strings.Contains(r.Labels, opts.Filter) {
 			continue
 		}
+		if opts.WithNlp && !r.HasNlp() {
+			continue
+		}
 		txtStatus := "❌"
 		if r.HasTxt() {
 			txtStatus = "✅"

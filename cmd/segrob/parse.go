@@ -173,8 +173,9 @@ type CatNlpOptions struct {
 }
 
 type CorpusLsOptions struct {
-	DbPath string // --db / SEGROB_CORPUS_PATH
-	Filter string // optional positional filter
+	DbPath  string // --db / SEGROB_CORPUS_PATH
+	Filter  string // optional positional filter
+	WithNlp bool   // --with-nlp / -n
 }
 
 // stringSliceFlag implements flag.Value for multi-value strings
@@ -1103,9 +1104,11 @@ func parseCorpusLsArgs(args []string, ui UI) (CorpusLsOptions, error) {
 
 	var opts CorpusLsOptions
 	fs.StringVar(&opts.DbPath, "db", os.Getenv("SEGROB_CORPUS_PATH"), "Corpus SQLite file")
+	fs.BoolVar(&opts.WithNlp, "with-nlp", false, "Only return records that have NLP data")
+	fs.BoolVar(&opts.WithNlp, "n", false, "alias for -with-nlp")
 
 	fs.Usage = func() {
-		_, _ = fmt.Fprintf(fs.Output(), "Usage: %s corpus-ls [filter] [--db corpus.db]\n", os.Args[0])
+		_, _ = fmt.Fprintf(fs.Output(), "Usage: %s corpus-ls [filter] [--db corpus.db] [-n|--with-nlp]\n", os.Args[0])
 		_, _ = fmt.Fprintf(fs.Output(), "\nDescription:\n")
 		_, _ = fmt.Fprintf(fs.Output(), "  List all documents in the corpus staging database.\n")
 		_, _ = fmt.Fprintf(fs.Output(), "\nOptions:\n")
