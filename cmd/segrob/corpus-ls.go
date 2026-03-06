@@ -17,11 +17,15 @@ func corpusLsCommand(repo storage.CorpusReader, opts CorpusLsOptions, ui UI) err
 		if opts.Filter != "" && !strings.Contains(r.Labels, opts.Filter) {
 			continue
 		}
-		status := "❌"
+		txtStatus := "❌"
 		if r.HasTxt() {
-			status = "✅"
+			txtStatus = "✅"
 		}
-		fmt.Fprintf(ui.Out, "📖 %s 🔖 %s txt: %s\n", r.ID, r.Labels, status)
+		nlpStatus := "❌"
+		if r.HasNlp() {
+			nlpStatus = "✅"
+		}
+		fmt.Fprintf(ui.Out, "📖 %s 🔖 %s txt: %s nlp: %s\n", r.ID, r.Labels, txtStatus, nlpStatus)
 	}
 
 	return nil

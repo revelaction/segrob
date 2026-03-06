@@ -104,7 +104,7 @@ type CorpusMeta struct {
 
 // CorpusReader defines read operations for corpus storage
 type CorpusReader interface {
-	// List returns partially filled records (ID and Labels).
+	// List returns records (ID, Labels, txt_hash, nlp_created_at, etc.).
 	List() ([]CorpusRecord, error)
 
 	// ReadMeta retrieves id, epub, and labels for a given document ID.
@@ -156,6 +156,10 @@ func TimeParse(s string) (time.Time, error) {
 
 func (r CorpusRecord) HasTxt() bool {
 	return r.TxtHash != ""
+}
+
+func (r CorpusRecord) HasNlp() bool {
+	return !r.NlpCreatedAt.IsZero()
 }
 
 // CorpusWriter defines write operations for corpus storage
