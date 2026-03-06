@@ -123,8 +123,21 @@ type CorpusReader interface {
 // inserted as one row in the corpus docs table.
 type CorpusRecord struct {
 	CorpusMeta
-	Txt     string // full plain text from pandoc
-	TxtHash string // SHA-256 hex of txt bytes
+	Txt            string // full plain text from pandoc
+	TxtHash        string // SHA-256 hex of txt bytes
+	TxtCreatedAt   string
+	TxtEdited      bool
+	TxtEditedAt    string
+	TxtEditor      string
+	TxtEditNotes   string
+	NlpCreatedAt   string
+	NlpReviewed    bool
+	NlpReviewedAt  string
+	NlpReviewer    string
+	NlpReviewNotes string
+	DeletedAt      string
+	CreatedAt      string
+	UpdatedAt      string
 }
 
 func (r CorpusRecord) HasTxt() bool {

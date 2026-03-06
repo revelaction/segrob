@@ -49,15 +49,34 @@ func (s *CorpusStore) List() ([]storage.CorpusRecord, error) {
 
 	var records []storage.CorpusRecord
 	err = sqlitex.Execute(conn,
-		"SELECT id, labels, txt_hash FROM corpus",
+		`SELECT 
+			id, labels, epub, txt_hash, txt_created_at, 
+			txt_edited, txt_edited_at, txt_editor, txt_edit_notes, 
+			nlp_created_at, nlp_reviewed, nlp_reviewed_at, nlp_reviewer, nlp_review_notes, 
+			deleted_at, created_at, updated_at 
+		 FROM corpus`,
 		&sqlitex.ExecOptions{
 			ResultFunc: func(stmt *sqlite.Stmt) error {
 				records = append(records, storage.CorpusRecord{
 					CorpusMeta: storage.CorpusMeta{
-						ID:     stmt.ColumnText(0),
-						Labels: stmt.ColumnText(1),
+						ID:     stmt.GetText("id"),
+						Labels: stmt.GetText("labels"),
+						Epub:   stmt.GetText("epub"),
 					},
-					TxtHash: stmt.ColumnText(2),
+					TxtHash:        stmt.GetText("txt_hash"),
+					TxtCreatedAt:   stmt.GetText("txt_created_at"),
+					TxtEdited:      stmt.GetBool("txt_edited"),
+					TxtEditedAt:    stmt.GetText("txt_edited_at"),
+					TxtEditor:      stmt.GetText("txt_editor"),
+					TxtEditNotes:   stmt.GetText("txt_edit_notes"),
+					NlpCreatedAt:   stmt.GetText("nlp_created_at"),
+					NlpReviewed:    stmt.GetBool("nlp_reviewed"),
+					NlpReviewedAt:  stmt.GetText("nlp_reviewed_at"),
+					NlpReviewer:    stmt.GetText("nlp_reviewer"),
+					NlpReviewNotes: stmt.GetText("nlp_review_notes"),
+					DeletedAt:      stmt.GetText("deleted_at"),
+					CreatedAt:      stmt.GetText("created_at"),
+					UpdatedAt:      stmt.GetText("updated_at"),
 				})
 				return nil
 			},
