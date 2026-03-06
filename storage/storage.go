@@ -2,6 +2,7 @@ package storage
 
 import (
 	"encoding/json"
+	"time"
 
 	sent "github.com/revelaction/segrob/sentence"
 	"github.com/revelaction/segrob/topic"
@@ -125,19 +126,32 @@ type CorpusRecord struct {
 	CorpusMeta
 	Txt            string // full plain text from pandoc
 	TxtHash        string // SHA-256 hex of txt bytes
-	TxtCreatedAt   string
+	TxtCreatedAt   time.Time
 	TxtEdited      bool
-	TxtEditedAt    string
+	TxtEditedAt    time.Time
 	TxtEditor      string
 	TxtEditNotes   string
-	NlpCreatedAt   string
+	NlpCreatedAt   time.Time
 	NlpReviewed    bool
-	NlpReviewedAt  string
+	NlpReviewedAt  time.Time
 	NlpReviewer    string
 	NlpReviewNotes string
-	DeletedAt      string
-	CreatedAt      string
-	UpdatedAt      string
+	DeletedAt      time.Time
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
+}
+
+// TimeParse parses a RFC3339 string into a time.Time.
+// This should be used when reading timestamps from SQLite to convert them
+// back to time.Time values. Returns an error if the input string is not
+// in RFC3339 format.
+func TimeParse(s string) (time.Time, error) {
+	// Handle empty strings gracefully, returning zero time and no error,
+	// as some DB fields might be nullable/empty timestamps.
+	if s == "" {
+		return time.Time{}, nil
+	}
+	return time.Parse(time.RFC3339, s)
 }
 
 func (r CorpusRecord) HasTxt() bool {

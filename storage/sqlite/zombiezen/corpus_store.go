@@ -57,6 +57,35 @@ func (s *CorpusStore) List() ([]storage.CorpusRecord, error) {
 		 FROM corpus`,
 		&sqlitex.ExecOptions{
 			ResultFunc: func(stmt *sqlite.Stmt) error {
+				txtCreatedAt, err := storage.TimeParse(stmt.GetText("txt_created_at"))
+				if err != nil {
+					return fmt.Errorf("error parsing txt_created_at: %w", err)
+				}
+				txtEditedAt, err := storage.TimeParse(stmt.GetText("txt_edited_at"))
+				if err != nil {
+					return fmt.Errorf("error parsing txt_edited_at: %w", err)
+				}
+				nlpCreatedAt, err := storage.TimeParse(stmt.GetText("nlp_created_at"))
+				if err != nil {
+					return fmt.Errorf("error parsing nlp_created_at: %w", err)
+				}
+				nlpReviewedAt, err := storage.TimeParse(stmt.GetText("nlp_reviewed_at"))
+				if err != nil {
+					return fmt.Errorf("error parsing nlp_reviewed_at: %w", err)
+				}
+				deletedAt, err := storage.TimeParse(stmt.GetText("deleted_at"))
+				if err != nil {
+					return fmt.Errorf("error parsing deleted_at: %w", err)
+				}
+				createdAt, err := storage.TimeParse(stmt.GetText("created_at"))
+				if err != nil {
+					return fmt.Errorf("error parsing created_at: %w", err)
+				}
+				updatedAt, err := storage.TimeParse(stmt.GetText("updated_at"))
+				if err != nil {
+					return fmt.Errorf("error parsing updated_at: %w", err)
+				}
+
 				records = append(records, storage.CorpusRecord{
 					CorpusMeta: storage.CorpusMeta{
 						ID:     stmt.GetText("id"),
@@ -64,19 +93,19 @@ func (s *CorpusStore) List() ([]storage.CorpusRecord, error) {
 						Epub:   stmt.GetText("epub"),
 					},
 					TxtHash:        stmt.GetText("txt_hash"),
-					TxtCreatedAt:   stmt.GetText("txt_created_at"),
+					TxtCreatedAt:   txtCreatedAt,
 					TxtEdited:      stmt.GetBool("txt_edited"),
-					TxtEditedAt:    stmt.GetText("txt_edited_at"),
+					TxtEditedAt:    txtEditedAt,
 					TxtEditor:      stmt.GetText("txt_editor"),
 					TxtEditNotes:   stmt.GetText("txt_edit_notes"),
-					NlpCreatedAt:   stmt.GetText("nlp_created_at"),
+					NlpCreatedAt:   nlpCreatedAt,
 					NlpReviewed:    stmt.GetBool("nlp_reviewed"),
-					NlpReviewedAt:  stmt.GetText("nlp_reviewed_at"),
+					NlpReviewedAt:  nlpReviewedAt,
 					NlpReviewer:    stmt.GetText("nlp_reviewer"),
 					NlpReviewNotes: stmt.GetText("nlp_review_notes"),
-					DeletedAt:      stmt.GetText("deleted_at"),
-					CreatedAt:      stmt.GetText("created_at"),
-					UpdatedAt:      stmt.GetText("updated_at"),
+					DeletedAt:      deletedAt,
+					CreatedAt:      createdAt,
+					UpdatedAt:      updatedAt,
 				})
 				return nil
 			},
