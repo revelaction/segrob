@@ -97,8 +97,8 @@ func runCommand(cmd string, args []string, ui UI) error {
 		}
 		return docCommand(repo, opts, id, ui)
 
-	case "ls-doc":
-		opts, _, err := parseLsDocArgs(args, ui)
+	case "doc-ls":
+		opts, _, err := parseDocLsArgs(args, ui)
 		if err != nil {
 			if errors.Is(err, flag.ErrHelp) {
 				return nil
@@ -109,10 +109,10 @@ func runCommand(cmd string, args []string, ui UI) error {
 		if err != nil {
 			return err
 		}
-		return lsDocCommand(repo, opts, ui)
+		return docLsCommand(repo, opts, ui)
 
-	case "ls-labels":
-		opts, err := parseLsLabelsArgs(args, ui)
+	case "label-ls":
+		opts, err := parseLabelLsArgs(args, ui)
 		if err != nil {
 			if errors.Is(err, flag.ErrHelp) {
 				return nil
@@ -123,7 +123,7 @@ func runCommand(cmd string, args []string, ui UI) error {
 		if err != nil {
 			return err
 		}
-		return lsLabelsCommand(repo, opts, ui)
+		return labelLsCommand(repo, opts, ui)
 
 	case "sentence":
 		opts, docId, sentId, err := parseSentenceArgs(args, ui)
@@ -386,6 +386,20 @@ func runCommand(cmd string, args []string, ui UI) error {
 			return err
 		}
 		return catTxtCommand(repo, opts, ui)
+
+	case "cat-nlp":
+		opts, err := parseCatNlpArgs(args, ui)
+		if err != nil {
+			if errors.Is(err, flag.ErrHelp) {
+				return nil
+			}
+			return err
+		}
+		repo, err := setup.NewCorpusRepository(opts.DbPath)
+		if err != nil {
+			return err
+		}
+		return catNlpCommand(repo, opts, ui)
 	}
 
 	return fmt.Errorf("unknown command: %s", cmd)

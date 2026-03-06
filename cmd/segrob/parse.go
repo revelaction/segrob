@@ -52,12 +52,12 @@ type DocOptions struct {
 	DocPath string
 }
 
-type LsDocOptions struct {
+type DocLsOptions struct {
 	DocPath string
 	Match   string
 }
 
-type LsLabelsOptions struct {
+type LabelLsOptions struct {
 	DocPath string
 	Match   string
 }
@@ -164,6 +164,12 @@ type CatTxtOptions struct {
 	DbPath string // --db / SEGROB_CORPUS_PATH
 	Output string // --output file path (empty = stdout)
 	ID     string // positional arg: document id
+}
+
+type CatNlpOptions struct {
+	DbPath   string // --db / SEGROB_CORPUS_PATH
+	NoLemmas bool   // -n, --no-lemmas
+	ID       string // positional arg: document id
 }
 
 type CorpusLsOptions struct {
@@ -301,18 +307,18 @@ func parseDocArgs(args []string, ui UI) (DocOptions, string, error) {
 	return opts, arg, nil
 }
 
-func parseLsDocArgs(args []string, ui UI) (LsDocOptions, bool, error) {
-	fs := flag.NewFlagSet("ls-doc", flag.ContinueOnError)
+func parseDocLsArgs(args []string, ui UI) (DocLsOptions, bool, error) {
+	fs := flag.NewFlagSet("doc-ls", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
 
-	var opts LsDocOptions
+	var opts DocLsOptions
 	fs.StringVar(&opts.DocPath, "doc-path", os.Getenv("SEGROB_DOC_PATH"), "Path to docs directory or SQLite file")
 	fs.StringVar(&opts.DocPath, "d", os.Getenv("SEGROB_DOC_PATH"), "alias for -doc-path")
 	fs.StringVar(&opts.Match, "match", "", "Retrieve only documents with at least one label containing this string")
 	fs.StringVar(&opts.Match, "m", "", "alias for -match")
 
 	fs.Usage = func() {
-		_, _ = fmt.Fprintf(fs.Output(), "Usage: %s ls-doc [options]\n", os.Args[0])
+		_, _ = fmt.Fprintf(fs.Output(), "Usage: %s doc-ls [options]\n", os.Args[0])
 		_, _ = fmt.Fprintf(fs.Output(), "\nDescription:\n")
 		_, _ = fmt.Fprintf(fs.Output(), "  List all documents in the repository.\n")
 		_, _ = fmt.Fprintf(fs.Output(), "\nOptions:\n")
@@ -343,18 +349,18 @@ func parseLsDocArgs(args []string, ui UI) (LsDocOptions, bool, error) {
 	return opts, info.IsDir(), nil
 }
 
-func parseLsLabelsArgs(args []string, ui UI) (LsLabelsOptions, error) {
-	fs := flag.NewFlagSet("ls-labels", flag.ContinueOnError)
+func parseLabelLsArgs(args []string, ui UI) (LabelLsOptions, error) {
+	fs := flag.NewFlagSet("label-ls", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
 
-	var opts LsLabelsOptions
+	var opts LabelLsOptions
 	fs.StringVar(&opts.DocPath, "doc-path", os.Getenv("SEGROB_DOC_PATH"), "Path to docs directory or SQLite file")
 	fs.StringVar(&opts.DocPath, "d", os.Getenv("SEGROB_DOC_PATH"), "alias for -doc-path")
 	fs.StringVar(&opts.Match, "match", "", "Retrieve only labels containing this string")
 	fs.StringVar(&opts.Match, "m", "", "alias for -match")
 
 	fs.Usage = func() {
-		_, _ = fmt.Fprintf(fs.Output(), "Usage: %s ls-labels [options]\n", os.Args[0])
+		_, _ = fmt.Fprintf(fs.Output(), "Usage: %s label-ls [options]\n", os.Args[0])
 		_, _ = fmt.Fprintf(fs.Output(), "\nDescription:\n")
 		_, _ = fmt.Fprintf(fs.Output(), "  List all unique labels in the repository.\n")
 		_, _ = fmt.Fprintf(fs.Output(), "\nOptions:\n")
@@ -1057,6 +1063,40 @@ func parseCatTxtArgs(args []string, ui UI) (CatTxtOptions, error) {
 	return opts, nil
 }
 
+func parseCatNlpArgs(args []string, ui UI) (CatNlpOptions, error) {
+	fs := flag.NewFlagSet("cat-nlp", flag.ContinueOnError)
+	fs.SetOutput(io.Discard)
+
+	var opts CatNlpOptions
+	fs.StringVar(&opts.DbPath, "db", os.Getenv("SEGROB_CORPUS_PATH"), "Corpus SQLite file")
+	fs.BoolVar(&opts.NoLemmas, "no-lemmas", false, "Remove lemmas from the JSON payload")
+	fs.BoolVar(&opts.NoLemmas, "n", false, "alias for -no-lemmas")
+
+	fs.Usage = func() {
+		_, _ = fmt.Fprintf(fs.Output(), "Usage: %s cat-nlp <id> [--db corpus.db] [-n|--no-lemmas]\n", os.Args[0])
+		_, _ = fmt.Fprintf(fs.Output(), "\nDescription:\n")
+		_, _ = fmt.Fprintf(fs.Output(), "  Output the nlp field of a corpus document.\n")
+		_, _ = fmt.Fprintf(fs.Output(), "\nOptions:\n")
+		fs.PrintDefaults()
+	}
+
+	if err := fs.Parse(args); err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			fs.SetOutput(ui.Out)
+			fs.Usage()
+			return opts, err
+		}
+		return opts, err
+	}
+
+	if fs.NArg() != 1 {
+		return opts, errors.New("cat-nlp requires exactly one argument: <id>")
+	}
+	opts.ID = fs.Arg(0)
+
+	return opts, nil
+}
+
 func parseCorpusLsArgs(args []string, ui UI) (CorpusLsOptions, error) {
 	fs := flag.NewFlagSet("corpus-ls", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
@@ -1100,8 +1140,8 @@ func setupUsage(fs *flag.FlagSet) {
 		_, _ = fmt.Fprintf(output, "  Sentence dictionary based on NLP topics\n")
 		_, _ = fmt.Fprintf(output, "\nCommands:\n")
 		_, _ = fmt.Fprintf(output, "  doc       Show contents of a document file or DB entry.\n")
-		_, _ = fmt.Fprintf(output, "  ls-doc    List all documents in the repository.\n")
-		_, _ = fmt.Fprintf(output, "  ls-labels List all unique labels in the repository.\n")
+		_, _ = fmt.Fprintf(output, "  doc-ls    List all documents in the repository.\n")
+		_, _ = fmt.Fprintf(output, "  label-ls  List all unique labels in the repository.\n")
 		_, _ = fmt.Fprintf(output, "  sentence  Show a specific sentence details.\n")
 		_, _ = fmt.Fprintf(output, "  topics    Show topics for a specific sentence.\n")
 		_, _ = fmt.Fprintf(output, "  expr      Evaluate a topic expression.\n")
@@ -1119,6 +1159,7 @@ func setupUsage(fs *flag.FlagSet) {
 		_, _ = fmt.Fprintf(output, "  add-label     Add one or more labels to a document.\n")
 		_, _ = fmt.Fprintf(output, "  remove-label  Remove one or more labels from a document.\n")
 		_, _ = fmt.Fprintf(output, "  cat-txt       Output the txt field of a corpus document.\n")
+		_, _ = fmt.Fprintf(output, "  cat-nlp       Output the nlp field of a corpus document.\n")
 		_, _ = fmt.Fprintf(output, "  bash          Output bash completion script.\n")
 		_, _ = fmt.Fprintf(output, "  version   Show version information\n")
 		_, _ = fmt.Fprintf(output, "  help      Show help for a command.\n")
