@@ -87,8 +87,8 @@ func (s *CorpusStore) WriteStream(seq func(yield func(storage.CorpusRecord, erro
 		}
 
 		err = sqlitex.Execute(conn,
-			`INSERT INTO corpus (id, labels, epub, txt, txt_hash, txt_edited, txt_edited_at, txt_editor, txt_edit_notes, nlp_reviewed, nlp_reviewed_at, nlp_reviewer, nlp_review_notes, deleted, deleted_at)
-			 VALUES (?, ?, ?, ?, ?, false, '', '', '', false, '', '', '', false, '')`,
+			`INSERT INTO corpus (id, labels, epub, txt, txt_hash)
+			 VALUES (?, ?, ?, ?, ?)`,
 			&sqlitex.ExecOptions{
 				Args: []interface{}{record.ID, record.Labels, record.Epub, record.Txt, record.TxtHash},
 			})
@@ -171,7 +171,7 @@ func (s *CorpusStore) WriteNlp(id string, nlp []byte) error {
 	defer s.pool.Put(conn)
 
 	return sqlitex.Execute(conn,
-		"UPDATE corpus SET nlp = ? WHERE id = ?",
+		"UPDATE corpus SET nlp = ?, nlp_created_at = (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')), updated_at = (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')) WHERE id = ?",
 		&sqlitex.ExecOptions{
 			Args: []interface{}{string(nlp), id},
 		})
@@ -217,7 +217,7 @@ func (s *CorpusStore) ClearNlp(id string) error {
 	defer s.pool.Put(conn)
 
 	return sqlitex.Execute(conn,
-		"UPDATE corpus SET nlp = NULL WHERE id = ?",
+		"UPDATE corpus SET nlp = '', updated_at = (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')) WHERE id = ?",
 		&sqlitex.ExecOptions{
 			Args: []interface{}{id},
 		})
