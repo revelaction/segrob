@@ -6,7 +6,7 @@ import (
 	"github.com/revelaction/segrob/storage"
 )
 
-func removeLabelCommand(repo storage.DocRepository, opts RemoveLabelOptions, ui UI) error {
+func labelRmCommand(repo storage.DocRepository, opts LabelRmOptions, ui UI) error {
 
 	if err := repo.RemoveLabel(opts.DocID, opts.Labels...); err != nil {
 		return fmt.Errorf("failed to remove labels: %w", err)

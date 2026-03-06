@@ -165,13 +165,13 @@ func parseLiveArgs(args []string, ui UI) (LiveOptions, error) {
 	return opts, nil
 }
 
-type AddLabelOptions struct {
+type LabelAddOptions struct {
 	DocID   string
 	Labels  []string
 	DocPath string
 }
 
-type RemoveLabelOptions struct {
+type LabelRmOptions struct {
 	DocID   string
 	Labels  []string
 	DocPath string
@@ -985,17 +985,17 @@ func parseCorpusNlp(args []string) (CorpusNlpOptions, error) {
 	return opts, nil
 }
 
-func parseAddLabelArgs(args []string, ui UI) (AddLabelOptions, error) {
-	fs := flag.NewFlagSet("add-label", flag.ContinueOnError)
+func parseLabelAddArgs(args []string, ui UI) (LabelAddOptions, error) {
+	fs := flag.NewFlagSet("label-add", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
 
-	var opts AddLabelOptions
+	var opts LabelAddOptions
 	fs.StringVar(&opts.DocPath, "doc-path", os.Getenv("SEGROB_DOC_PATH"), "")
 	fs.StringVar(&opts.DocPath, "d", os.Getenv("SEGROB_DOC_PATH"), "")
 
 	fs.Usage = func() {
 		w := fs.Output()
-		fmt.Fprintf(w, "Usage: %s add-label [options] <doc_id> <label> [<label>...]\n\n", os.Args[0])
+		fmt.Fprintf(w, "Usage: %s label-add [options] <doc_id> <label> [<label>...]\n\n", os.Args[0])
 		fmt.Fprintf(w, "  Add one or more labels to a document.\n")
 		fmt.Fprintf(w, "\nArguments:\n")
 		fmt.Fprintf(w, helpArgFmt, "doc_id", "ID of the document")
@@ -1014,7 +1014,7 @@ func parseAddLabelArgs(args []string, ui UI) (AddLabelOptions, error) {
 	}
 
 	if fs.NArg() < 2 {
-		return opts, errors.New("add-label requires at least two arguments: <doc_id> and one or more <label>")
+		return opts, errors.New("label-add requires at least two arguments: <doc_id> and one or more <label>")
 	}
 
 	opts.DocID = fs.Arg(0)
@@ -1027,17 +1027,17 @@ func parseAddLabelArgs(args []string, ui UI) (AddLabelOptions, error) {
 	return opts, nil
 }
 
-func parseRemoveLabelArgs(args []string, ui UI) (RemoveLabelOptions, error) {
-	fs := flag.NewFlagSet("remove-label", flag.ContinueOnError)
+func parseLabelRmArgs(args []string, ui UI) (LabelRmOptions, error) {
+	fs := flag.NewFlagSet("label-rm", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
 
-	var opts RemoveLabelOptions
+	var opts LabelRmOptions
 	fs.StringVar(&opts.DocPath, "doc-path", os.Getenv("SEGROB_DOC_PATH"), "")
 	fs.StringVar(&opts.DocPath, "d", os.Getenv("SEGROB_DOC_PATH"), "")
 
 	fs.Usage = func() {
 		w := fs.Output()
-		fmt.Fprintf(w, "Usage: %s remove-label [options] <doc_id> <label> [<label>...]\n\n", os.Args[0])
+		fmt.Fprintf(w, "Usage: %s label-rm [options] <doc_id> <label> [<label>...]\n\n", os.Args[0])
 		fmt.Fprintf(w, "  Remove one or more labels from a document.\n")
 		fmt.Fprintf(w, "\nArguments:\n")
 		fmt.Fprintf(w, helpArgFmt, "doc_id", "ID of the document")
@@ -1056,7 +1056,7 @@ func parseRemoveLabelArgs(args []string, ui UI) (RemoveLabelOptions, error) {
 	}
 
 	if fs.NArg() < 2 {
-		return opts, errors.New("remove-label requires at least two arguments: <doc_id> and one or more <label>")
+		return opts, errors.New("label-rm requires at least two arguments: <doc_id> and one or more <label>")
 	}
 
 	opts.DocID = fs.Arg(0)
@@ -1253,8 +1253,8 @@ func setupUsage(fs *flag.FlagSet) {
 		fmt.Fprintf(w, helpCmdFmt, "doc", "Show contents of a document file or DB entry.")
 		fmt.Fprintf(w, helpCmdFmt, "doc-ls", "List all documents in the repository.")
 		fmt.Fprintf(w, helpCmdFmt, "label-ls", "List all unique labels in the repository.")
-		fmt.Fprintf(w, helpCmdFmt, "add-label", "Add one or more labels to a document.")
-		fmt.Fprintf(w, helpCmdFmt, "remove-label", "Remove one or more labels from a document.")
+		fmt.Fprintf(w, helpCmdFmt, "label-add", "Add one or more labels to a document.")
+		fmt.Fprintf(w, helpCmdFmt, "label-rm", "Remove one or more labels from a document.")
 		fmt.Fprintf(w, helpCmdFmt, "sentence", "Show a specific sentence details.")
 		fmt.Fprintf(w, helpCmdFmt, "topics", "Show topics for a specific sentence.")
 		fmt.Fprintf(w, helpCmdFmt, "expr", "Evaluate a topic expression.")

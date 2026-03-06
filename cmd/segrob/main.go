@@ -327,8 +327,8 @@ func runCommand(cmd string, args []string, ui UI) error {
 		}
 		return corpusLsCommand(repo, opts, ui)
 
-	case "add-label":
-		opts, err := parseAddLabelArgs(args, ui)
+	case "label-add":
+		opts, err := parseLabelAddArgs(args, ui)
 		if err != nil {
 			if errors.Is(err, flag.ErrHelp) {
 				return nil
@@ -339,10 +339,10 @@ func runCommand(cmd string, args []string, ui UI) error {
 		if err != nil {
 			return err
 		}
-		return addLabelCommand(repo, opts, ui)
+		return labelAddCommand(repo, opts, ui)
 
-	case "remove-label":
-		opts, err := parseRemoveLabelArgs(args, ui)
+	case "label-rm":
+		opts, err := parseLabelRmArgs(args, ui)
 		if err != nil {
 			if errors.Is(err, flag.ErrHelp) {
 				return nil
@@ -353,7 +353,7 @@ func runCommand(cmd string, args []string, ui UI) error {
 		if err != nil {
 			return err
 		}
-		return removeLabelCommand(repo, opts, ui)
+		return labelRmCommand(repo, opts, ui)
 
 	case "corpus-meta":
 		opts, err := parseCorpusMetaArgs(args, ui)

@@ -6,7 +6,7 @@ import (
 	"github.com/revelaction/segrob/storage"
 )
 
-func addLabelCommand(repo storage.DocRepository, opts AddLabelOptions, ui UI) error {
+func labelAddCommand(repo storage.DocRepository, opts LabelAddOptions, ui UI) error {
 
 	if err := repo.AddLabel(opts.DocID, opts.Labels...); err != nil {
 		return fmt.Errorf("failed to add labels: %w", err)
