@@ -6,6 +6,7 @@ import (
 )
 
 var commands = []string{
+	"corpus",
 	"doc",
 	"sentence",
 	"topics",
@@ -16,6 +17,10 @@ var commands = []string{
 	"stat",
 	"bash",
 	"help",
+}
+
+var corpusSubcommands = []string{
+	"ls",
 }
 
 // completeCommand handles the autocompletion requests triggered by the bash completion script.
@@ -45,6 +50,24 @@ func getCompletions(args []string) []string {
 		for _, c := range commands {
 			if strings.HasPrefix(c, lastWord) {
 				completions = append(completions, c)
+			}
+		}
+		return completions
+	}
+
+	// Second-level completion for group commands
+	if cursorIndex == commandIndex+1 {
+		command := args[commandIndex]
+		lastWord := args[cursorIndex]
+		var subcommands []string
+		switch command {
+		case "corpus":
+			subcommands = corpusSubcommands
+		}
+		var completions []string
+		for _, s := range subcommands {
+			if strings.HasPrefix(s, lastWord) {
+				completions = append(completions, s)
 			}
 		}
 		return completions

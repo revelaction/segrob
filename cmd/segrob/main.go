@@ -75,7 +75,7 @@ func runCommand(cmd string, args []string, ui UI) error {
 
 	case "help":
 		if len(args) > 0 {
-			return runCommand(args[0], []string{"--help"}, ui)
+			return runCommand(args[0], append(args[1:], "--help"), ui)
 		}
 		fs := flag.NewFlagSet("segrob", flag.ContinueOnError)
 		fs.SetOutput(ui.Out)

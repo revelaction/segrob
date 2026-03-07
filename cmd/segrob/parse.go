@@ -1299,7 +1299,7 @@ func setupUsage(fs *flag.FlagSet) {
 		fmt.Fprintf(w, "\nCommands: Corpus - Stage\n")
 		fmt.Fprintf(w, helpCmdFmt, "corpus-meta", "Scan an epub directory and build a corpus database.")
 		fmt.Fprintf(w, helpCmdFmt, "corpus-nlp", "Process document text with NLP and store in corpus.")
-		fmt.Fprintf(w, helpCmdFmt, "corpus-ls", "List documents in the corpus staging database.")
+		fmt.Fprintf(w, helpCmdFmt, "corpus", "Manage the corpus staging database.")
 		fmt.Fprintf(w, helpCmdFmt, "cat-txt", "Output the txt field of a corpus document.")
 		fmt.Fprintf(w, helpCmdFmt, "cat-nlp", "Output the nlp field of a corpus document.")
 		fmt.Fprintf(w, helpCmdFmt, "corpus-doc", "Show rendered contents of a corpus document's NLP field.")
