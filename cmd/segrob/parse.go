@@ -1069,6 +1069,61 @@ func parseLabelRmArgs(args []string, ui UI) (LabelRmOptions, error) {
 	return opts, nil
 }
 
+type CorpusDocOptions struct {
+	Start  int
+	Count  *int
+	DbPath string
+}
+
+func parseCorpusDocArgs(args []string, ui UI) (CorpusDocOptions, string, error) {
+	fs := flag.NewFlagSet("corpus-doc", flag.ContinueOnError)
+	fs.SetOutput(io.Discard)
+
+	var opts CorpusDocOptions
+	fs.IntVar(&opts.Start, "start", 0, "")
+	fs.IntVar(&opts.Start, "s", 0, "")
+
+	var countOpt optionalInt
+	fs.Var(&countOpt, "number", "")
+	fs.Var(&countOpt, "n", "")
+
+	fs.StringVar(&opts.DbPath, "db", os.Getenv("SEGROB_CORPUS_PATH"), "")
+
+	fs.Usage = func() {
+		w := fs.Output()
+		fmt.Fprintf(w, "Usage: %s corpus-doc [options] <id>\n\n", os.Args[0])
+		fmt.Fprintf(w, "  Show contents of a document's NLP field from the corpus staging database.\n")
+		fmt.Fprintf(w, "\nArguments:\n")
+		fmt.Fprintf(w, helpArgFmt, "id", "Document ID")
+		fmt.Fprintf(w, "\nOptions:\n")
+		printOpt(w, "-s, --start", "INDEX", "Index of the first sentence to show (default: 0)")
+		printOpt(w, "-n, --number", "N", "Number of sentences to show")
+		printOpt(w, "--db", "FILE", "Corpus SQLite file (or SEGROB_CORPUS_PATH)")
+	}
+
+	if err := fs.Parse(args); err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			fs.SetOutput(ui.Out)
+			fs.Usage()
+			return opts, "", err
+		}
+		return opts, "", err
+	}
+
+	opts.Count = countOpt.value
+
+	if opts.DbPath == "" {
+		return opts, "", errors.New("corpus database must be specified via --db or SEGROB_CORPUS_PATH")
+	}
+
+	if fs.NArg() != 1 {
+		return opts, "", errors.New("corpus-doc requires exactly one argument: <id>")
+	}
+	arg := fs.Arg(0)
+
+	return opts, arg, nil
+}
+
 func parseCorpusMetaArgs(args []string, ui UI) (CorpusMetaOptions, error) {
 	fs := flag.NewFlagSet("corpus-meta", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
@@ -1247,6 +1302,7 @@ func setupUsage(fs *flag.FlagSet) {
 		fmt.Fprintf(w, helpCmdFmt, "corpus-ls", "List documents in the corpus staging database.")
 		fmt.Fprintf(w, helpCmdFmt, "cat-txt", "Output the txt field of a corpus document.")
 		fmt.Fprintf(w, helpCmdFmt, "cat-nlp", "Output the nlp field of a corpus document.")
+		fmt.Fprintf(w, helpCmdFmt, "corpus-doc", "Show rendered contents of a corpus document's NLP field.")
 
 		fmt.Fprintf(w, "\nCommands: Doc - Live - Production\n")
 		fmt.Fprintf(w, helpCmdFmt, "live", "Move a document from corpus to live production tables.")
