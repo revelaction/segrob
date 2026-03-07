@@ -299,6 +299,9 @@ func runCommand(cmd string, args []string, ui UI) error {
 		}
 		return liveCommand(corpusRepo, docRepo, opts, ui)
 
+	case "corpus":
+		return runCorpusCommand(args, setup, ui)
+
 	case "corpus-nlp":
 		opts, err := parseCorpusNlp(args)
 		if err != nil {
@@ -312,20 +315,6 @@ func runCommand(cmd string, args []string, ui UI) error {
 			return err
 		}
 		return corpusNlpCommand(corpusRepo, opts, ui)
-
-	case "corpus-ls":
-		opts, err := parseCorpusLsArgs(args, ui)
-		if err != nil {
-			if errors.Is(err, flag.ErrHelp) {
-				return nil
-			}
-			return err
-		}
-		repo, err := setup.NewCorpusRepository(opts.DbPath)
-		if err != nil {
-			return err
-		}
-		return corpusLsCommand(repo, opts, ui)
 
 	case "label-add":
 		opts, err := parseLabelAddArgs(args, ui)

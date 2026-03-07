@@ -1251,7 +1251,7 @@ func parseCatNlpArgs(args []string, ui UI) (CatNlpOptions, error) {
 }
 
 func parseCorpusLsArgs(args []string, ui UI) (CorpusLsOptions, error) {
-	fs := flag.NewFlagSet("corpus-ls", flag.ContinueOnError)
+	fs := flag.NewFlagSet("corpus ls", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
 
 	var opts CorpusLsOptions
@@ -1261,7 +1261,7 @@ func parseCorpusLsArgs(args []string, ui UI) (CorpusLsOptions, error) {
 
 	fs.Usage = func() {
 		w := fs.Output()
-		fmt.Fprintf(w, "Usage: %s corpus-ls [options] [filter]\n\n", os.Args[0])
+		fmt.Fprintf(w, "Usage: %s corpus ls [options] [filter]\n\n", os.Args[0])
 		fmt.Fprintf(w, "  List all documents in the corpus staging database.\n")
 		fmt.Fprintf(w, "\nArguments:\n")
 		fmt.Fprintf(w, helpArgFmt, "filter", "Optional substring filter on document ID")
