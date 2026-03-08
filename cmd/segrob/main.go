@@ -281,24 +281,6 @@ func runCommand(cmd string, args []string, ui UI) error {
 		}
 		return initDbCommand(pool, opts, ui)
 
-	case "live":
-		opts, err := parseLiveArgs(args, ui)
-		if err != nil {
-			if errors.Is(err, flag.ErrHelp) {
-				return nil
-			}
-			return err
-		}
-		corpusRepo, err := setup.NewCorpusRepository(opts.From)
-		if err != nil {
-			return err
-		}
-		docRepo, err := setup.NewDocRepository(opts.To)
-		if err != nil {
-			return err
-		}
-		return liveCommand(corpusRepo, docRepo, opts, ui)
-
 	case "corpus":
 		return runCorpusCommand(args, setup, ui)
 

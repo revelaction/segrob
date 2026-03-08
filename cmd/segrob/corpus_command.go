@@ -11,7 +11,8 @@ func printCorpusUsage(w io.Writer) {
 	fmt.Fprintf(w, "  Manage the corpus staging database.\n")
 	fmt.Fprintf(w, "\nSubcommands:\n")
 	fmt.Fprintf(w, helpCmdFmt, "ls", "List documents in the corpus staging database.")
-	fmt.Fprintf(w, helpCmdFmt, "show", "Show rendered contents of a corpus document's NLP field.")
+	fmt.Fprintf(w, helpCmdFmt, "show", "Show rendered contents of a document's NLP field.")
+	fmt.Fprintf(w, helpCmdFmt, "publish", "Move a document from corpus to live production tables.")
 	fmt.Fprintf(w, helpCmdFmt, "dump-txt", "Output the txt field of a corpus document byte-exact.")
 	fmt.Fprintf(w, helpCmdFmt, "dump-nlp", "Output the nlp field of a corpus document.")
 	fmt.Fprintf(w, helpCmdFmt, "ingest-nlp", "Process document text with NLP and store in corpus.")
@@ -54,6 +55,21 @@ func runCorpusCommand(args []string, setup *Setup, ui UI) error {
 			return err
 		}
 		return corpusShowCommand(repo, opts, id, ui)
+
+	case "publish":
+		opts, err := parseCorpusPublishArgs(subArgs, ui)
+		if err != nil {
+			return err
+		}
+		corpusRepo, err := setup.NewCorpusRepository(opts.From)
+		if err != nil {
+			return err
+		}
+		docRepo, err := setup.NewDocRepository(opts.To)
+		if err != nil {
+			return err
+		}
+		return corpusPublishCommand(corpusRepo, docRepo, opts, ui)
 
 	case "dump-txt":
 		opts, err := parseCorpusDumpTxtArgs(subArgs, ui)

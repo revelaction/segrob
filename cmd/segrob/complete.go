@@ -7,7 +7,6 @@ import (
 
 var commands = []string{
 	"corpus",
-	"live",
 	"doc",
 	"doc-ls",
 	"label-ls",
@@ -31,6 +30,7 @@ var commands = []string{
 var corpusSubcommands = []string{
 	"ls",
 	"show",
+	"publish",
 	"dump-txt",
 	"dump-nlp",
 	"ingest-nlp",

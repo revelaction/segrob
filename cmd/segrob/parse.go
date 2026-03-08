@@ -112,18 +112,18 @@ type CorpusIngestNlpOptions struct {
 	ID        string
 }
 
-type LiveOptions struct {
+type CorpusPublishOptions struct {
 	From string // corpus.db path (--from / SEGROB_CORPUS_PATH)
 	To   string // segrob.db path (--to / SEGROB_DOC_PATH)
 	ID   string // positional arg: document id
 	Move bool   // -m/--move: delete nlp from corpus after success
 }
 
-func parseLiveArgs(args []string, ui UI) (LiveOptions, error) {
-	fs := flag.NewFlagSet("live", flag.ContinueOnError)
+func parseCorpusPublishArgs(args []string, ui UI) (CorpusPublishOptions, error) {
+	fs := flag.NewFlagSet("corpus publish", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
 
-	var opts LiveOptions
+	var opts CorpusPublishOptions
 	fs.StringVar(&opts.From, "from", os.Getenv("SEGROB_CORPUS_PATH"), "Source corpus SQLite file")
 	fs.StringVar(&opts.To, "to", os.Getenv("SEGROB_DOC_PATH"), "Target segrob SQLite file")
 	fs.BoolVar(&opts.Move, "move", false, "Delete nlp data from corpus after successful live")
@@ -131,7 +131,7 @@ func parseLiveArgs(args []string, ui UI) (LiveOptions, error) {
 
 	fs.Usage = func() {
 		w := fs.Output()
-		fmt.Fprintf(w, "Usage: %s live [options] <id>\n\n", os.Args[0])
+		fmt.Fprintf(w, "Usage: %s corpus publish [options] <id>\n\n", os.Args[0])
 		fmt.Fprintf(w, "  Move a document from corpus staging to live production tables.\n")
 		fmt.Fprintf(w, "\nArguments:\n")
 		fmt.Fprintf(w, helpArgFmt, "id", "Document ID to move to production")
@@ -151,7 +151,7 @@ func parseLiveArgs(args []string, ui UI) (LiveOptions, error) {
 	}
 
 	if fs.NArg() != 1 {
-		return opts, errors.New("live requires exactly one argument: <id>")
+		return opts, errors.New("corpus publish requires exactly one argument: <id>")
 	}
 	opts.ID = fs.Arg(0)
 
@@ -1314,7 +1314,6 @@ func setupUsage(fs *flag.FlagSet) {
 		fmt.Fprintf(w, helpCmdFmt, "corpus", "Manage the corpus staging database.")
 
 		fmt.Fprintf(w, "\nCommands: Doc - Live - Production\n")
-		fmt.Fprintf(w, helpCmdFmt, "live", "Move a document from corpus to live production tables.")
 		fmt.Fprintf(w, helpCmdFmt, "doc", "Show contents of a document file or DB entry.")
 		fmt.Fprintf(w, helpCmdFmt, "doc-ls", "List all documents in the repository.")
 		fmt.Fprintf(w, helpCmdFmt, "label-ls", "List all unique labels in the repository.")
