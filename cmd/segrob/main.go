@@ -302,20 +302,6 @@ func runCommand(cmd string, args []string, ui UI) error {
 	case "corpus":
 		return runCorpusCommand(args, setup, ui)
 
-	case "corpus-nlp":
-		opts, err := parseCorpusNlp(args)
-		if err != nil {
-			if errors.Is(err, flag.ErrHelp) {
-				return nil
-			}
-			return err
-		}
-		corpusRepo, err := setup.NewCorpusRepository(opts.DbPath)
-		if err != nil {
-			return err
-		}
-		return corpusNlpCommand(corpusRepo, opts, ui)
-
 	case "label-add":
 		opts, err := parseLabelAddArgs(args, ui)
 		if err != nil {

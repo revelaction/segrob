@@ -8,7 +8,6 @@ import (
 var commands = []string{
 	"corpus",
 	"corpus-meta",
-	"corpus-nlp",
 	"corpus-doc",
 	"live",
 	"doc",
@@ -35,6 +34,7 @@ var corpusSubcommands = []string{
 	"ls",
 	"dump-txt",
 	"dump-nlp",
+	"ingest-nlp",
 }
 
 // completeCommand handles the autocompletion requests triggered by the bash completion script.

@@ -9,7 +9,7 @@ import (
 	"github.com/revelaction/segrob/storage"
 )
 
-func corpusNlpCommand(corpusRepo storage.CorpusRepository, opts CorpusNlpOptions, ui UI) error {
+func corpusIngestNlpCommand(corpusRepo storage.CorpusRepository, opts CorpusIngestNlpOptions, ui UI) error {
 	// Read raw text
 	txtBytes, err := corpusRepo.ReadTxt(opts.ID)
 	if err != nil {

@@ -13,6 +13,7 @@ func printCorpusUsage(w io.Writer) {
 	fmt.Fprintf(w, helpCmdFmt, "ls", "List documents in the corpus staging database.")
 	fmt.Fprintf(w, helpCmdFmt, "dump-txt", "Output the txt field of a corpus document byte-exact.")
 	fmt.Fprintf(w, helpCmdFmt, "dump-nlp", "Output the nlp field of a corpus document.")
+	fmt.Fprintf(w, helpCmdFmt, "ingest-nlp", "Process document text with NLP and store in corpus.")
 }
 
 func runCorpusCommand(args []string, setup *Setup, ui UI) error {
@@ -62,6 +63,17 @@ func runCorpusCommand(args []string, setup *Setup, ui UI) error {
 			return err
 		}
 		return corpusDumpNlpCommand(repo, opts, ui)
+
+	case "ingest-nlp":
+		opts, err := parseCorpusIngestNlpArgs(subArgs, ui)
+		if err != nil {
+			return err
+		}
+		repo, err := setup.NewCorpusRepository(opts.DbPath)
+		if err != nil {
+			return err
+		}
+		return corpusIngestNlpCommand(repo, opts, ui)
 
 	default:
 		printCorpusUsage(ui.Err)

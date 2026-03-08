@@ -106,7 +106,7 @@ type InitDbOptions struct {
 	DbPath string
 }
 
-type CorpusNlpOptions struct {
+type CorpusIngestNlpOptions struct {
 	NlpScript string
 	DbPath    string // corpus db path
 	ID        string
@@ -947,18 +947,18 @@ func parseInitDbArgs(args []string, ui UI) (InitDbOptions, error) {
 	return opts, nil
 }
 
-func parseCorpusNlp(args []string) (CorpusNlpOptions, error) {
-	fs := flag.NewFlagSet("corpus-nlp", flag.ContinueOnError)
+func parseCorpusIngestNlpArgs(args []string, ui UI) (CorpusIngestNlpOptions, error) {
+	fs := flag.NewFlagSet("corpus ingest-nlp", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
 
-	var opts CorpusNlpOptions
+	var opts CorpusIngestNlpOptions
 	fs.StringVar(&opts.NlpScript, "nlp-script", os.Getenv("SEGROB_NLP_SCRIPT"), "")
 	fs.StringVar(&opts.NlpScript, "s", os.Getenv("SEGROB_NLP_SCRIPT"), "")
 	fs.StringVar(&opts.DbPath, "db", os.Getenv("SEGROB_CORPUS_PATH"), "")
 
 	fs.Usage = func() {
 		w := fs.Output()
-		fmt.Fprintf(w, "Usage: %s corpus-nlp [options] <id>\n\n", os.Args[0])
+		fmt.Fprintf(w, "Usage: %s corpus ingest-nlp [options] <id>\n\n", os.Args[0])
 		fmt.Fprintf(w, "  Process document text with NLP and store results in the corpus.\n")
 		fmt.Fprintf(w, "\nArguments:\n")
 		fmt.Fprintf(w, helpArgFmt, "id", "Document ID to process")
@@ -968,6 +968,11 @@ func parseCorpusNlp(args []string) (CorpusNlpOptions, error) {
 	}
 
 	if err := fs.Parse(args); err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			fs.SetOutput(ui.Out)
+			fs.Usage()
+			return opts, err
+		}
 		return opts, err
 	}
 
@@ -1307,7 +1312,6 @@ func setupUsage(fs *flag.FlagSet) {
 
 		fmt.Fprintf(w, "\nCommands: Corpus - Stage\n")
 		fmt.Fprintf(w, helpCmdFmt, "corpus-meta", "Scan an epub directory and build a corpus database.")
-		fmt.Fprintf(w, helpCmdFmt, "corpus-nlp", "Process document text with NLP and store in corpus.")
 		fmt.Fprintf(w, helpCmdFmt, "corpus", "Manage the corpus staging database.")
 		fmt.Fprintf(w, helpCmdFmt, "corpus-doc", "Show rendered contents of a corpus document's NLP field.")
 
