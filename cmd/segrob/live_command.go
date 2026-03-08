@@ -13,8 +13,8 @@ func printLiveUsage(w io.Writer) {
 	fmt.Fprintf(w, helpCmdFmt, "ls", "List all documents in the repository.")
 	fmt.Fprintf(w, helpCmdFmt, "ls-label", "List all unique labels in the repository.")
 	fmt.Fprintf(w, helpCmdFmt, "set-label", "Add one or more labels to a document.")
-	fmt.Fprintf(w, helpCmdFmt, "show", "Show contents of a document file or DB entry.")
-	fmt.Fprintf(w, helpCmdFmt, "show-sent", "Show details of a specific sentence.")
+	fmt.Fprintf(w, helpCmdFmt, "show", "Show document contents or statistics.")
+	fmt.Fprintf(w, helpCmdFmt, "show-sent", "Show sentence details or statistics.")
 	fmt.Fprintf(w, helpCmdFmt, "query", "Enter interactive query mode.")
 	fmt.Fprintf(w, helpCmdFmt, "edit", "Enter interactive edit mode.")
 }

@@ -17,6 +17,11 @@ func liveShowSentCommand(repo storage.DocRepository, opts LiveShowSentOptions, d
 		return fmt.Errorf("sentence index %d out of bounds (0-%d)", sentId, len(sentences)-1)
 	}
 
+	if opts.Stats {
+		printStats(sentences[sentId:sentId+1], ui)
+		return nil
+	}
+
 	s := sentences[sentId]
 	r := render.NewCLIRenderer()
 	r.HasColor = false

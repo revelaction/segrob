@@ -10,6 +10,11 @@ func liveShowCommand(repo storage.DocRepository, opts ShowOptions, id string, ui
 		return err
 	}
 
+	if opts.Stats {
+		printStats(sentences, ui)
+		return nil
+	}
+
 	renderDoc(sentences, opts, ui)
 	return nil
 }

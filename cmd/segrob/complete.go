@@ -11,7 +11,6 @@ var commands = []string{
 	"topics",
 	"expr",
 	"topic",
-	"stat",
 	"import-topic",
 	"export-topic",
 	"init-db",

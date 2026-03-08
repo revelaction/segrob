@@ -114,20 +114,6 @@ func runCommand(cmd string, args []string, ui UI) error {
 		}
 		return topicCommand(tr, opts, name, ui)
 
-	case "stat":
-		opts, docId, sentId, err := parseStatArgs(args, ui)
-		if err != nil {
-			if errors.Is(err, flag.ErrHelp) {
-				return nil
-			}
-			return err
-		}
-		repo, err := setup.NewDocRepository(opts.DocPath)
-		if err != nil {
-			return err
-		}
-		return statCommand(repo, opts, docId, sentId, ui)
-
 	case "bash":
 		if err := parseBashArgs(args, ui); err != nil {
 			if errors.Is(err, flag.ErrHelp) {
@@ -180,7 +166,7 @@ func runCommand(cmd string, args []string, ui UI) error {
 
 	case "corpus":
 		return runCorpusCommand(args, setup, ui)
-}
+	}
 
 	return fmt.Errorf("unknown command: %s", cmd)
 }

@@ -69,6 +69,7 @@ type ShowOptions struct {
 	Start  int
 	Count  *int
 	DbPath string // path to segrob.db or corpus.db
+	Stats  bool   // -s/--stats: show document statistics
 }
 
 type LiveLsOptions struct {
@@ -83,10 +84,7 @@ type LiveLsLabelOptions struct {
 
 type LiveShowSentOptions struct {
 	DbPath string
-}
-
-type StatOptions struct {
-	DocPath string
+	Stats  bool // -s/--stats: show sentence statistics
 }
 
 type LiveEditOptions struct {
@@ -287,7 +285,8 @@ func parseLiveShowArgs(args []string, ui UI) (ShowOptions, string, error) {
 
 	var opts ShowOptions
 	fs.IntVar(&opts.Start, "start", 0, "")
-	fs.IntVar(&opts.Start, "s", 0, "")
+	fs.BoolVar(&opts.Stats, "stats", false, "")
+	fs.BoolVar(&opts.Stats, "s", false, "")
 
 	var countOpt optionalInt
 	fs.Var(&countOpt, "number", "")
@@ -302,8 +301,9 @@ func parseLiveShowArgs(args []string, ui UI) (ShowOptions, string, error) {
 		fmt.Fprintf(w, "\nArguments:\n")
 		fmt.Fprintf(w, helpArgFmt, "doc_id", "ID of the document to show")
 		fmt.Fprintf(w, "\nOptions:\n")
-		printOpt(w, "-s, --start", "INDEX", "Index of the first sentence to show (default: 0)")
+		printOpt(w, "--start", "INDEX", "Index of the first sentence to show (default: 0)")
 		printOpt(w, "-n, --number", "N", "Number of sentences to show")
+		printOpt(w, "-s, --stats", "", "Show document statistics")
 		printOpt(w, "--db", "FILE", "Path to docs directory or SQLite file (or SEGROB_DOC_PATH)")
 	}
 
@@ -416,6 +416,8 @@ func parseLiveShowSentArgs(args []string, ui UI) (LiveShowSentOptions, string, i
 
 	var opts LiveShowSentOptions
 	fs.StringVar(&opts.DbPath, "db", os.Getenv("SEGROB_DOC_PATH"), "")
+	fs.BoolVar(&opts.Stats, "stats", false, "")
+	fs.BoolVar(&opts.Stats, "s", false, "")
 
 	fs.Usage = func() {
 		w := fs.Output()
@@ -425,6 +427,7 @@ func parseLiveShowSentArgs(args []string, ui UI) (LiveShowSentOptions, string, i
 		fmt.Fprintf(w, helpArgFmt, "doc_id", "ID of the document")
 		fmt.Fprintf(w, helpArgFmt, "sentence_id", "Index of the sentence")
 		fmt.Fprintf(w, "\nOptions:\n")
+		printOpt(w, "-s, --stats", "", "Show sentence statistics")
 		printOpt(w, "--db", "PATH", "Path to SQLite file (or SEGROB_DOC_PATH)")
 	}
 
@@ -766,56 +769,6 @@ func parseTopicArgs(args []string, ui UI) (TopicOptions, string, bool, error) {
 	}
 
 	return opts, name, !info.IsDir(), nil
-}
-
-func parseStatArgs(args []string, ui UI) (StatOptions, string, *int, error) {
-	fs := flag.NewFlagSet("stat", flag.ContinueOnError)
-	fs.SetOutput(io.Discard)
-
-	var opts StatOptions
-	fs.StringVar(&opts.DocPath, "doc-path", os.Getenv("SEGROB_DOC_PATH"), "")
-	fs.StringVar(&opts.DocPath, "d", os.Getenv("SEGROB_DOC_PATH"), "")
-
-	fs.Usage = func() {
-		w := fs.Output()
-		fmt.Fprintf(w, "Usage: %s stat [options] <doc_id> [sentence_id]\n\n", os.Args[0])
-		fmt.Fprintf(w, "  Show statistics for a document or sentence from the configured repository.\n")
-		fmt.Fprintf(w, "\nArguments:\n")
-		fmt.Fprintf(w, helpArgFmt, "doc_id", "ID of the document")
-		fmt.Fprintf(w, helpArgFmt, "sentence_id", "Index of the sentence (optional)")
-		fmt.Fprintf(w, "\nOptions:\n")
-		printOpt(w, "-d, --doc-path", "PATH", "Path to docs directory or SQLite file (or SEGROB_DOC_PATH)")
-	}
-
-	if err := fs.Parse(args); err != nil {
-		if errors.Is(err, flag.ErrHelp) {
-			fs.SetOutput(ui.Out)
-			fs.Usage()
-			return opts, "", nil, err
-		}
-		return opts, "", nil, err
-	}
-
-	if opts.DocPath == "" {
-		return opts, "", nil, errors.New("document source must be specified via -d or SEGROB_DOC_PATH")
-	}
-
-	if fs.NArg() < 1 {
-		return opts, "", nil, errors.New("stat command needs at least one argument: <doc_id>")
-	}
-
-	docId := fs.Arg(0)
-
-	var sentId *int
-	if fs.NArg() > 1 {
-		v, err := strconv.Atoi(fs.Arg(1))
-		if err != nil {
-			return opts, "", nil, fmt.Errorf("invalid sentenceId '%s': %w", fs.Arg(1), err)
-		}
-		sentId = &v
-	}
-
-	return opts, docId, sentId, nil
 }
 
 func parseBashArgs(args []string, ui UI) error {
@@ -1265,7 +1218,6 @@ func setupUsage(fs *flag.FlagSet) {
 		fmt.Fprintf(w, helpCmdFmt, "topics", "Show topics for a specific sentence.")
 		fmt.Fprintf(w, helpCmdFmt, "expr", "Evaluate a topic expression.")
 		fmt.Fprintf(w, helpCmdFmt, "topic", "List topics or show expressions of a topic.")
-		fmt.Fprintf(w, helpCmdFmt, "stat", "Show statistics for a document or sentence.")
 		fmt.Fprintf(w, helpCmdFmt, "import-topic", "Import topics from filesystem to SQLite.")
 		fmt.Fprintf(w, helpCmdFmt, "export-topic", "Export topics from SQLite to filesystem.")
 		fmt.Fprintf(w, helpCmdFmt, "init-db", "Initialize a new SQLite database with the required schema.")
