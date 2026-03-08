@@ -324,7 +324,7 @@ func parseLiveShowArgs(args []string, ui UI) (ShowOptions, string, error) {
 	opts.Count = countOpt.value
 
 	if opts.DbPath == "" {
-		return opts, "", errors.New("document source must be specified via -d or SEGROB_DOC_PATH")
+		return opts, "", errors.New("document source must be specified via --db or SEGROB_DOC_PATH")
 	}
 
 	if fs.NArg() != 1 {
