@@ -7,7 +7,7 @@ import (
 	"github.com/revelaction/segrob/storage"
 )
 
-func labelLsCommand(repo storage.DocReader, opts LabelLsOptions, ui UI) error {
+func liveLsLabelCommand(repo storage.DocReader, opts LiveLsLabelOptions, ui UI) error {
 
 	labels, err := repo.ListLabels(opts.Match)
 	if err != nil {

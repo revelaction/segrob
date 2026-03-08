@@ -8,7 +8,6 @@ import (
 var commands = []string{
 	"corpus",
 	"live",
-	"label-ls",
 	"label-add",
 	"label-rm",
 	"sentence",
@@ -36,6 +35,7 @@ var corpusSubcommands = []string{
 
 var liveSubcommands = []string{
 	"ls",
+	"ls-label",
 	"show",
 	"query",
 	"edit",

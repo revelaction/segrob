@@ -68,20 +68,6 @@ func runCommand(cmd string, args []string, ui UI) error {
 	case "live":
 		return runLiveCommand(args, setup, ui)
 
-	case "label-ls":
-		opts, err := parseLabelLsArgs(args, ui)
-		if err != nil {
-			if errors.Is(err, flag.ErrHelp) {
-				return nil
-			}
-			return err
-		}
-		repo, err := setup.NewDocRepository(opts.DocPath)
-		if err != nil {
-			return err
-		}
-		return labelLsCommand(repo, opts, ui)
-
 	case "sentence":
 		opts, docId, sentId, err := parseSentenceArgs(args, ui)
 		if err != nil {

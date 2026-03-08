@@ -76,7 +76,7 @@ type LiveLsOptions struct {
 	Match   string
 }
 
-type LabelLsOptions struct {
+type LiveLsLabelOptions struct {
 	DocPath string
 	Match   string
 }
@@ -378,11 +378,11 @@ func parseLiveLsArgs(args []string, ui UI) (LiveLsOptions, bool, error) {
 	return opts, info.IsDir(), nil
 }
 
-func parseLabelLsArgs(args []string, ui UI) (LabelLsOptions, error) {
-	fs := flag.NewFlagSet("label-ls", flag.ContinueOnError)
+func parseLiveLsLabelArgs(args []string, ui UI) (LiveLsLabelOptions, error) {
+	fs := flag.NewFlagSet("live ls-label", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
 
-	var opts LabelLsOptions
+	var opts LiveLsLabelOptions
 	fs.StringVar(&opts.DocPath, "doc-path", os.Getenv("SEGROB_DOC_PATH"), "")
 	fs.StringVar(&opts.DocPath, "d", os.Getenv("SEGROB_DOC_PATH"), "")
 	fs.StringVar(&opts.Match, "match", "", "")
@@ -390,7 +390,7 @@ func parseLabelLsArgs(args []string, ui UI) (LabelLsOptions, error) {
 
 	fs.Usage = func() {
 		w := fs.Output()
-		fmt.Fprintf(w, "Usage: %s label-ls [options]\n\n", os.Args[0])
+		fmt.Fprintf(w, "Usage: %s live ls-label [options]\n\n", os.Args[0])
 		fmt.Fprintf(w, "  List all unique labels in the repository.\n")
 		fmt.Fprintf(w, "\nOptions:\n")
 		printOpt(w, "-d, --doc-path", "PATH", "Path to docs directory or SQLite file (or SEGROB_DOC_PATH)")
@@ -1309,7 +1309,6 @@ func setupUsage(fs *flag.FlagSet) {
 
 		fmt.Fprintf(w, "\nCommands: Doc - Live - Production\n")
 		fmt.Fprintf(w, helpCmdFmt, "live", "Manage the live production database.")
-		fmt.Fprintf(w, helpCmdFmt, "label-ls", "List all unique labels in the repository.")
 		fmt.Fprintf(w, helpCmdFmt, "label-add", "Add one or more labels to a document.")
 		fmt.Fprintf(w, helpCmdFmt, "label-rm", "Remove one or more labels from a document.")
 		fmt.Fprintf(w, helpCmdFmt, "sentence", "Show a specific sentence details.")
