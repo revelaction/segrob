@@ -8,7 +8,7 @@ import (
 	sent "github.com/revelaction/segrob/sentence"
 )
 
-func renderDoc(sentences []sent.Sentence, opts DocOptions, ui UI) {
+func renderDoc(sentences []sent.Sentence, opts ShowOptions, ui UI) {
 	start := opts.Start
 	if start < 0 {
 		start = 0

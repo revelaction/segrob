@@ -64,10 +64,11 @@ type TopicOptions struct {
 	TopicPath string
 }
 
-type DocOptions struct {
-	Start   int
-	Count   *int
-	DocPath string
+// ShowOptions defines shared pagination and source settings for "show" commands (live and corpus).
+type ShowOptions struct {
+	Start  int
+	Count  *int
+	DbPath string // path to segrob.db or corpus.db
 }
 
 type LiveLsOptions struct {
@@ -285,11 +286,11 @@ func parseMainArgs(args []string, ui UI) (string, []string, error) {
 	return cmd, cmdArgs, nil
 }
 
-func parseDocArgs(args []string, ui UI) (DocOptions, string, error) {
-	fs := flag.NewFlagSet("doc", flag.ContinueOnError)
+func parseLiveShowArgs(args []string, ui UI) (ShowOptions, string, error) {
+	fs := flag.NewFlagSet("live show", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
 
-	var opts DocOptions
+	var opts ShowOptions
 	fs.IntVar(&opts.Start, "start", 0, "")
 	fs.IntVar(&opts.Start, "s", 0, "")
 
@@ -297,12 +298,12 @@ func parseDocArgs(args []string, ui UI) (DocOptions, string, error) {
 	fs.Var(&countOpt, "number", "")
 	fs.Var(&countOpt, "n", "")
 
-	fs.StringVar(&opts.DocPath, "doc-path", os.Getenv("SEGROB_DOC_PATH"), "")
-	fs.StringVar(&opts.DocPath, "d", os.Getenv("SEGROB_DOC_PATH"), "")
+	fs.StringVar(&opts.DbPath, "doc-path", os.Getenv("SEGROB_DOC_PATH"), "")
+	fs.StringVar(&opts.DbPath, "d", os.Getenv("SEGROB_DOC_PATH"), "")
 
 	fs.Usage = func() {
 		w := fs.Output()
-		fmt.Fprintf(w, "Usage: %s doc [options] <doc_id>\n\n", os.Args[0])
+		fmt.Fprintf(w, "Usage: %s live show [options] <doc_id>\n\n", os.Args[0])
 		fmt.Fprintf(w, "  Show contents of a document from the configured repository.\n")
 		fmt.Fprintf(w, "\nArguments:\n")
 		fmt.Fprintf(w, helpArgFmt, "doc_id", "ID of the document to show")
@@ -323,16 +324,16 @@ func parseDocArgs(args []string, ui UI) (DocOptions, string, error) {
 
 	opts.Count = countOpt.value
 
-	if opts.DocPath == "" {
+	if opts.DbPath == "" {
 		return opts, "", errors.New("document source must be specified via -d or SEGROB_DOC_PATH")
 	}
 
-	arg := fs.Arg(0)
-	if arg == "" {
-		return opts, "", errors.New("document ID required")
+	if fs.NArg() != 1 {
+		return opts, "", errors.New("live show requires exactly one argument: <id>")
 	}
+	id := fs.Arg(0)
 
-	return opts, arg, nil
+	return opts, id, nil
 }
 
 func parseLiveLsArgs(args []string, ui UI) (LiveLsOptions, bool, error) {
@@ -1075,17 +1076,11 @@ func parseLabelRmArgs(args []string, ui UI) (LabelRmOptions, error) {
 	return opts, nil
 }
 
-type CorpusShowOptions struct {
-	Start  int
-	Count  *int
-	DbPath string
-}
-
-func parseCorpusShowArgs(args []string, ui UI) (CorpusShowOptions, string, error) {
+func parseCorpusShowArgs(args []string, ui UI) (ShowOptions, string, error) {
 	fs := flag.NewFlagSet("corpus show", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
 
-	var opts CorpusShowOptions
+	var opts ShowOptions
 	fs.IntVar(&opts.Start, "start", 0, "")
 	fs.IntVar(&opts.Start, "s", 0, "")
 
@@ -1315,7 +1310,6 @@ func setupUsage(fs *flag.FlagSet) {
 
 		fmt.Fprintf(w, "\nCommands: Doc - Live - Production\n")
 		fmt.Fprintf(w, helpCmdFmt, "live", "Manage the live production database.")
-		fmt.Fprintf(w, helpCmdFmt, "doc", "Show contents of a document file or DB entry.")
 		fmt.Fprintf(w, helpCmdFmt, "label-ls", "List all unique labels in the repository.")
 		fmt.Fprintf(w, helpCmdFmt, "label-add", "Add one or more labels to a document.")
 		fmt.Fprintf(w, helpCmdFmt, "label-rm", "Remove one or more labels from a document.")

@@ -8,7 +8,6 @@ import (
 var commands = []string{
 	"corpus",
 	"live",
-	"doc",
 	"label-ls",
 	"label-add",
 	"label-rm",
@@ -39,6 +38,7 @@ var corpusSubcommands = []string{
 
 var liveSubcommands = []string{
 	"ls",
+	"show",
 }
 
 // completeCommand handles the autocompletion requests triggered by the bash completion script.

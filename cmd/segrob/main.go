@@ -83,20 +83,6 @@ func runCommand(cmd string, args []string, ui UI) error {
 		fs.Usage()
 		return nil
 
-	case "doc":
-		opts, id, err := parseDocArgs(args, ui)
-		if err != nil {
-			if errors.Is(err, flag.ErrHelp) {
-				return nil
-			}
-			return err
-		}
-		repo, err := setup.NewDocRepository(opts.DocPath)
-		if err != nil {
-			return err
-		}
-		return docCommand(repo, opts, id, ui)
-
 	case "live":
 		return runLiveCommand(args, setup, ui)
 

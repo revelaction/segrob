@@ -12,7 +12,7 @@ type nlpResponse struct {
 	Sentences []sent.Sentence `json:"sentences"`
 }
 
-func corpusShowCommand(repo storage.CorpusRepository, opts CorpusShowOptions, id string, ui UI) error {
+func corpusShowCommand(repo storage.CorpusRepository, opts ShowOptions, id string, ui UI) error {
 	nlpData, err := repo.ReadNlp(id)
 	if err != nil {
 		return fmt.Errorf("failed to read nlp for %s: %w", id, err)
@@ -28,11 +28,6 @@ func corpusShowCommand(repo storage.CorpusRepository, opts CorpusShowOptions, id
 		return fmt.Errorf("failed to parse nlp json: %w", err)
 	}
 
-	docOpts := DocOptions{
-		Start: opts.Start,
-		Count: opts.Count,
-	}
-
-	renderDoc(payload.Sentences, docOpts, ui)
+	renderDoc(payload.Sentences, opts, ui)
 	return nil
 }
