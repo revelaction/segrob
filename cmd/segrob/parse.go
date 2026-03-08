@@ -298,8 +298,7 @@ func parseLiveShowArgs(args []string, ui UI) (ShowOptions, string, error) {
 	fs.Var(&countOpt, "number", "")
 	fs.Var(&countOpt, "n", "")
 
-	fs.StringVar(&opts.DbPath, "doc-path", os.Getenv("SEGROB_DOC_PATH"), "")
-	fs.StringVar(&opts.DbPath, "d", os.Getenv("SEGROB_DOC_PATH"), "")
+	fs.StringVar(&opts.DbPath, "db", os.Getenv("SEGROB_DOC_PATH"), "")
 
 	fs.Usage = func() {
 		w := fs.Output()
@@ -310,7 +309,7 @@ func parseLiveShowArgs(args []string, ui UI) (ShowOptions, string, error) {
 		fmt.Fprintf(w, "\nOptions:\n")
 		printOpt(w, "-s, --start", "INDEX", "Index of the first sentence to show (default: 0)")
 		printOpt(w, "-n, --number", "N", "Number of sentences to show")
-		printOpt(w, "-d, --doc-path", "PATH", "Path to docs directory or SQLite file (or SEGROB_DOC_PATH)")
+		printOpt(w, "--db", "FILE", "Path to docs directory or SQLite file (or SEGROB_DOC_PATH)")
 	}
 
 	if err := fs.Parse(args); err != nil {
