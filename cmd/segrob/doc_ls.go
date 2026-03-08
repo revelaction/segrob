@@ -7,7 +7,7 @@ import (
 	"github.com/revelaction/segrob/storage"
 )
 
-func docLsCommand(repo storage.DocReader, opts DocLsOptions, ui UI) error {
+func liveLsCommand(repo storage.DocReader, opts LiveLsOptions, ui UI) error {
 
 	docs, err := repo.List()
 	if err != nil {

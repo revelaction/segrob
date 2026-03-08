@@ -70,7 +70,7 @@ type DocOptions struct {
 	DocPath string
 }
 
-type DocLsOptions struct {
+type LiveLsOptions struct {
 	DocPath string
 	Match   string
 }
@@ -335,11 +335,11 @@ func parseDocArgs(args []string, ui UI) (DocOptions, string, error) {
 	return opts, arg, nil
 }
 
-func parseDocLsArgs(args []string, ui UI) (DocLsOptions, bool, error) {
-	fs := flag.NewFlagSet("doc-ls", flag.ContinueOnError)
+func parseLiveLsArgs(args []string, ui UI) (LiveLsOptions, bool, error) {
+	fs := flag.NewFlagSet("live ls", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
 
-	var opts DocLsOptions
+	var opts LiveLsOptions
 	fs.StringVar(&opts.DocPath, "doc-path", os.Getenv("SEGROB_DOC_PATH"), "")
 	fs.StringVar(&opts.DocPath, "d", os.Getenv("SEGROB_DOC_PATH"), "")
 	fs.StringVar(&opts.Match, "match", "", "")
@@ -347,7 +347,7 @@ func parseDocLsArgs(args []string, ui UI) (DocLsOptions, bool, error) {
 
 	fs.Usage = func() {
 		w := fs.Output()
-		fmt.Fprintf(w, "Usage: %s doc-ls [options]\n\n", os.Args[0])
+		fmt.Fprintf(w, "Usage: %s live ls [options]\n\n", os.Args[0])
 		fmt.Fprintf(w, "  List all documents in the repository.\n")
 		fmt.Fprintf(w, "\nOptions:\n")
 		printOpt(w, "-d, --doc-path", "PATH", "Path to docs directory or SQLite file (or SEGROB_DOC_PATH)")
@@ -1314,8 +1314,8 @@ func setupUsage(fs *flag.FlagSet) {
 		fmt.Fprintf(w, helpCmdFmt, "corpus", "Manage the corpus staging database.")
 
 		fmt.Fprintf(w, "\nCommands: Doc - Live - Production\n")
+		fmt.Fprintf(w, helpCmdFmt, "live", "Manage the live production database.")
 		fmt.Fprintf(w, helpCmdFmt, "doc", "Show contents of a document file or DB entry.")
-		fmt.Fprintf(w, helpCmdFmt, "doc-ls", "List all documents in the repository.")
 		fmt.Fprintf(w, helpCmdFmt, "label-ls", "List all unique labels in the repository.")
 		fmt.Fprintf(w, helpCmdFmt, "label-add", "Add one or more labels to a document.")
 		fmt.Fprintf(w, helpCmdFmt, "label-rm", "Remove one or more labels from a document.")

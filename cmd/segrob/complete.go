@@ -7,8 +7,8 @@ import (
 
 var commands = []string{
 	"corpus",
+	"live",
 	"doc",
-	"doc-ls",
 	"label-ls",
 	"label-add",
 	"label-rm",
@@ -35,6 +35,10 @@ var corpusSubcommands = []string{
 	"dump-nlp",
 	"ingest-nlp",
 	"ingest-meta",
+}
+
+var liveSubcommands = []string{
+	"ls",
 }
 
 // completeCommand handles the autocompletion requests triggered by the bash completion script.
@@ -77,6 +81,8 @@ func getCompletions(args []string) []string {
 		switch command {
 		case "corpus":
 			subcommands = corpusSubcommands
+		case "live":
+			subcommands = liveSubcommands
 		}
 		var completions []string
 		for _, s := range subcommands {

@@ -97,19 +97,8 @@ func runCommand(cmd string, args []string, ui UI) error {
 		}
 		return docCommand(repo, opts, id, ui)
 
-	case "doc-ls":
-		opts, _, err := parseDocLsArgs(args, ui)
-		if err != nil {
-			if errors.Is(err, flag.ErrHelp) {
-				return nil
-			}
-			return err
-		}
-		repo, err := setup.NewDocRepository(opts.DocPath)
-		if err != nil {
-			return err
-		}
-		return docLsCommand(repo, opts, ui)
+	case "live":
+		return runLiveCommand(args, setup, ui)
 
 	case "label-ls":
 		opts, err := parseLabelLsArgs(args, ui)
