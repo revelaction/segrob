@@ -48,7 +48,7 @@ func runLiveCommand(args []string, setup *Setup, ui UI) error {
 		if err != nil {
 			return err
 		}
-		repo, err := setup.NewDocRepository(opts.DocPath)
+		repo, err := setup.NewDocRepository(opts.DbPath)
 		if err != nil {
 			return err
 		}

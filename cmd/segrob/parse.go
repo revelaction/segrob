@@ -77,8 +77,8 @@ type LiveLsOptions struct {
 }
 
 type LiveLsLabelOptions struct {
-	DocPath string
-	Match   string
+	DbPath string
+	Match  string
 }
 
 type SentenceOptions struct {
@@ -383,8 +383,7 @@ func parseLiveLsLabelArgs(args []string, ui UI) (LiveLsLabelOptions, error) {
 	fs.SetOutput(io.Discard)
 
 	var opts LiveLsLabelOptions
-	fs.StringVar(&opts.DocPath, "doc-path", os.Getenv("SEGROB_DOC_PATH"), "")
-	fs.StringVar(&opts.DocPath, "d", os.Getenv("SEGROB_DOC_PATH"), "")
+	fs.StringVar(&opts.DbPath, "db", os.Getenv("SEGROB_DOC_PATH"), "")
 	fs.StringVar(&opts.Match, "match", "", "")
 	fs.StringVar(&opts.Match, "m", "", "")
 
@@ -393,7 +392,7 @@ func parseLiveLsLabelArgs(args []string, ui UI) (LiveLsLabelOptions, error) {
 		fmt.Fprintf(w, "Usage: %s live ls-label [options]\n\n", os.Args[0])
 		fmt.Fprintf(w, "  List all unique labels in the repository.\n")
 		fmt.Fprintf(w, "\nOptions:\n")
-		printOpt(w, "-d, --doc-path", "PATH", "Path to docs directory or SQLite file (or SEGROB_DOC_PATH)")
+		printOpt(w, "--db", "PATH", "Path to docs directory or SQLite file (or SEGROB_DOC_PATH)")
 		printOpt(w, "-m, --match", "STRING", "Only list labels containing STRING")
 	}
 
@@ -409,8 +408,8 @@ func parseLiveLsLabelArgs(args []string, ui UI) (LiveLsLabelOptions, error) {
 		return opts, err
 	}
 
-	if opts.DocPath == "" {
-		return opts, errors.New("no document source specified (use -d or SEGROB_DOC_PATH)")
+	if opts.DbPath == "" {
+		return opts, errors.New("no document source specified (use --db or SEGROB_DOC_PATH)")
 	}
 
 	return opts, nil
