@@ -177,7 +177,7 @@ type LabelRmOptions struct {
 	DocPath string
 }
 
-type CorpusMetaOptions struct {
+type CorpusIngestMetaOptions struct {
 	DbPath string
 	Dir    string
 }
@@ -1075,17 +1075,17 @@ func parseLabelRmArgs(args []string, ui UI) (LabelRmOptions, error) {
 	return opts, nil
 }
 
-type CorpusDocOptions struct {
+type CorpusShowOptions struct {
 	Start  int
 	Count  *int
 	DbPath string
 }
 
-func parseCorpusDocArgs(args []string, ui UI) (CorpusDocOptions, string, error) {
-	fs := flag.NewFlagSet("corpus-doc", flag.ContinueOnError)
+func parseCorpusShowArgs(args []string, ui UI) (CorpusShowOptions, string, error) {
+	fs := flag.NewFlagSet("corpus show", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
 
-	var opts CorpusDocOptions
+	var opts CorpusShowOptions
 	fs.IntVar(&opts.Start, "start", 0, "")
 	fs.IntVar(&opts.Start, "s", 0, "")
 
@@ -1097,8 +1097,8 @@ func parseCorpusDocArgs(args []string, ui UI) (CorpusDocOptions, string, error) 
 
 	fs.Usage = func() {
 		w := fs.Output()
-		fmt.Fprintf(w, "Usage: %s corpus-doc [options] <id>\n\n", os.Args[0])
-		fmt.Fprintf(w, "  Show contents of a document's NLP field from the corpus staging database.\n")
+		fmt.Fprintf(w, "Usage: %s corpus show [options] <id>\n\n", os.Args[0])
+		fmt.Fprintf(w, "  Show rendered contents of a document's NLP field from the corpus staging database.\n")
 		fmt.Fprintf(w, "\nArguments:\n")
 		fmt.Fprintf(w, helpArgFmt, "id", "Document ID")
 		fmt.Fprintf(w, "\nOptions:\n")
@@ -1123,23 +1123,23 @@ func parseCorpusDocArgs(args []string, ui UI) (CorpusDocOptions, string, error) 
 	}
 
 	if fs.NArg() != 1 {
-		return opts, "", errors.New("corpus-doc requires exactly one argument: <id>")
+		return opts, "", errors.New("corpus show requires exactly one argument: <id>")
 	}
 	arg := fs.Arg(0)
 
 	return opts, arg, nil
 }
 
-func parseCorpusMetaArgs(args []string, ui UI) (CorpusMetaOptions, error) {
-	fs := flag.NewFlagSet("corpus-meta", flag.ContinueOnError)
+func parseCorpusIngestMetaArgs(args []string, ui UI) (CorpusIngestMetaOptions, error) {
+	fs := flag.NewFlagSet("corpus ingest-meta", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
 
-	var opts CorpusMetaOptions
+	var opts CorpusIngestMetaOptions
 	fs.StringVar(&opts.DbPath, "db", os.Getenv("SEGROB_CORPUS_PATH"), "")
 
 	fs.Usage = func() {
 		w := fs.Output()
-		fmt.Fprintf(w, "Usage: %s corpus-meta [options] <dir>\n\n", os.Args[0])
+		fmt.Fprintf(w, "Usage: %s corpus ingest-meta [options] <dir>\n\n", os.Args[0])
 		fmt.Fprintf(w, "  Scan a directory for epub files and build a corpus database.\n")
 		fmt.Fprintf(w, "\nArguments:\n")
 		fmt.Fprintf(w, helpArgFmt, "dir", "Directory to scan for epub files")
@@ -1157,7 +1157,7 @@ func parseCorpusMetaArgs(args []string, ui UI) (CorpusMetaOptions, error) {
 	}
 
 	if fs.NArg() != 1 {
-		return opts, errors.New("corpus-meta requires exactly one directory argument")
+		return opts, errors.New("corpus ingest-meta requires exactly one directory argument")
 	}
 
 	dir := fs.Arg(0)
@@ -1311,9 +1311,7 @@ func setupUsage(fs *flag.FlagSet) {
 		fmt.Fprintf(w, "  Sentence dictionary based on NLP topics\n")
 
 		fmt.Fprintf(w, "\nCommands: Corpus - Stage\n")
-		fmt.Fprintf(w, helpCmdFmt, "corpus-meta", "Scan an epub directory and build a corpus database.")
 		fmt.Fprintf(w, helpCmdFmt, "corpus", "Manage the corpus staging database.")
-		fmt.Fprintf(w, helpCmdFmt, "corpus-doc", "Show rendered contents of a corpus document's NLP field.")
 
 		fmt.Fprintf(w, "\nCommands: Doc - Live - Production\n")
 		fmt.Fprintf(w, helpCmdFmt, "live", "Move a document from corpus to live production tables.")

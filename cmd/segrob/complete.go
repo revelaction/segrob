@@ -7,8 +7,6 @@ import (
 
 var commands = []string{
 	"corpus",
-	"corpus-meta",
-	"corpus-doc",
 	"live",
 	"doc",
 	"doc-ls",
@@ -32,9 +30,11 @@ var commands = []string{
 
 var corpusSubcommands = []string{
 	"ls",
+	"show",
 	"dump-txt",
 	"dump-nlp",
 	"ingest-nlp",
+	"ingest-meta",
 }
 
 // completeCommand handles the autocompletion requests triggered by the bash completion script.
@@ -56,7 +56,7 @@ func getCompletions(args []string) []string {
 	commandIndex := 1
 	cursorIndex := len(args) - 1
 
-	// 2. Decide what to complete based on command position
+	// 2. Decide what to complete based on cursor position relative to command position
 	if cursorIndex == commandIndex {
 		// User is typing the command itself
 		lastWord := args[cursorIndex]

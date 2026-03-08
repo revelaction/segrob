@@ -329,38 +329,6 @@ func runCommand(cmd string, args []string, ui UI) error {
 			return err
 		}
 		return labelRmCommand(repo, opts, ui)
-
-	case "corpus-meta":
-		opts, err := parseCorpusMetaArgs(args, ui)
-		if err != nil {
-			if errors.Is(err, flag.ErrHelp) {
-				return nil
-			}
-			return err
-		}
-		pool, err := setup.GetPool(opts.DbPath)
-		if err != nil {
-			return err
-		}
-		repo, err := setup.NewCorpusRepository(opts.DbPath)
-		if err != nil {
-			return err
-		}
-		return corpusMetaCommand(pool, repo, opts, ui)
-
-	case "corpus-doc":
-		opts, id, err := parseCorpusDocArgs(args, ui)
-		if err != nil {
-			if errors.Is(err, flag.ErrHelp) {
-				return nil
-			}
-			return err
-		}
-		repo, err := setup.NewCorpusRepository(opts.DbPath)
-		if err != nil {
-			return err
-		}
-		return corpusDocCommand(repo, opts, id, ui)
 	}
 
 	return fmt.Errorf("unknown command: %s", cmd)

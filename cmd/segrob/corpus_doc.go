@@ -12,7 +12,7 @@ type nlpResponse struct {
 	Sentences []sent.Sentence `json:"sentences"`
 }
 
-func corpusDocCommand(repo storage.CorpusRepository, opts CorpusDocOptions, id string, ui UI) error {
+func corpusShowCommand(repo storage.CorpusRepository, opts CorpusShowOptions, id string, ui UI) error {
 	nlpData, err := repo.ReadNlp(id)
 	if err != nil {
 		return fmt.Errorf("failed to read nlp for %s: %w", id, err)
@@ -28,7 +28,6 @@ func corpusDocCommand(repo storage.CorpusRepository, opts CorpusDocOptions, id s
 		Count: opts.Count,
 	}
 
-	// This reuses renderDoc from cmd/segrob/render_doc.go
 	renderDoc(payload.Sentences, docOpts, ui)
 	return nil
 }

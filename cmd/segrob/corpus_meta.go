@@ -44,7 +44,7 @@ func epubPaths(dir string) ([]string, error) {
 	return paths, nil
 }
 
-func corpusMetaCommand(pool *sqlitex.Pool, repo storage.CorpusRepository, opts CorpusMetaOptions, ui UI) error {
+func corpusIngestMetaCommand(pool *sqlitex.Pool, repo storage.CorpusRepository, opts CorpusIngestMetaOptions, ui UI) error {
 	// Check pandoc exists
 	if _, err := exec.LookPath("pandoc"); err != nil {
 		return fmt.Errorf("pandoc is not installed or not in PATH: %w", err)
