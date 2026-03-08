@@ -89,7 +89,7 @@ type StatOptions struct {
 	DocPath string
 }
 
-type EditOptions struct {
+type LiveEditOptions struct {
 	TopicPath string
 }
 
@@ -688,17 +688,17 @@ func parseLiveQueryArgs(args []string, ui UI) (LiveQueryOptions, bool, bool, err
 	return opts, !tinfo.IsDir(), !dinfo.IsDir(), nil
 }
 
-func parseEditArgs(args []string, ui UI) (EditOptions, bool, error) {
-	fs := flag.NewFlagSet("edit", flag.ContinueOnError)
+func parseLiveEditArgs(args []string, ui UI) (LiveEditOptions, bool, error) {
+	fs := flag.NewFlagSet("live edit", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
 
-	var opts EditOptions
+	var opts LiveEditOptions
 	fs.StringVar(&opts.TopicPath, "topic-path", os.Getenv("SEGROB_TOPIC_PATH"), "")
 	fs.StringVar(&opts.TopicPath, "t", os.Getenv("SEGROB_TOPIC_PATH"), "")
 
 	fs.Usage = func() {
 		w := fs.Output()
-		fmt.Fprintf(w, "Usage: %s edit [options]\n\n", os.Args[0])
+		fmt.Fprintf(w, "Usage: %s live edit [options]\n\n", os.Args[0])
 		fmt.Fprintf(w, "  Enter interactive edit mode.\n")
 		fmt.Fprintf(w, "\nOptions:\n")
 		printOpt(w, "-t, --topic-path", "PATH", "Path to topics directory or SQLite file (or SEGROB_TOPIC_PATH)")
@@ -1315,7 +1315,6 @@ func setupUsage(fs *flag.FlagSet) {
 		fmt.Fprintf(w, helpCmdFmt, "sentence", "Show a specific sentence details.")
 		fmt.Fprintf(w, helpCmdFmt, "topics", "Show topics for a specific sentence.")
 		fmt.Fprintf(w, helpCmdFmt, "expr", "Evaluate a topic expression.")
-		fmt.Fprintf(w, helpCmdFmt, "edit", "Enter interactive edit mode.")
 		fmt.Fprintf(w, helpCmdFmt, "topic", "List topics or show expressions of a topic.")
 		fmt.Fprintf(w, helpCmdFmt, "stat", "Show statistics for a document or sentence.")
 		fmt.Fprintf(w, helpCmdFmt, "import-topic", "Import topics from filesystem to SQLite.")

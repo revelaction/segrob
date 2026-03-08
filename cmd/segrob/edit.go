@@ -8,7 +8,7 @@ import (
 	"golang.org/x/term"
 )
 
-func editCommand(tr storage.TopicRepository, opts EditOptions, ui UI) error {
+func liveEditCommand(tr storage.TopicRepository, opts LiveEditOptions, ui UI) error {
 
 	// The issue occurs because go-prompt puts your terminal into Raw Mode (to
 	// handle custom keybinds and colors) but fails to restore it to Cooked

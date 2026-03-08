@@ -14,7 +14,6 @@ var commands = []string{
 	"sentence",
 	"topics",
 	"expr",
-	"edit",
 	"topic",
 	"stat",
 	"import-topic",
@@ -39,6 +38,7 @@ var liveSubcommands = []string{
 	"ls",
 	"show",
 	"query",
+	"edit",
 }
 
 // completeCommand handles the autocompletion requests triggered by the bash completion script.

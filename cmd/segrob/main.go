@@ -128,20 +128,6 @@ func runCommand(cmd string, args []string, ui UI) error {
 		}
 		return exprCommand(dr, opts, cmdArgs, ui)
 
-	case "edit":
-		opts, _, err := parseEditArgs(args, ui)
-		if err != nil {
-			if errors.Is(err, flag.ErrHelp) {
-				return nil
-			}
-			return err
-		}
-		tr, err := setup.NewTopicRepository(opts.TopicPath)
-		if err != nil {
-			return err
-		}
-		return editCommand(tr, opts, ui)
-
 	case "topic":
 		opts, name, _, err := parseTopicArgs(args, ui)
 		if err != nil {
