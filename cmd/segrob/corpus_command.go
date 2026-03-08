@@ -11,6 +11,7 @@ func printCorpusUsage(w io.Writer) {
 	fmt.Fprintf(w, "  Manage the corpus staging database.\n")
 	fmt.Fprintf(w, "\nSubcommands:\n")
 	fmt.Fprintf(w, helpCmdFmt, "ls", "List documents in the corpus staging database.")
+	fmt.Fprintf(w, helpCmdFmt, "dump-txt", "Output the txt field of a corpus document byte-exact.")
 }
 
 func runCorpusCommand(args []string, setup *Setup, ui UI) error {
@@ -38,6 +39,17 @@ func runCorpusCommand(args []string, setup *Setup, ui UI) error {
 			return err
 		}
 		return corpusLsCommand(repo, opts, ui)
+
+	case "dump-txt":
+		opts, err := parseCorpusDumpTxtArgs(subArgs, ui)
+		if err != nil {
+			return err
+		}
+		repo, err := setup.NewCorpusRepository(opts.DbPath)
+		if err != nil {
+			return err
+		}
+		return corpusDumpTxtCommand(repo, opts, ui)
 
 	default:
 		printCorpusUsage(ui.Err)

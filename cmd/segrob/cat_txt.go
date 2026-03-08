@@ -7,7 +7,7 @@ import (
 	"github.com/revelaction/segrob/storage"
 )
 
-func catTxtCommand(repo storage.CorpusRepository, opts CatTxtOptions, ui UI) error {
+func corpusDumpTxtCommand(repo storage.CorpusRepository, opts CorpusDumpTxtOptions, ui UI) error {
 
 	txt, err := repo.ReadTxt(opts.ID)
 	if err != nil {

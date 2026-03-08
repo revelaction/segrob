@@ -362,20 +362,6 @@ func runCommand(cmd string, args []string, ui UI) error {
 		}
 		return corpusMetaCommand(pool, repo, opts, ui)
 
-	case "cat-txt":
-		opts, err := parseCatTxtArgs(args, ui)
-		if err != nil {
-			if errors.Is(err, flag.ErrHelp) {
-				return nil
-			}
-			return err
-		}
-		repo, err := setup.NewCorpusRepository(opts.DbPath)
-		if err != nil {
-			return err
-		}
-		return catTxtCommand(repo, opts, ui)
-
 	case "cat-nlp":
 		opts, err := parseCatNlpArgs(args, ui)
 		if err != nil {

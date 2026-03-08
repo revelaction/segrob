@@ -182,7 +182,7 @@ type CorpusMetaOptions struct {
 	Dir    string
 }
 
-type CatTxtOptions struct {
+type CorpusDumpTxtOptions struct {
 	DbPath string // --db / SEGROB_CORPUS_PATH
 	Output string // --output file path (empty = stdout)
 	ID     string // positional arg: document id
@@ -1172,23 +1172,24 @@ func parseCorpusMetaArgs(args []string, ui UI) (CorpusMetaOptions, error) {
 	return opts, nil
 }
 
-func parseCatTxtArgs(args []string, ui UI) (CatTxtOptions, error) {
-	fs := flag.NewFlagSet("cat-txt", flag.ContinueOnError)
+func parseCorpusDumpTxtArgs(args []string, ui UI) (CorpusDumpTxtOptions, error) {
+	fs := flag.NewFlagSet("corpus dump-txt", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
 
-	var opts CatTxtOptions
+	var opts CorpusDumpTxtOptions
 	fs.StringVar(&opts.DbPath, "db", os.Getenv("SEGROB_CORPUS_PATH"), "")
 	fs.StringVar(&opts.Output, "output", "", "")
+	fs.StringVar(&opts.Output, "o", "", "")
 
 	fs.Usage = func() {
 		w := fs.Output()
-		fmt.Fprintf(w, "Usage: %s cat-txt [options] <id>\n\n", os.Args[0])
+		fmt.Fprintf(w, "Usage: %s corpus dump-txt [options] <id>\n\n", os.Args[0])
 		fmt.Fprintf(w, "  Output the txt field of a corpus document byte-exact.\n")
 		fmt.Fprintf(w, "\nArguments:\n")
 		fmt.Fprintf(w, helpArgFmt, "id", "Document ID")
 		fmt.Fprintf(w, "\nOptions:\n")
 		printOpt(w, "--db", "FILE", "Corpus SQLite file (or SEGROB_CORPUS_PATH)")
-		printOpt(w, "--output", "FILE", "Write output to FILE instead of stdout")
+		printOpt(w, "-o, --output", "FILE", "Write output to FILE instead of stdout")
 	}
 
 	if err := fs.Parse(args); err != nil {
@@ -1201,7 +1202,7 @@ func parseCatTxtArgs(args []string, ui UI) (CatTxtOptions, error) {
 	}
 
 	if fs.NArg() != 1 {
-		return opts, errors.New("cat-txt requires exactly one argument: <id>")
+		return opts, errors.New("corpus dump-txt requires exactly one argument: <id>")
 	}
 
 	opts.ID = fs.Arg(0)
@@ -1300,7 +1301,6 @@ func setupUsage(fs *flag.FlagSet) {
 		fmt.Fprintf(w, helpCmdFmt, "corpus-meta", "Scan an epub directory and build a corpus database.")
 		fmt.Fprintf(w, helpCmdFmt, "corpus-nlp", "Process document text with NLP and store in corpus.")
 		fmt.Fprintf(w, helpCmdFmt, "corpus", "Manage the corpus staging database.")
-		fmt.Fprintf(w, helpCmdFmt, "cat-txt", "Output the txt field of a corpus document.")
 		fmt.Fprintf(w, helpCmdFmt, "cat-nlp", "Output the nlp field of a corpus document.")
 		fmt.Fprintf(w, helpCmdFmt, "corpus-doc", "Show rendered contents of a corpus document's NLP field.")
 
