@@ -7,7 +7,16 @@ import (
 
 var commands = []string{
 	"corpus",
+	"corpus-meta",
+	"corpus-nlp",
+	"cat-nlp",
+	"corpus-doc",
+	"live",
 	"doc",
+	"doc-ls",
+	"label-ls",
+	"label-add",
+	"label-rm",
 	"sentence",
 	"topics",
 	"expr",
@@ -15,12 +24,17 @@ var commands = []string{
 	"edit",
 	"topic",
 	"stat",
+	"import-topic",
+	"export-topic",
+	"init-db",
 	"bash",
+	"version",
 	"help",
 }
 
 var corpusSubcommands = []string{
 	"ls",
+	"dump-txt",
 }
 
 // completeCommand handles the autocompletion requests triggered by the bash completion script.
