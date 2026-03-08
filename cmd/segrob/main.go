@@ -195,20 +195,6 @@ func runCommand(cmd string, args []string, ui UI) error {
 	case "corpus":
 		return runCorpusCommand(args, setup, ui)
 
-	case "label-add":
-		opts, err := parseLabelAddArgs(args, ui)
-		if err != nil {
-			if errors.Is(err, flag.ErrHelp) {
-				return nil
-			}
-			return err
-		}
-		repo, err := setup.NewDocRepository(opts.DocPath)
-		if err != nil {
-			return err
-		}
-		return labelAddCommand(repo, opts, ui)
-
 	case "label-rm":
 		opts, err := parseLabelRmArgs(args, ui)
 		if err != nil {

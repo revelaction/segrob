@@ -166,10 +166,10 @@ func parseCorpusPublishArgs(args []string, ui UI) (CorpusPublishOptions, error) 
 	return opts, nil
 }
 
-type LabelAddOptions struct {
-	DocID   string
-	Labels  []string
-	DocPath string
+type LiveSetLabelOptions struct {
+	DocID  string
+	Labels []string
+	DbPath string
 }
 
 type LabelRmOptions struct {
@@ -990,23 +990,22 @@ func parseCorpusIngestNlpArgs(args []string, ui UI) (CorpusIngestNlpOptions, err
 	return opts, nil
 }
 
-func parseLabelAddArgs(args []string, ui UI) (LabelAddOptions, error) {
-	fs := flag.NewFlagSet("label-add", flag.ContinueOnError)
+func parseLiveSetLabelArgs(args []string, ui UI) (LiveSetLabelOptions, error) {
+	fs := flag.NewFlagSet("live set-label", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
 
-	var opts LabelAddOptions
-	fs.StringVar(&opts.DocPath, "doc-path", os.Getenv("SEGROB_DOC_PATH"), "")
-	fs.StringVar(&opts.DocPath, "d", os.Getenv("SEGROB_DOC_PATH"), "")
+	var opts LiveSetLabelOptions
+	fs.StringVar(&opts.DbPath, "db", os.Getenv("SEGROB_DOC_PATH"), "")
 
 	fs.Usage = func() {
 		w := fs.Output()
-		fmt.Fprintf(w, "Usage: %s label-add [options] <doc_id> <label> [<label>...]\n\n", os.Args[0])
+		fmt.Fprintf(w, "Usage: %s live set-label [options] <doc_id> <label> [<label>...]\n\n", os.Args[0])
 		fmt.Fprintf(w, "  Add one or more labels to a document.\n")
 		fmt.Fprintf(w, "\nArguments:\n")
 		fmt.Fprintf(w, helpArgFmt, "doc_id", "ID of the document")
 		fmt.Fprintf(w, helpArgFmt, "label", "One or more labels to add")
 		fmt.Fprintf(w, "\nOptions:\n")
-		printOpt(w, "-d, --doc-path", "PATH", "Path to SQLite file (or SEGROB_DOC_PATH)")
+		printOpt(w, "--db", "PATH", "Path to SQLite file (or SEGROB_DOC_PATH)")
 	}
 
 	if err := fs.Parse(args); err != nil {
@@ -1019,14 +1018,14 @@ func parseLabelAddArgs(args []string, ui UI) (LabelAddOptions, error) {
 	}
 
 	if fs.NArg() < 2 {
-		return opts, errors.New("label-add requires at least two arguments: <doc_id> and one or more <label>")
+		return opts, errors.New("live set-label requires at least two arguments: <doc_id> and one or more <label>")
 	}
 
 	opts.DocID = fs.Arg(0)
 	opts.Labels = fs.Args()[1:]
 
-	if opts.DocPath == "" {
-		return opts, errors.New("no document source specified (use -d or SEGROB_DOC_PATH)")
+	if opts.DbPath == "" {
+		return opts, errors.New("no document source specified (use --db or SEGROB_DOC_PATH)")
 	}
 
 	return opts, nil
@@ -1308,7 +1307,6 @@ func setupUsage(fs *flag.FlagSet) {
 
 		fmt.Fprintf(w, "\nCommands: Doc - Live - Production\n")
 		fmt.Fprintf(w, helpCmdFmt, "live", "Manage the live production database.")
-		fmt.Fprintf(w, helpCmdFmt, "label-add", "Add one or more labels to a document.")
 		fmt.Fprintf(w, helpCmdFmt, "label-rm", "Remove one or more labels from a document.")
 		fmt.Fprintf(w, helpCmdFmt, "sentence", "Show a specific sentence details.")
 		fmt.Fprintf(w, helpCmdFmt, "topics", "Show topics for a specific sentence.")
