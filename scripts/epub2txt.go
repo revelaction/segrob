@@ -236,10 +236,17 @@ func resolveEntities(content []byte) []byte {
 
 // extractTextFromXHTML parses XHTML content and extracts human-readable text.
 // It skips scripts, styles, and metadata, and preserves block-level structure (newlines).
+//
+// Compatibility Note:
+// This function works for both EPUB 2 (XHTML 1.1) and EPUB 3 (HTML5 XML serialization).
+// The core structure (container -> OPF -> Spine) is consistent across versions.
 func extractTextFromXHTML(content []byte) (string, error) {
 	// Pre-process content to resolve HTML entities that XML doesn't support.
 	content = resolveEntities(content)
 	
+	// Create an XML decoder to parse the content token by token.
+	// Unlike DOM parsers that load the whole tree into memory,
+	// this stream parser is efficient and low-memory.
 	decoder := xml.NewDecoder(bytes.NewReader(content))
 	var buf strings.Builder
 	
@@ -255,16 +262,25 @@ func extractTextFromXHTML(content []byte) (string, error) {
 
 	ignoreDepth := 0 // Tracks if we are currently inside an ignored tag (like <script>).
 	
+	// Iterate through the XML stream one token at a time.
 	for {
 		token, err := decoder.Token()
 		if err == io.EOF {
-			break
+			break // End of file
 		}
 		if err != nil {
 			return "", err
 		}
 
+		// Handle the 3 main types of XML tokens:
 		switch t := token.(type) {
+		
+		// 1. Start Element: <tag>
+		//    We check if we are entering an ignored section (like <script>)
+		//    or if we need to insert a newline (like <p>).
+		//
+		//    NOTE: Self-closing tags (like <br /> or <hr />) are parsed by xml.Decoder
+		//    as a StartElement immediately followed by an EndElement.
 		case xml.StartElement:
 			name := strings.ToLower(t.Name.Local)
 			if ignoreTags[name] {
@@ -278,6 +294,8 @@ func extractTextFromXHTML(content []byte) (string, error) {
 				buf.WriteString("\n")
 			}
 
+		// 2. End Element: </tag>
+		//    We check if we are leaving an ignored section.
 		case xml.EndElement:
 			name := strings.ToLower(t.Name.Local)
 			if ignoreTags[name] {
@@ -288,6 +306,8 @@ func extractTextFromXHTML(content []byte) (string, error) {
 				buf.WriteString("\n")
 			}
 
+		// 3. Character Data: "Some text"
+		//    This is the actual content we want to extract.
 		case xml.CharData:
 			// If we are inside an ignored tag (e.g., <script>), skip this text.
 			if ignoreDepth > 0 {
@@ -296,23 +316,28 @@ func extractTextFromXHTML(content []byte) (string, error) {
 			text := string(t)
 			
 			// Text Normalization Logic:
-			// 1. Convert newlines/tabs to spaces (HTML treats them as whitespace).
-			// 2. Collapse runs of spaces into a single space.
-			// 3. IMPORTANT: Preserve leading/trailing spaces if they exist in the source.
-			//    This prevents joining words incorrectly (e.g., "end" + "start" -> "endstart")
-			//    while avoiding insertion of artificial spaces before punctuation.
+			// Goal: "  Hello   \n  World  " -> " Hello World "
 			
 			var sb strings.Builder
+			// Optimization: Pre-allocate memory for the builder.
+			// We know the result won't be larger than the input 'text'.
+			// This avoids resizing the buffer multiple times.
 			sb.Grow(len(text))
-			spaceCount := 0
+			
+			spaceCount := 0 // Tracks consecutive spaces to collapse them.
+			
 			for _, r := range text {
+				// Treat newlines, tabs, and returns as spaces.
 				if r == '\n' || r == '\r' || r == '\t' || r == ' ' {
 					spaceCount++
+					// Only write the FIRST space in a sequence.
 					if spaceCount == 1 {
 						sb.WriteRune(' ')
 					}
 				} else {
+					// It's a non-whitespace character. Write it.
 					sb.WriteRune(r)
+					// Reset space counter so the next space will be written.
 					spaceCount = 0
 				}
 			}
