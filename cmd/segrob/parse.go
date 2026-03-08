@@ -188,9 +188,10 @@ type CorpusDumpTxtOptions struct {
 	ID     string // positional arg: document id
 }
 
-type CatNlpOptions struct {
+type CorpusDumpNlpOptions struct {
 	DbPath   string // --db / SEGROB_CORPUS_PATH
 	NoLemmas bool   // -n, --no-lemmas
+	Output   string // --output file path (empty = stdout)
 	ID       string // positional arg: document id
 }
 
@@ -1214,24 +1215,27 @@ func parseCorpusDumpTxtArgs(args []string, ui UI) (CorpusDumpTxtOptions, error) 
 	return opts, nil
 }
 
-func parseCatNlpArgs(args []string, ui UI) (CatNlpOptions, error) {
-	fs := flag.NewFlagSet("cat-nlp", flag.ContinueOnError)
+func parseCorpusDumpNlpArgs(args []string, ui UI) (CorpusDumpNlpOptions, error) {
+	fs := flag.NewFlagSet("corpus dump-nlp", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
 
-	var opts CatNlpOptions
+	var opts CorpusDumpNlpOptions
 	fs.StringVar(&opts.DbPath, "db", os.Getenv("SEGROB_CORPUS_PATH"), "")
 	fs.BoolVar(&opts.NoLemmas, "no-lemmas", false, "")
 	fs.BoolVar(&opts.NoLemmas, "n", false, "")
+	fs.StringVar(&opts.Output, "output", "", "")
+	fs.StringVar(&opts.Output, "o", "", "")
 
 	fs.Usage = func() {
 		w := fs.Output()
-		fmt.Fprintf(w, "Usage: %s cat-nlp [options] <id>\n\n", os.Args[0])
+		fmt.Fprintf(w, "Usage: %s corpus dump-nlp [options] <id>\n\n", os.Args[0])
 		fmt.Fprintf(w, "  Output the nlp field of a corpus document.\n")
 		fmt.Fprintf(w, "\nArguments:\n")
 		fmt.Fprintf(w, helpArgFmt, "id", "Document ID")
 		fmt.Fprintf(w, "\nOptions:\n")
 		printOpt(w, "--db", "FILE", "Corpus SQLite file (or SEGROB_CORPUS_PATH)")
 		printOpt(w, "-n, --no-lemmas", "", "Strip lemmas from the JSON payload")
+		printOpt(w, "-o, --output", "FILE", "Write output to FILE instead of stdout")
 	}
 
 	if err := fs.Parse(args); err != nil {
@@ -1244,9 +1248,13 @@ func parseCatNlpArgs(args []string, ui UI) (CatNlpOptions, error) {
 	}
 
 	if fs.NArg() != 1 {
-		return opts, errors.New("cat-nlp requires exactly one argument: <id>")
+		return opts, errors.New("corpus dump-nlp requires exactly one argument: <id>")
 	}
 	opts.ID = fs.Arg(0)
+
+	if opts.DbPath == "" {
+		return opts, errors.New("corpus database must be specified via --db or SEGROB_CORPUS_PATH")
+	}
 
 	return opts, nil
 }
@@ -1301,7 +1309,6 @@ func setupUsage(fs *flag.FlagSet) {
 		fmt.Fprintf(w, helpCmdFmt, "corpus-meta", "Scan an epub directory and build a corpus database.")
 		fmt.Fprintf(w, helpCmdFmt, "corpus-nlp", "Process document text with NLP and store in corpus.")
 		fmt.Fprintf(w, helpCmdFmt, "corpus", "Manage the corpus staging database.")
-		fmt.Fprintf(w, helpCmdFmt, "cat-nlp", "Output the nlp field of a corpus document.")
 		fmt.Fprintf(w, helpCmdFmt, "corpus-doc", "Show rendered contents of a corpus document's NLP field.")
 
 		fmt.Fprintf(w, "\nCommands: Doc - Live - Production\n")

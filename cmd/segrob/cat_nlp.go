@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"os"
 
 	"github.com/revelaction/segrob/storage"
 )
@@ -16,7 +17,7 @@ type nlpPayload struct {
 	Sentences []nlpSentence `json:"sentences"`
 }
 
-func catNlpCommand(repo storage.CorpusRepository, opts CatNlpOptions, ui UI) error {
+func corpusDumpNlpCommand(repo storage.CorpusRepository, opts CorpusDumpNlpOptions, ui UI) error {
 	nlpData, err := repo.ReadNlp(opts.ID)
 	if err != nil {
 		return fmt.Errorf("failed to read nlp for %s: %w", opts.ID, err)
@@ -32,6 +33,14 @@ func catNlpCommand(repo storage.CorpusRepository, opts CatNlpOptions, ui UI) err
 		if err != nil {
 			return fmt.Errorf("failed to marshal modified nlp json: %w", err)
 		}
+	}
+
+	// Write to file or stdout
+	if opts.Output != "" {
+		if err := os.WriteFile(opts.Output, nlpData, 0644); err != nil {
+			return fmt.Errorf("failed to write output file %s: %w", opts.Output, err)
+		}
+		return nil
 	}
 
 	// stdout: write bytes directly
