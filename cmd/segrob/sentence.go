@@ -7,7 +7,7 @@ import (
 	"github.com/revelaction/segrob/storage"
 )
 
-func sentenceCommand(repo storage.DocRepository, opts SentenceOptions, docId string, sentId int, ui UI) error {
+func liveShowSentCommand(repo storage.DocRepository, opts LiveShowSentOptions, docId string, sentId int, ui UI) error {
 	sentences, err := repo.Nlp(docId)
 	if err != nil {
 		return err

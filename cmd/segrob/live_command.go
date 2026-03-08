@@ -14,6 +14,7 @@ func printLiveUsage(w io.Writer) {
 	fmt.Fprintf(w, helpCmdFmt, "ls-label", "List all unique labels in the repository.")
 	fmt.Fprintf(w, helpCmdFmt, "set-label", "Add one or more labels to a document.")
 	fmt.Fprintf(w, helpCmdFmt, "show", "Show contents of a document file or DB entry.")
+	fmt.Fprintf(w, helpCmdFmt, "show-sent", "Show details of a specific sentence.")
 	fmt.Fprintf(w, helpCmdFmt, "query", "Enter interactive query mode.")
 	fmt.Fprintf(w, helpCmdFmt, "edit", "Enter interactive edit mode.")
 }
@@ -76,6 +77,17 @@ func runLiveCommand(args []string, setup *Setup, ui UI) error {
 			return err
 		}
 		return liveShowCommand(repo, opts, id, ui)
+
+	case "show-sent":
+		opts, docId, sentId, err := parseLiveShowSentArgs(subArgs, ui)
+		if err != nil {
+			return err
+		}
+		repo, err := setup.NewDocRepository(opts.DbPath)
+		if err != nil {
+			return err
+		}
+		return liveShowSentCommand(repo, opts, docId, sentId, ui)
 
 	case "query":
 		opts, _, _, err := parseLiveQueryArgs(subArgs, ui)

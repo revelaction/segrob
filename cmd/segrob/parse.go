@@ -81,8 +81,8 @@ type LiveLsLabelOptions struct {
 	Match  string
 }
 
-type SentenceOptions struct {
-	DocPath string
+type LiveShowSentOptions struct {
+	DbPath string
 }
 
 type StatOptions struct {
@@ -410,23 +410,22 @@ func parseLiveLsLabelArgs(args []string, ui UI) (LiveLsLabelOptions, error) {
 	return opts, nil
 }
 
-func parseSentenceArgs(args []string, ui UI) (SentenceOptions, string, int, error) {
-	fs := flag.NewFlagSet("sentence", flag.ContinueOnError)
+func parseLiveShowSentArgs(args []string, ui UI) (LiveShowSentOptions, string, int, error) {
+	fs := flag.NewFlagSet("live show-sent", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
 
-	var opts SentenceOptions
-	fs.StringVar(&opts.DocPath, "doc-path", os.Getenv("SEGROB_DOC_PATH"), "")
-	fs.StringVar(&opts.DocPath, "d", os.Getenv("SEGROB_DOC_PATH"), "")
+	var opts LiveShowSentOptions
+	fs.StringVar(&opts.DbPath, "db", os.Getenv("SEGROB_DOC_PATH"), "")
 
 	fs.Usage = func() {
 		w := fs.Output()
-		fmt.Fprintf(w, "Usage: %s sentence [options] <doc_id> <sentence_id>\n\n", os.Args[0])
+		fmt.Fprintf(w, "Usage: %s live show-sent [options] <doc_id> <sentence_id>\n\n", os.Args[0])
 		fmt.Fprintf(w, "  Show details of a specific sentence from the configured repository.\n")
 		fmt.Fprintf(w, "\nArguments:\n")
 		fmt.Fprintf(w, helpArgFmt, "doc_id", "ID of the document")
 		fmt.Fprintf(w, helpArgFmt, "sentence_id", "Index of the sentence")
 		fmt.Fprintf(w, "\nOptions:\n")
-		printOpt(w, "-d, --doc-path", "PATH", "Path to docs directory or SQLite file (or SEGROB_DOC_PATH)")
+		printOpt(w, "--db", "PATH", "Path to SQLite file (or SEGROB_DOC_PATH)")
 	}
 
 	if err := fs.Parse(args); err != nil {
@@ -438,12 +437,12 @@ func parseSentenceArgs(args []string, ui UI) (SentenceOptions, string, int, erro
 		return opts, "", 0, err
 	}
 
-	if opts.DocPath == "" {
-		return opts, "", 0, errors.New("document source must be specified via -d or SEGROB_DOC_PATH")
+	if opts.DbPath == "" {
+		return opts, "", 0, errors.New("document source must be specified via --db or SEGROB_DOC_PATH")
 	}
 
 	if fs.NArg() != 2 {
-		return opts, "", 0, errors.New("sentence command needs exactly two arguments: <doc_id> <sentence_id>")
+		return opts, "", 0, errors.New("live show-sent requires exactly two arguments: <doc_id> <sentence_id>")
 	}
 
 	docId := fs.Arg(0)
@@ -1263,7 +1262,6 @@ func setupUsage(fs *flag.FlagSet) {
 
 		fmt.Fprintf(w, "\nCommands: Doc - Live - Production\n")
 		fmt.Fprintf(w, helpCmdFmt, "live", "Manage the live production database.")
-		fmt.Fprintf(w, helpCmdFmt, "sentence", "Show a specific sentence details.")
 		fmt.Fprintf(w, helpCmdFmt, "topics", "Show topics for a specific sentence.")
 		fmt.Fprintf(w, helpCmdFmt, "expr", "Evaluate a topic expression.")
 		fmt.Fprintf(w, helpCmdFmt, "topic", "List topics or show expressions of a topic.")

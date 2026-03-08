@@ -68,20 +68,6 @@ func runCommand(cmd string, args []string, ui UI) error {
 	case "live":
 		return runLiveCommand(args, setup, ui)
 
-	case "sentence":
-		opts, docId, sentId, err := parseSentenceArgs(args, ui)
-		if err != nil {
-			if errors.Is(err, flag.ErrHelp) {
-				return nil
-			}
-			return err
-		}
-		repo, err := setup.NewDocRepository(opts.DocPath)
-		if err != nil {
-			return err
-		}
-		return sentenceCommand(repo, opts, docId, sentId, ui)
-
 	case "topics":
 		opts, docId, sentId, err := parseTopicsArgs(args, ui)
 		if err != nil {

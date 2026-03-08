@@ -8,7 +8,6 @@ import (
 var commands = []string{
 	"corpus",
 	"live",
-	"sentence",
 	"topics",
 	"expr",
 	"topic",
@@ -36,6 +35,7 @@ var liveSubcommands = []string{
 	"ls-label",
 	"set-label",
 	"show",
+	"show-sent",
 	"query",
 	"edit",
 }
