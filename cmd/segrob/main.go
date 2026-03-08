@@ -6,8 +6,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-
-	"golang.org/x/term"
 )
 
 var (
@@ -49,22 +47,6 @@ func fprintErr(w io.Writer, err error) {
 }
 
 func runCommand(cmd string, args []string, ui UI) error {
-
-	// Centralized Terminal Reset
-	//
-	// The issue occurs because go-prompt puts your terminal into Raw Mode (to
-	// handle custom keybinds and colors) but fails to restore it to Cooked
-	// Mode (canonical mode) upon exit. When the terminal is left in Raw Mode,
-	// it often disables local echo (typing is invisible) and carriage
-	// returns.
-	// For interactive commands, we save the terminal state (Cooked Mode)
-	// and strictly restore it when the function returns.
-	if cmd == "query" || cmd == "edit" {
-		fd := int(os.Stdin.Fd())
-		if state, err := term.GetState(fd); err == nil {
-			defer term.Restore(fd, state)
-		}
-	}
 
 	setup := NewSetup()
 	defer setup.Close()
@@ -145,24 +127,6 @@ func runCommand(cmd string, args []string, ui UI) error {
 			return err
 		}
 		return exprCommand(dr, opts, cmdArgs, ui)
-
-	case "query":
-		opts, _, _, err := parseQueryArgs(args, ui)
-		if err != nil {
-			if errors.Is(err, flag.ErrHelp) {
-				return nil
-			}
-			return err
-		}
-		dr, err := setup.NewDocRepository(opts.DocPath)
-		if err != nil {
-			return err
-		}
-		tr, err := setup.NewTopicRepository(opts.TopicPath)
-		if err != nil {
-			return err
-		}
-		return queryCommand(dr, tr, opts, ui)
 
 	case "edit":
 		opts, _, err := parseEditArgs(args, ui)

@@ -14,7 +14,6 @@ var commands = []string{
 	"sentence",
 	"topics",
 	"expr",
-	"query",
 	"edit",
 	"topic",
 	"stat",
@@ -39,6 +38,7 @@ var corpusSubcommands = []string{
 var liveSubcommands = []string{
 	"ls",
 	"show",
+	"query",
 }
 
 // completeCommand handles the autocompletion requests triggered by the bash completion script.

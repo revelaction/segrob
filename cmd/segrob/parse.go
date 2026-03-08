@@ -44,7 +44,7 @@ type ExprOptions struct {
 	Limit     int  // max matched results (0 = unlimited)
 }
 
-type QueryOptions struct {
+type LiveQueryOptions struct {
 	Labels    []string
 	NoColor   bool
 	NoPrefix  bool
@@ -608,11 +608,11 @@ func parseExprArgs(args []string, ui UI) (ExprOptions, []string, bool, error) {
 	return opts, fs.Args(), !info.IsDir(), nil
 }
 
-func parseQueryArgs(args []string, ui UI) (QueryOptions, bool, bool, error) {
-	fs := flag.NewFlagSet("query", flag.ContinueOnError)
+func parseLiveQueryArgs(args []string, ui UI) (LiveQueryOptions, bool, bool, error) {
+	fs := flag.NewFlagSet("live query", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
 
-	var opts QueryOptions
+	var opts LiveQueryOptions
 	labels := (*stringSliceFlag)(&opts.Labels)
 	fs.Var(labels, "label", "")
 	fs.Var(labels, "l", "")
@@ -639,7 +639,7 @@ func parseQueryArgs(args []string, ui UI) (QueryOptions, bool, bool, error) {
 
 	fs.Usage = func() {
 		w := fs.Output()
-		fmt.Fprintf(w, "Usage: %s query [options]\n\n", os.Args[0])
+		fmt.Fprintf(w, "Usage: %s live query [options]\n\n", os.Args[0])
 		fmt.Fprintf(w, "  Enter interactive query mode.\n")
 		fmt.Fprintf(w, "\nOptions:\n")
 		printOpt(w, "-d, --doc-path", "PATH", "Path to docs directory or SQLite file (or SEGROB_DOC_PATH)")
@@ -1315,7 +1315,6 @@ func setupUsage(fs *flag.FlagSet) {
 		fmt.Fprintf(w, helpCmdFmt, "sentence", "Show a specific sentence details.")
 		fmt.Fprintf(w, helpCmdFmt, "topics", "Show topics for a specific sentence.")
 		fmt.Fprintf(w, helpCmdFmt, "expr", "Evaluate a topic expression.")
-		fmt.Fprintf(w, helpCmdFmt, "query", "Enter interactive query mode.")
 		fmt.Fprintf(w, helpCmdFmt, "edit", "Enter interactive edit mode.")
 		fmt.Fprintf(w, helpCmdFmt, "topic", "List topics or show expressions of a topic.")
 		fmt.Fprintf(w, helpCmdFmt, "stat", "Show statistics for a document or sentence.")

@@ -12,6 +12,7 @@ func printLiveUsage(w io.Writer) {
 	fmt.Fprintf(w, "\nSubcommands:\n")
 	fmt.Fprintf(w, helpCmdFmt, "ls", "List all documents in the repository.")
 	fmt.Fprintf(w, helpCmdFmt, "show", "Show contents of a document file or DB entry.")
+	fmt.Fprintf(w, helpCmdFmt, "query", "Enter interactive query mode.")
 }
 
 func runLiveCommand(args []string, setup *Setup, ui UI) error {
@@ -50,6 +51,21 @@ func runLiveCommand(args []string, setup *Setup, ui UI) error {
 			return err
 		}
 		return liveShowCommand(repo, opts, id, ui)
+
+	case "query":
+		opts, _, _, err := parseLiveQueryArgs(subArgs, ui)
+		if err != nil {
+			return err
+		}
+		dr, err := setup.NewDocRepository(opts.DocPath)
+		if err != nil {
+			return err
+		}
+		tr, err := setup.NewTopicRepository(opts.TopicPath)
+		if err != nil {
+			return err
+		}
+		return liveQueryCommand(dr, tr, opts, ui)
 
 	default:
 		printLiveUsage(ui.Err)
