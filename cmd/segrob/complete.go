@@ -8,7 +8,6 @@ import (
 var commands = []string{
 	"corpus",
 	"live",
-	"label-rm",
 	"sentence",
 	"topics",
 	"expr",

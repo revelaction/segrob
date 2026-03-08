@@ -194,21 +194,7 @@ func runCommand(cmd string, args []string, ui UI) error {
 
 	case "corpus":
 		return runCorpusCommand(args, setup, ui)
-
-	case "label-rm":
-		opts, err := parseLabelRmArgs(args, ui)
-		if err != nil {
-			if errors.Is(err, flag.ErrHelp) {
-				return nil
-			}
-			return err
-		}
-		repo, err := setup.NewDocRepository(opts.DocPath)
-		if err != nil {
-			return err
-		}
-		return labelRmCommand(repo, opts, ui)
-	}
+}
 
 	return fmt.Errorf("unknown command: %s", cmd)
 }
