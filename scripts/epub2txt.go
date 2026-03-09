@@ -9,7 +9,6 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strings"
 )
 
@@ -130,9 +129,11 @@ type PackageXML struct {
 // Think of it as an inventory. Each item has a unique 'id' and a 'href' (path).
 //
 // <manifest>
-//   <item id="intro" href="intro.xhtml" media-type="application/xhtml+xml"/>
-//   <item id="chap1" href="chapter1.xhtml" media-type="application/xhtml+xml"/>
-//   <item id="css" href="style.css" media-type="text/css"/>
+//
+//	<item id="intro" href="intro.xhtml" media-type="application/xhtml+xml"/>
+//	<item id="chap1" href="chapter1.xhtml" media-type="application/xhtml+xml"/>
+//	<item id="css" href="style.css" media-type="text/css"/>
+//
 // </manifest>
 type Manifest struct {
 	Items []Item `xml:"item"`
@@ -151,8 +152,10 @@ type Item struct {
 // or just separates the "order" logic from the "file" logic.
 //
 // <spine>
-//   <itemref idref="intro"/>  <!-- First, read the item with id="intro" -->
-//   <itemref idref="chap1"/>  <!-- Then, read the item with id="chap1" -->
+//
+//	<itemref idref="intro"/>  <!-- First, read the item with id="intro" -->
+//	<itemref idref="chap1"/>  <!-- Then, read the item with id="chap1" -->
+//
 // </spine>
 type Spine struct {
 	ItemRefs []ItemRef `xml:"itemref"`
@@ -200,39 +203,24 @@ func parseOPF(z *zip.ReadCloser, opfPath string) (PackageXML, error) {
 func readZipFile(z *zip.ReadCloser, name string) ([]byte, error) {
 	// Normalize name to forward slashes just in case we are on Windows.
 	name = strings.ReplaceAll(name, "\\", "/")
-	
+
 	for _, f := range z.File {
 		if f.Name == name {
 			rc, err := f.Open()
 			if err != nil {
 				return nil, err
 			}
-			defer rc.Close()
-			return io.ReadAll(rc)
+			data, err := io.ReadAll(rc)
+			// Explicitly close the file without using defer inside a loop
+			// to avoid potential resource leaks if the loop logic changes.
+			rc.Close()
+			return data, err
 		}
 	}
 	return nil, fmt.Errorf("file not found: %s", name)
 }
 
 // Text Extraction
-
-// entityPattern matches HTML entities like &nbsp;, &copy;, etc.
-var entityPattern = regexp.MustCompile(`&[a-zA-Z]+;`)
-
-// resolveEntities replaces named HTML entities with their UTF-8 characters.
-// Standard XML decoders only strictly support &lt;, &gt;, &amp;, &apos;, &quot;.
-// We must manually resolve others (like &nbsp;) before parsing as XML.
-func resolveEntities(content []byte) []byte {
-	return entityPattern.ReplaceAllFunc(content, func(match []byte) []byte {
-		s := string(match)
-		// Keep standard XML entities as is; the XML decoder handles them.
-		if s == "&lt;" || s == "&gt;" || s == "&amp;" || s == "&apos;" || s == "&quot;" {
-			return match
-		}
-		// Unescape others (e.g. &nbsp; -> \u00A0) using html package.
-		return []byte(html.UnescapeString(s))
-	})
-}
 
 // extractTextFromXHTML parses XHTML content and extracts human-readable text.
 // It skips scripts, styles, and metadata, and preserves block-level structure (newlines).
@@ -241,15 +229,40 @@ func resolveEntities(content []byte) []byte {
 // This function works for both EPUB 2 (XHTML 1.1) and EPUB 3 (HTML5 XML serialization).
 // The core structure (container -> OPF -> Spine) is consistent across versions.
 func extractTextFromXHTML(content []byte) (string, error) {
-	// Pre-process content to resolve HTML entities that XML doesn't support.
-	content = resolveEntities(content)
-	
+
 	// Create an XML decoder to parse the content token by token.
 	// Unlike DOM parsers that load the whole tree into memory,
 	// this stream parser is efficient and low-memory.
 	decoder := xml.NewDecoder(bytes.NewReader(content))
+
+	// Configure the decoder for "loose" real-world HTML/XHTML parsing:
+	//
+	// 1. Strict = false
+	//    By default, Go's XML parser is extremely strict. Older EPUBs often have
+	//    <!DOCTYPE> declarations with external DTDs that cause the parser to "choke".
+	//    Setting Strict=false bypasses DTD validation entirely.
+	//    Additionally, it permits unknown HTML entities (like &copy;). Instead of
+	//    crashing, the parser safely passes the raw string "&copy;" to our CharData.
+	decoder.Strict = false
+
+	// 2. AutoClose
+	//    Many HTML tags (like <br> or <hr>) do not have closing tags. Strict XML
+	//    will complain about "unexpected EOF" or mismatched tags if we don't
+	//    give it a list of "void elements" to close automatically.
+	decoder.AutoClose = []string{
+		"br", "hr", "img", "meta", "link", "param", "area", "input", "col", "base",
+	}
+
+	// 3. Entity map
+	//    When Strict=false, unknown entities safely pass into CharData as raw text.
+	//    However, mapping frequent ones here provides an excellent performance
+	//    shortcut at the lexer level (saving UnescapeString from working later).
+	decoder.Entity = map[string]string{
+		"nbsp": "\u00A0",
+	}
+
 	var buf strings.Builder
-	
+
 	// Tags to ignore content from (we don't want script code or CSS styles).
 	ignoreTags := map[string]bool{
 		"head": true, "script": true, "style": true, "title": true,
@@ -261,7 +274,7 @@ func extractTextFromXHTML(content []byte) (string, error) {
 	}
 
 	ignoreDepth := 0 // Tracks if we are currently inside an ignored tag (like <script>).
-	
+
 	// Iterate through the XML stream one token at a time.
 	for {
 		token, err := decoder.Token()
@@ -274,7 +287,7 @@ func extractTextFromXHTML(content []byte) (string, error) {
 
 		// Handle the 3 main types of XML tokens:
 		switch t := token.(type) {
-		
+
 		// 1. Start Element: <tag>
 		//    We check if we are entering an ignored section (like <script>)
 		//    or if we need to insert a newline (like <p>).
@@ -313,19 +326,29 @@ func extractTextFromXHTML(content []byte) (string, error) {
 			if ignoreDepth > 0 {
 				continue
 			}
-			text := string(t)
-			
+
+			// We fetch the text. Because Strict=false, the parser handles numeric
+			// references properly (via built-in support) but allows completely
+			// unknown entities (like &mdash;) to slip through raw.
+			// Example: "&mdash;" passes through unmodified into string(t).
+			rawText := string(t)
+
+			// We apply html.UnescapeString as a perfect "catch-all". It safely and
+			// accurately decodes all named and numeric entities WITHOUT modifying
+			// the XML structure (since the tokenizer already did its job).
+			text := html.UnescapeString(rawText)
+
 			// Text Normalization Logic:
 			// Goal: "  Hello   \n  World  " -> " Hello World "
-			
+
 			var sb strings.Builder
 			// Optimization: Pre-allocate memory for the builder.
 			// We know the result won't be larger than the input 'text'.
 			// This avoids resizing the buffer multiple times.
 			sb.Grow(len(text))
-			
+
 			spaceCount := 0 // Tracks consecutive spaces to collapse them.
-			
+
 			for _, r := range text {
 				// Treat newlines, tabs, and returns as spaces.
 				if r == '\n' || r == '\r' || r == '\t' || r == ' ' {
@@ -342,7 +365,7 @@ func extractTextFromXHTML(content []byte) (string, error) {
 				}
 			}
 			text = sb.String()
-			
+
 			if len(text) > 0 {
 				buf.WriteString(text)
 			}
