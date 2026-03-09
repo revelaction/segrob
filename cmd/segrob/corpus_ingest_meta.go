@@ -75,34 +75,28 @@ func corpusIngestMetaCommand(pool *sqlitex.Pool, repo storage.CorpusRepository, 
 	return nil
 }
 
-// processEpub takes pre-read epub bytes and a pre-computed id, extracts DC labels,
-// runs pandoc (via stdin) to convert it to plain text, and returns a CorpusRecord.
 func processEpub(epubBytes []byte, name, id string) (storage.CorpusRecord, error) {
 	var record storage.CorpusRecord
 	record.ID = id
 	record.Epub = name
 
-	// Extract DC labels via *zip.Reader (decoupled from filesystem)
+    // Create zip reader from bytes
 	zr, err := zip.NewReader(bytes.NewReader(epubBytes), int64(len(epubBytes)))
 	if err != nil {
 		return record, fmt.Errorf("failed to open epub zip %s: %w", name, err)
 	}
 
-	labels, err := epub.Labels(zr)
-	if err != nil {
-		return record, fmt.Errorf("failed to extract epub labels from %s: %w", name, err)
-	}
-	record.Labels = labels
+    // Initialize epub Book
+    book, err := epub.New(zr)
+    if err != nil {
+        return record, fmt.Errorf("failed to parse epub %s: %w", name, err)
+    }
 
-	// Run pandoc to convert epub to plain text via stdin
-	cmd := exec.Command("pandoc", "-f", "epub", "-t", "plain", "--wrap=preserve")
-	cmd.Stdin = bytes.NewReader(epubBytes)
-	txtBytes, err := cmd.Output()
-	if err != nil {
-		return record, fmt.Errorf("pandoc failed for %s: %w", name, err)
-	}
-
-	record.Txt = epub.CleanForNLP(string(txtBytes))
+	record.Labels = book.Labels()
+	record.Txt, err = book.Text()
+    if err != nil {
+        return record, fmt.Errorf("failed to extract text from %s: %w", name, err)
+    }
 
 	// Hash the cleaned full text output (full 32 bytes = 64 hex chars)
 	record.TxtHash = sha256Hex([]byte(record.Txt), 32)
