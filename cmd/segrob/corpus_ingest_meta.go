@@ -101,7 +101,7 @@ func corpusIngestMetaCommand(pool *sqlitex.Pool, repo storage.CorpusRepository, 
 }
 
 func processEpubGo(epubBytes []byte, name, id string) (storage.CorpusRecord, error) {
-	record := storage.CorpusRecord{ID: id, Epub: name}
+	record := storage.CorpusRecord{CorpusMeta: storage.CorpusMeta{ID: id, Epub: name}}
 	book, err := openBook(epubBytes, name)
 	if err != nil {
 		return record, err
@@ -116,7 +116,7 @@ func processEpubGo(epubBytes []byte, name, id string) (storage.CorpusRecord, err
 }
 
 func processEpubPandoc(epubBytes []byte, name, id string) (storage.CorpusRecord, error) {
-	record := storage.CorpusRecord{ID: id, Epub: name}
+	record := storage.CorpusRecord{CorpusMeta: storage.CorpusMeta{ID: id, Epub: name}}
 	book, err := openBook(epubBytes, name)
 	if err != nil {
 		return record, err
