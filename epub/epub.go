@@ -8,39 +8,6 @@ import (
 	"strings"
 )
 
-type ContainerXML struct {
-	Rootfiles []Rootfile `xml:"rootfiles>rootfile"`
-}
-
-type Rootfile struct {
-	FullPath  string `xml:"full-path,attr"`
-	MediaType string `xml:"media-type,attr"`
-}
-
-type PackageXML struct {
-	Metadata Metadata `xml:"metadata"`
-}
-
-type Metadata struct {
-	Titles       []string  `xml:"title"`
-	Creators     []Creator `xml:"creator"`
-	Contributors []Creator `xml:"contributor"`
-	Dates        []Date    `xml:"date"`
-	Language     []string  `xml:"language"`
-	Description  []string  `xml:"description"`
-}
-
-type Creator struct {
-	Value  string `xml:",chardata"`
-	Role   string `xml:"role,attr"`
-	FileAs string `xml:"file-as,attr"`
-}
-
-type Date struct {
-	Value string `xml:",chardata"`
-	Event string `xml:"event,attr"`
-}
-
 // Labels extracts DC metadata from an epub zip, normalizes values, and
 // returns a comma-separated string of labels in "key:value" format.
 // Example: "creator:garcia_marquez,title:cien_anos_de_soledad,date:1967,language:es"
