@@ -8,7 +8,7 @@ import (
 	"html"
 	"io"
 	"os"
-	"path/filepath"
+	"path"
 	"strings"
 )
 
@@ -37,9 +37,9 @@ func main() {
 	fmt.Print(text)
 }
 
-func extractEpubText(path string) (string, error) {
+func extractEpubText(epubPath string) (string, error) {
 	// Step 1: Open the EPUB file as a ZIP archive.
-	z, err := zip.OpenReader(path)
+	z, err := zip.OpenReader(epubPath)
 	if err != nil {
 		return "", fmt.Errorf("opening zip: %w", err)
 	}
@@ -68,7 +68,7 @@ func extractEpubText(path string) (string, error) {
 
 	// Step 4: Iterate through the Spine to process chapters in reading order.
 	var fullText strings.Builder
-	opfDir := filepath.Dir(opfPath) // Paths in OPF are relative to the OPF file itself.
+	opfDir := path.Dir(opfPath) // Paths in OPF are relative to the OPF file itself.
 
 	for _, itemRef := range pkg.Spine.ItemRefs {
 		// Find the file path for this spine item using its IDRef.
@@ -77,12 +77,12 @@ func extractEpubText(path string) (string, error) {
 			continue // Should not happen in a valid EPUB, but safe to skip.
 		}
 
-		// Resolve the absolute path within the ZIP archive.
+		// Resolve the absolute path within the logical ZIP archive.
 		// Example: If OPF is "OEBPS/content.opf" and href is "chap1.xhtml",
-		// the file in ZIP is "OEBPS/chap1.xhtml".
-		fullPath := filepath.Join(opfDir, href)
-		// Ensure we use forward slashes, as ZIP files always use forward slashes.
-		fullPath = filepath.ToSlash(fullPath)
+		// the file in ZIP is "OEBPS/chap1.xhtml". We use the 'path' package
+		// (not 'filepath') because ZIP files use forward slashes regardless
+		// of the host operating system.
+		fullPath := path.Join(opfDir, href)
 
 		// Read the content of the XHTML file.
 		content, err := readZipFile(z, fullPath)
