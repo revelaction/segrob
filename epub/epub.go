@@ -2,9 +2,12 @@ package epub
 
 import (
 	"archive/zip"
+	"bytes"
 	"encoding/xml"
 	"fmt"
+	"html"
 	"io"
+	"path"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -112,6 +115,203 @@ func (b *Book) Labels() string {
 		labels = append(labels, "translator:"+v)
 	}
 	return strings.Join(labels, ",")
+}
+
+// Text extracts the plain text content of the EPUB in reading order.
+func (b *Book) Text() (string, error) {
+	// Map Manifest IDs to Hrefs
+	idToHref := make(map[string]string)
+	for _, item := range b.Package.Manifest.Items {
+		idToHref[item.ID] = item.Href
+	}
+
+	var fullText strings.Builder
+
+	for _, itemRef := range b.Package.Spine.ItemRefs {
+		href, ok := idToHref[itemRef.IDRef]
+		if !ok {
+			continue
+		}
+
+		// Resolve the absolute path within the logical ZIP archive.
+		// We use the 'path' package (not 'filepath') because ZIP files use
+		// forward slashes regardless of the host operating system.
+		fullPath := path.Join(b.opfDir, href)
+
+		content, err := b.getContent(fullPath)
+		if err != nil {
+             // Try fallback (logic from script)
+             content, err = b.getContent(href)
+             if err != nil {
+                 return "", fmt.Errorf("reading content file %s: %w", fullPath, err)
+             }
+		}
+
+		text, err := extractTextFromXHTML(content)
+		if err != nil {
+			return "", fmt.Errorf("extracting text from %s: %w", fullPath, err)
+		}
+
+		fullText.WriteString(text)
+		fullText.WriteString("\n")
+	}
+
+	return fullText.String(), nil
+}
+
+// extractTextFromXHTML parses XHTML content and extracts human-readable text.
+// It skips scripts, styles, and metadata, and preserves block-level structure (newlines).
+//
+// Compatibility Note:
+// This function works for both EPUB 2 (XHTML 1.1) and EPUB 3 (HTML5 XML serialization).
+// The core structure (container -> OPF -> Spine) is consistent across versions.
+func extractTextFromXHTML(content []byte) (string, error) {
+	// Create an XML decoder to parse the content token by token.
+	// Unlike DOM parsers that load the whole tree into memory,
+	// this stream parser is efficient and low-memory.
+	decoder := xml.NewDecoder(bytes.NewReader(content))
+
+	// Configure the decoder for "loose" real-world HTML/XHTML parsing:
+	//
+	// 1. Strict = false
+	//    By default, Go's XML parser is extremely strict. Older EPUBs often have
+	//    <!DOCTYPE> declarations with external DTDs that cause the parser to "choke".
+	//    Setting Strict=false bypasses DTD validation entirely.
+	//    Additionally, it permits unknown HTML entities (like &copy;). Instead of
+	//    crashing, the parser safely passes the raw string "&copy;" to our CharData.
+	decoder.Strict = false
+
+	// 2. AutoClose
+	//    Many HTML tags (like <br> or <hr>) do not have closing tags. Strict XML
+	//    will complain about "unexpected EOF" or mismatched tags if we don't
+	//    give it a list of "void elements" to close automatically.
+	decoder.AutoClose = []string{
+		"br", "hr", "img", "meta", "link", "param", "area", "input", "col", "base",
+	}
+
+	// 3. Entity map
+	//    When Strict=false, unknown entities safely pass into CharData as raw text.
+	//    However, mapping frequent ones here provides an excellent performance
+	//    shortcut at the lexer level (saving UnescapeString from working later).
+	decoder.Entity = map[string]string{
+		"nbsp": "\u00A0",
+	}
+
+	var buf strings.Builder
+
+	// Tags to ignore content from (we don't want script code or CSS styles).
+	ignoreTags := map[string]bool{
+		"head": true, "script": true, "style": true, "title": true,
+	}
+	// Tags that should trigger a visual line break (block-level elements).
+	blockTags := map[string]bool{
+		"p": true, "div": true, "h1": true, "h2": true, "h3": true, "h4": true, "h5": true, "h6": true,
+		"li": true, "blockquote": true, "pre": true, "section": true, "header": true, "footer": true, "article": true,
+	}
+
+	ignoreDepth := 0 // Tracks if we are currently inside an ignored tag (like <script>).
+
+	// Iterate through the XML stream one token at a time.
+	for {
+		token, err := decoder.Token()
+		if err == io.EOF {
+			break // End of file
+		}
+		if err != nil {
+			return "", err
+		}
+
+		// Handle the 3 main types of XML tokens:
+		switch t := token.(type) {
+		
+		// 1. Start Element: <tag>
+		//    We check if we are entering an ignored section (like <script>)
+		//    or if we need to insert a newline (like <p>).
+		//
+		//    NOTE: Self-closing tags (like <br /> or <hr />) are parsed by xml.Decoder
+		//    as a StartElement immediately followed by an EndElement.
+		case xml.StartElement:
+			name := strings.ToLower(t.Name.Local)
+			if ignoreTags[name] {
+				ignoreDepth++
+			}
+			// If starting a block element (like <p>), ensure we have a newline before it.
+			if blockTags[name] || name == "br" {
+				buf.WriteString("\n")
+			}
+
+		// 2. End Element: </tag>
+		//    We check if we are leaving an ignored section.
+		case xml.EndElement:
+			name := strings.ToLower(t.Name.Local)
+			if ignoreTags[name] {
+				ignoreDepth--
+			}
+			// If ending a block element, ensure we have a newline after it.
+			if blockTags[name] {
+				buf.WriteString("\n")
+			}
+
+		// 3. Character Data: "Some text"
+		//    This is the actual content we want to extract.
+		case xml.CharData:
+			// If we are inside an ignored tag (e.g., <script>), skip this text.
+			if ignoreDepth > 0 {
+				continue
+			}
+
+			// We fetch the text. Because Strict=false, the parser handles numeric
+			// references properly (via built-in support) but allows completely
+			// unknown entities (like &mdash;) to slip through raw.
+			// Example: "&mdash;" passes through unmodified into string(t).
+			rawText := string(t)
+
+			// We apply html.UnescapeString as a perfect "catch-all". It safely and
+			// accurately decodes all named and numeric entities WITHOUT modifying
+			// the XML structure (since the tokenizer already did its job).
+			text := html.UnescapeString(rawText)
+
+			// Text Normalization Logic:
+			// Goal: "  Hello   \n  World  " -> " Hello World "
+			
+			var sb strings.Builder
+			// Optimization: Pre-allocate memory for the builder.
+			// We know the result won't be larger than the input 'text'.
+			// This avoids resizing the buffer multiple times.
+			sb.Grow(len(text))
+			
+			spaceCount := 0 // Tracks consecutive spaces to collapse them.
+			
+			for _, r := range text {
+				// Treat newlines, tabs, and returns as spaces.
+				if r == '\n' || r == '\r' || r == '\t' || r == ' ' {
+					spaceCount++
+					// Only write the FIRST space in a sequence.
+					if spaceCount == 1 {
+						sb.WriteRune(' ')
+					}
+				} else {
+					// It's a non-whitespace character. Write it.
+					sb.WriteRune(r)
+					// Reset space counter so the next space will be written.
+					spaceCount = 0
+				}
+			}
+			text = sb.String()
+			
+			if len(text) > 0 {
+				buf.WriteString(text)
+			}
+		}
+	}
+
+	// Post-processing: cleanup multiple consecutive newlines.
+	result := buf.String()
+	// Collapse 3+ newlines into 2 (one blank line).
+	for strings.Contains(result, "\n\n\n") {
+		result = strings.ReplaceAll(result, "\n\n\n", "\n\n")
+	}
+	return strings.TrimSpace(result), nil
 }
 
 func findOPFPath(r *zip.Reader) (string, error) {
