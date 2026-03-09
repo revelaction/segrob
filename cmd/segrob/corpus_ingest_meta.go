@@ -66,9 +66,13 @@ func finalizeText(record *storage.CorpusRecord, rawTxt string) {
 }
 
 func corpusIngestMetaCommand(pool *sqlitex.Pool, repo storage.CorpusRepository, opts CorpusIngestMetaOptions, ui UI) error {
-	// Check pandoc exists
-	if _, err := exec.LookPath("pandoc"); err != nil {
-		return fmt.Errorf("pandoc is not installed or not in PATH: %w", err)
+	// Select processor once here. Nothing below this point knows about the flag.
+	process := processEpubGo
+	if opts.Pandoc {
+		if _, err := exec.LookPath("pandoc"); err != nil {
+			return fmt.Errorf("pandoc is not installed or not in PATH: %w", err)
+		}
+		process = processEpubPandoc
 	}
 
 	// Create schema if not exists
@@ -88,7 +92,7 @@ func corpusIngestMetaCommand(pool *sqlitex.Pool, repo storage.CorpusRepository, 
 	}
 
 	// Build iterator and write stream
-	seq := corpusIterator(repo, paths, ui)
+	seq := corpusIterator(repo, paths, process, ui)
 	if err := repo.WriteStream(seq); err != nil {
 		return err
 	}
@@ -132,7 +136,7 @@ func processEpubPandoc(epubBytes []byte, name, id string) (storage.CorpusRecord,
 // each epub path. It checks existence in the store (idempotency) and
 // prints a summary line per processed epub. On error, it yields the error
 // and halts.
-func corpusIterator(repo storage.CorpusRepository, epubPaths []string, ui UI) func(yield func(storage.CorpusRecord, error) bool) {
+func corpusIterator(repo storage.CorpusRepository, epubPaths []string, process func([]byte, string, string) (storage.CorpusRecord, error), ui UI) func(yield func(storage.CorpusRecord, error) bool) {
 	seen := make(map[string]bool)
 	return func(yield func(storage.CorpusRecord, error) bool) {
 		for _, epubPath := range epubPaths {
@@ -145,7 +149,7 @@ func corpusIterator(repo storage.CorpusRepository, epubPaths []string, ui UI) fu
 			}
 
 			// Compute hash early to skip duplicates before heavy work
-            // 16 hex chars
+			// 16 hex chars
 			id := sha256Hex(epubBytes, 8)
 
 			if seen[id] {
@@ -166,7 +170,7 @@ func corpusIterator(repo storage.CorpusRepository, epubPaths []string, ui UI) fu
 			seen[id] = true
 
 			// Now do the expensive work: zip parsing, label extraction, pandoc
-			record, err := processEpub(epubBytes, name, id)
+			record, err := process(epubBytes, name, id)
 			if err != nil {
 				yield(storage.CorpusRecord{}, err)
 				return
