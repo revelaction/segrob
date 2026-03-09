@@ -174,6 +174,7 @@ type LiveSetLabelOptions struct {
 type CorpusIngestMetaOptions struct {
 	DbPath string
 	Dir    string
+	Pandoc bool
 }
 
 type CorpusDumpTxtOptions struct {
@@ -1036,6 +1037,8 @@ func parseCorpusIngestMetaArgs(args []string, ui UI) (CorpusIngestMetaOptions, e
 
 	var opts CorpusIngestMetaOptions
 	fs.StringVar(&opts.DbPath, "db", os.Getenv("SEGROB_CORPUS_PATH"), "")
+	fs.BoolVar(&opts.Pandoc, "pandoc", false, "")
+	fs.BoolVar(&opts.Pandoc, "p", false, "")
 
 	fs.Usage = func() {
 		w := fs.Output()
@@ -1045,6 +1048,7 @@ func parseCorpusIngestMetaArgs(args []string, ui UI) (CorpusIngestMetaOptions, e
 		fmt.Fprintf(w, helpArgFmt, "dir", "Directory to scan for epub files")
 		fmt.Fprintf(w, "\nOptions:\n")
 		printOpt(w, "--db", "FILE", "Output SQLite file for corpus data (or SEGROB_CORPUS_PATH)")
+		printOpt(w, "-p, --pandoc", "", "Use pandoc for text extraction instead of pure Go")
 	}
 
 	if err := fs.Parse(args); err != nil {
