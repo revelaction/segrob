@@ -44,6 +44,22 @@ func epubPaths(dir string) ([]string, error) {
 	return paths, nil
 }
 
+func openBook(epubBytes []byte, name string) (*epub.Book, error) {
+	// IMPORTANT NOTE: zr is created from an in-memory byte slice using bytes.NewReader.
+	// Unlike zip.OpenReader which returns a *zip.ReadCloser (requiring explicit defer rc.Close()),
+	// zip.NewReader returns a *zip.Reader that does not hold file handles and has no Close() method.
+	// The resource remains safely alive/open for lazy reading while `book` is in scope.
+	zr, err := zip.NewReader(bytes.NewReader(epubBytes), int64(len(epubBytes)))
+	if err != nil {
+		return nil, fmt.Errorf("failed to open epub zip %s: %w", name, err)
+	}
+	book, err := epub.New(zr)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse epub %s: %w", name, err)
+	}
+	return book, nil
+}
+
 func corpusIngestMetaCommand(pool *sqlitex.Pool, repo storage.CorpusRepository, opts CorpusIngestMetaOptions, ui UI) error {
 	// Check pandoc exists
 	if _, err := exec.LookPath("pandoc"); err != nil {
