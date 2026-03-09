@@ -60,6 +60,11 @@ func openBook(epubBytes []byte, name string) (*epub.Book, error) {
 	return book, nil
 }
 
+func finalizeText(record *storage.CorpusRecord, rawTxt string) {
+	record.Txt = epub.CleanForNLP(rawTxt)
+	record.TxtHash = sha256Hex([]byte(record.Txt), 32)
+}
+
 func corpusIngestMetaCommand(pool *sqlitex.Pool, repo storage.CorpusRepository, opts CorpusIngestMetaOptions, ui UI) error {
 	// Check pandoc exists
 	if _, err := exec.LookPath("pandoc"); err != nil {
