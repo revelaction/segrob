@@ -70,40 +70,48 @@ func (b *Book) getContent(name string) ([]byte, error) {
 	return nil, fmt.Errorf("file not found: %s", name)
 }
 
-// Labels extracts DC metadata from an epub zip, normalizes values, and
-// returns a comma-separated string of labels in "key:value" format.
-// Example: "creator:garcia_marquez,title:cien_anos_de_soledad,date:1967,language:es"
-func Labels(r *zip.Reader) (string, error) {
-	opfPath, err := findOPFPath(r)
-	if err != nil {
-		return "", err
-	}
+// Metadata Accessors (wrapping the unexported extract* and normalize* helpers)
+func (b *Book) Creator() string {
+	return normalizeValue(extractCreator(b.Package.Metadata))
+}
 
-	pkg, err := parseOPF(r, opfPath)
-	if err != nil {
-		return "", err
-	}
+func (b *Book) Title() string {
+	return normalizeValue(extractTitle(b.Package.Metadata))
+}
 
-	m := pkg.Metadata
+func (b *Book) Date() string {
+	return normalizeDate(extractDatePublication(b.Package.Metadata))
+}
+
+func (b *Book) Language() string {
+	return normalizeValue(extractLanguage(b.Package.Metadata))
+}
+
+func (b *Book) Translator() string {
+	return normalizeValue(extractTranslator(b.Package.Metadata))
+}
+
+// Labels extracts DC metadata and returns a comma-separated string of labels.
+// This method does not return an error because it operates purely on the
+// pre-parsed Book.Package.Metadata struct fully populated during epub.New().
+func (b *Book) Labels() string {
 	var labels []string
-
-	if v := normalizeValue(extractCreator(m)); v != "" {
+	if v := b.Creator(); v != "" {
 		labels = append(labels, "creator:"+v)
 	}
-	if v := normalizeValue(extractTitle(m)); v != "" {
+	if v := b.Title(); v != "" {
 		labels = append(labels, "title:"+v)
 	}
-	if v := normalizeDate(extractDatePublication(m)); v != "" {
+	if v := b.Date(); v != "" {
 		labels = append(labels, "date:"+v)
 	}
-	if v := normalizeValue(extractLanguage(m)); v != "" {
+	if v := b.Language(); v != "" {
 		labels = append(labels, "language:"+v)
 	}
-	if v := normalizeValue(extractTranslator(m)); v != "" {
+	if v := b.Translator(); v != "" {
 		labels = append(labels, "translator:"+v)
 	}
-
-	return strings.Join(labels, ","), nil
+	return strings.Join(labels, ",")
 }
 
 func findOPFPath(r *zip.Reader) (string, error) {
