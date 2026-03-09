@@ -4,9 +4,71 @@ import (
 	"archive/zip"
 	"encoding/xml"
 	"fmt"
+	"io"
+	"path/filepath"
 	"regexp"
 	"strings"
 )
+
+// Book represents a parsed EPUB.
+// It holds a reference to an open *zip.Reader but does not own its lifecycle.
+// Callers MUST ensure the underlying zip source (e.g., os.File or memory buffer)
+// remains open and valid for the entire lifetime of the Book instance.
+// CRITICAL: If you built this from a *zip.ReadCloser (e.g., zip.OpenReader),
+// do NOT call Close() on it until you are completely finished calling
+// all methods on Book (like Text()).
+type Book struct {
+	z       *zip.Reader
+	Package PackageXML
+	opfDir  string // Directory containing the OPF file, for relative path resolution
+}
+
+// New creates a new Book from an existing zip reader.
+// It parses the metadata immediately. The provided *zip.Reader must remain
+// open to allow subsequent calls to methods like Text() to lazily read files.
+//
+// Example usage with a file:
+//   r, _ := zip.OpenReader("file.epub")
+//   book, _ := epub.New(&r.Reader) // Pass the embedded Reader
+//   text, _ := book.Text()         // Must happen BEFORE r.Close()
+//   r.Close()
+func New(z *zip.Reader) (*Book, error) {
+	// Find and parse OPF
+	opfPath, err := findOPFPath(z)
+	if err != nil {
+		return nil, err
+	}
+
+	pkg, err := parseOPF(z, opfPath)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Book{
+		z:       z,
+		Package: pkg,
+		opfDir:  filepath.Dir(opfPath),
+	}, nil
+}
+
+// getContent finds and reads a specific file from the ZIP archive.
+func (b *Book) getContent(name string) ([]byte, error) {
+	name = strings.ReplaceAll(name, "\\", "/")
+	for _, f := range b.z.File {
+		if f.Name == name {
+			rc, err := f.Open()
+			if err != nil {
+				return nil, err
+			}
+			data, err := io.ReadAll(rc)
+			// Explicitly close the file without using defer inside a loop
+			// to avoid potential resource leaks if the loop logic changes.
+			rc.Close()
+			return data, err
+		}
+	}
+	return nil, fmt.Errorf("file not found: %s", name)
+}
 
 // Labels extracts DC metadata from an epub zip, normalizes values, and
 // returns a comma-separated string of labels in "key:value" format.
