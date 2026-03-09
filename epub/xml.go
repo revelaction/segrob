@@ -1,7 +1,5 @@
 package epub
 
-import "encoding/xml"
-
 // ContainerXML represents META-INF/container.xml
 type ContainerXML struct {
 	Rootfiles []struct {

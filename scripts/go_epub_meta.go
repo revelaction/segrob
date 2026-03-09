@@ -2,50 +2,15 @@ package main
 
 import (
 	"archive/zip"
-	"encoding/xml"
 	"flag"
 	"fmt"
 	"log"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strings"
+
+	"github.com/revelaction/segrob/epub"
 )
-
-// ContainerXML represents META-INF/container.xml
-type ContainerXML struct {
-	Rootfiles []Rootfile `xml:"rootfiles>rootfile"`
-}
-
-type Rootfile struct {
-	FullPath  string `xml:"full-path,attr"`
-	MediaType string `xml:"media-type,attr"`
-}
-
-// PackageXML represents the OPF file content
-type PackageXML struct {
-	Metadata Metadata `xml:"metadata"`
-}
-
-type Metadata struct {
-	Titles       []string      `xml:"title"`
-	Creators     []Creator     `xml:"creator"`
-	Contributors []Creator     `xml:"contributor"`
-	Dates        []Date        `xml:"date"`
-	Language     []string      `xml:"language"`
-	Description  []string      `xml:"description"`
-}
-
-type Creator struct {
-	Value  string `xml:",chardata"`
-	Role   string `xml:"role,attr"`
-	FileAs string `xml:"file-as,attr"`
-}
-
-type Date struct {
-	Value string `xml:",chardata"`
-	Event string `xml:"event,attr"`
-}
 
 func main() {
 	// Parse arguments
@@ -86,7 +51,6 @@ func main() {
 }
 
 func processEPUB(epubPath string, outputDir string) {
-	// Open the EPUB (zip) file
 	r, err := zip.OpenReader(epubPath)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error reading %s: %v\n", filepath.Base(epubPath), err)
@@ -94,27 +58,17 @@ func processEPUB(epubPath string, outputDir string) {
 	}
 	defer r.Close()
 
-	// Find OPF path
-	opfPath, err := findOPFPath(r)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error reading %s: %v\n", filepath.Base(epubPath), err)
-		return
-	}
-
-	// Parse OPF
-	pkg, err := parseOPF(r, opfPath)
+	book, err := epub.New(&r.Reader)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error parsing OPF in %s: %v\n", filepath.Base(epubPath), err)
 		return
 	}
 
-	// Extract and normalize metadata
-	m := pkg.Metadata
-	creator := normalizeValue(extractCreator(m))
-	title := normalizeValue(extractTitle(m))
-	date := normalizeDate(extractDatePublication(m))
-	language := normalizeValue(extractLanguage(m))
-	translator := normalizeValue(extractTranslator(m))
+	creator := book.Creator()
+	title := book.Title()
+	date := book.Date()
+	language := book.Language()
+	translator := book.Translator()
 
 	// Status output
 	essentials := map[string]string{
@@ -126,7 +80,6 @@ func processEPUB(epubPath string, outputDir string) {
 	var found, missing []string
 	
 	// Check essentials
-	// Order isn't guaranteed in map, but let's check keys in a stable order for printing
 	keys := []string{"creator", "title", "date", "language"}
 	for _, k := range keys {
 		if essentials[k] != "" {
@@ -187,124 +140,4 @@ func processEPUB(epubPath string, outputDir string) {
 	if err := os.WriteFile(outPath, []byte(tomlString), 0644); err != nil {
 		fmt.Fprintf(os.Stderr, "Error writing TOML for %s: %v\n", filepath.Base(epubPath), err)
 	}
-}
-
-func findOPFPath(r *zip.ReadCloser) (string, error) {
-	for _, f := range r.File {
-		if f.Name == "META-INF/container.xml" {
-			rc, err := f.Open()
-			if err != nil {
-				return "", err
-			}
-			defer rc.Close()
-
-			var container ContainerXML
-			if err := xml.NewDecoder(rc).Decode(&container); err != nil {
-				return "", err
-			}
-
-			if len(container.Rootfiles) > 0 {
-				return container.Rootfiles[0].FullPath, nil
-			}
-			break
-		}
-	}
-	return "", fmt.Errorf("could not find OPF path in container.xml")
-}
-
-func parseOPF(r *zip.ReadCloser, opfPath string) (PackageXML, error) {
-	var pkg PackageXML
-	for _, f := range r.File {
-		if f.Name == opfPath {
-			rc, err := f.Open()
-			if err != nil {
-				return pkg, err
-			}
-			defer rc.Close()
-
-			if err := xml.NewDecoder(rc).Decode(&pkg); err != nil {
-				return pkg, err
-			}
-			return pkg, nil
-		}
-	}
-	return pkg, fmt.Errorf("OPF file not found in zip archive")
-}
-
-// ---------------------------------------------------------------------------
-// Normalization
-// ---------------------------------------------------------------------------
-
-func normalizeValue(val string) string {
-	if val == "" {
-		return ""
-	}
-	val = strings.ToLower(val)
-	val = strings.ReplaceAll(val, " ", "_")
-	val = strings.ReplaceAll(val, "-", "_")
-	return val
-}
-
-func normalizeDate(val string) string {
-	if val == "" {
-		return ""
-	}
-	re := regexp.MustCompile(`\d{4}`)
-	return re.FindString(val)
-}
-
-// ---------------------------------------------------------------------------
-// Extract functions
-// ---------------------------------------------------------------------------
-
-func extractCreator(m Metadata) string {
-	for _, c := range m.Creators {
-		// return first where role != 'trl'
-		if c.Role != "trl" {
-			return c.Value
-		}
-	}
-	return ""
-}
-
-func extractTranslator(m Metadata) string {
-	// Check contributors first
-	for _, c := range m.Contributors {
-		if c.Role == "trl" {
-			return c.Value
-		}
-	}
-	// Then check creators
-	for _, c := range m.Creators {
-		if c.Role == "trl" {
-			return c.Value
-		}
-	}
-	return ""
-}
-
-func extractTitle(m Metadata) string {
-	if len(m.Titles) > 0 {
-		return m.Titles[0]
-	}
-	return ""
-}
-
-func extractLanguage(m Metadata) string {
-	if len(m.Language) > 0 {
-		return m.Language[0]
-	}
-	return ""
-}
-
-func extractDatePublication(m Metadata) string {
-	for _, d := range m.Dates {
-		// Python script checks for 'event' attribute being 'publication'
-		// It checks opf:event, event, etc.
-		// Our struct 'Event' captures the attribute 'event' (ignoring namespace typically in standard encoding/xml if not strict)
-		if d.Event == "publication" {
-			return d.Value
-		}
-	}
-	return ""
 }
