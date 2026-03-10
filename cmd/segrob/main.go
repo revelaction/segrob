@@ -86,20 +86,6 @@ func runCommand(cmd string, args []string, ui UI) error {
 		}
 		return topicsCommand(dr, tr, opts, docId, sentId, ui)
 
-	case "topic":
-		opts, name, _, err := parseTopicArgs(args, ui)
-		if err != nil {
-			if errors.Is(err, flag.ErrHelp) {
-				return nil
-			}
-			return err
-		}
-		tr, err := setup.NewTopicRepository(opts.TopicPath)
-		if err != nil {
-			return err
-		}
-		return topicCommand(tr, opts, name, ui)
-
 	case "bash":
 		if err := parseBashArgs(args, ui); err != nil {
 			if errors.Is(err, flag.ErrHelp) {

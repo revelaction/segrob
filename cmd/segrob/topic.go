@@ -3,33 +3,20 @@ package main
 import (
 	"fmt"
 
-	"github.com/revelaction/segrob/render"
 	"github.com/revelaction/segrob/storage"
 )
 
-// topicCommand prints the expressions of a topic
-func topicCommand(tr storage.TopicRepository, opts TopicOptions, name string, ui UI) error {
+// liveLsTopicCommand lists all topics
+func liveLsTopicCommand(tr storage.TopicRepository, opts LiveLsTopicOptions, ui UI) error {
 
-	// No name provided (list all)
-	if name == "" {
-		topicLib, err := tr.ReadAll()
-		if err != nil {
-			return err
-		}
-
-		for topicId, name := range topicLib.Names() {
-			fmt.Fprintf(ui.Out, "📖 %d %s \n", topicId, name)
-		}
-
-		return nil
-	}
-
-	tp, err := tr.Read(name)
+	topicLib, err := tr.ReadAll()
 	if err != nil {
 		return err
 	}
 
-	r := render.NewCLIRenderer()
-	r.Topic(tp.Exprs)
+	for topicId, name := range topicLib.Names() {
+		fmt.Fprintf(ui.Out, "📖 %d %s \n", topicId, name)
+	}
+
 	return nil
 }

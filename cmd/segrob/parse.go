@@ -60,7 +60,11 @@ type TopicsOptions struct {
 	DocPath   string
 }
 
-type TopicOptions struct {
+type LiveLsTopicOptions struct {
+	TopicPath string
+}
+
+type LiveShowTopicOptions struct {
 	TopicPath string
 }
 
@@ -725,20 +729,60 @@ func parseLiveEditArgs(args []string, ui UI) (LiveEditOptions, bool, error) {
 	return opts, !info.IsDir(), nil
 }
 
-func parseTopicArgs(args []string, ui UI) (TopicOptions, string, bool, error) {
-	fs := flag.NewFlagSet("topic", flag.ContinueOnError)
+func parseLiveLsTopicArgs(args []string, ui UI) (LiveLsTopicOptions, bool, error) {
+	fs := flag.NewFlagSet("live ls-topic", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
 
-	var opts TopicOptions
+	var opts LiveLsTopicOptions
 	fs.StringVar(&opts.TopicPath, "topic-path", os.Getenv("SEGROB_TOPIC_PATH"), "")
 	fs.StringVar(&opts.TopicPath, "t", os.Getenv("SEGROB_TOPIC_PATH"), "")
 
 	fs.Usage = func() {
 		w := fs.Output()
-		fmt.Fprintf(w, "Usage: %s topic [options] [name]\n\n", os.Args[0])
-		fmt.Fprintf(w, "  List topics or show expressions of a named topic.\n")
+		fmt.Fprintf(w, "Usage: %s live ls-topic [options]\n\n", os.Args[0])
+		fmt.Fprintf(w, "  List all topic names in the repository.\n")
+		fmt.Fprintf(w, "\nOptions:\n")
+		printOpt(w, "-t, --topic-path", "PATH", "Path to topics directory or SQLite file (or SEGROB_TOPIC_PATH)")
+	}
+
+	if err := fs.Parse(args); err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			fs.SetOutput(ui.Out)
+			fs.Usage()
+			return opts, false, err
+		}
+		fs.SetOutput(ui.Err)
+		fprintErr(ui.Err, err)
+		fs.Usage()
+		return opts, false, err
+	}
+
+	if opts.TopicPath == "" {
+		return opts, false, errors.New("Topic path must be specified via -t or SEGROB_TOPIC_PATH")
+	}
+
+	info, err := os.Stat(opts.TopicPath)
+	if err != nil {
+		return opts, false, fmt.Errorf("Topic path not found: %s", opts.TopicPath)
+	}
+
+	return opts, !info.IsDir(), nil
+}
+
+func parseLiveShowTopicArgs(args []string, ui UI) (LiveShowTopicOptions, string, bool, error) {
+	fs := flag.NewFlagSet("live show-topic", flag.ContinueOnError)
+	fs.SetOutput(io.Discard)
+
+	var opts LiveShowTopicOptions
+	fs.StringVar(&opts.TopicPath, "topic-path", os.Getenv("SEGROB_TOPIC_PATH"), "")
+	fs.StringVar(&opts.TopicPath, "t", os.Getenv("SEGROB_TOPIC_PATH"), "")
+
+	fs.Usage = func() {
+		w := fs.Output()
+		fmt.Fprintf(w, "Usage: %s live show-topic [options] <name>\n\n", os.Args[0])
+		fmt.Fprintf(w, "  Show expressions of a named topic.\n")
 		fmt.Fprintf(w, "\nArguments:\n")
-		fmt.Fprintf(w, helpArgFmt, "name", "Topic name to inspect (optional; lists all topics if omitted)")
+		fmt.Fprintf(w, helpArgFmt, "name", "Topic name to inspect")
 		fmt.Fprintf(w, "\nOptions:\n")
 		printOpt(w, "-t, --topic-path", "PATH", "Path to topics directory or SQLite file (or SEGROB_TOPIC_PATH)")
 	}
@@ -759,14 +803,14 @@ func parseTopicArgs(args []string, ui UI) (TopicOptions, string, bool, error) {
 		return opts, "", false, errors.New("Topic path must be specified via -t or SEGROB_TOPIC_PATH")
 	}
 
+	if fs.NArg() != 1 {
+		return opts, "", false, errors.New("live show-topic requires exactly one argument: <name>")
+	}
+	name := fs.Arg(0)
+
 	info, err := os.Stat(opts.TopicPath)
 	if err != nil {
 		return opts, "", false, fmt.Errorf("Topic path not found: %s", opts.TopicPath)
-	}
-
-	name := ""
-	if fs.NArg() > 0 {
-		name = fs.Arg(0)
 	}
 
 	return opts, name, !info.IsDir(), nil

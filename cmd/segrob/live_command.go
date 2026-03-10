@@ -12,9 +12,11 @@ func printLiveUsage(w io.Writer) {
 	fmt.Fprintf(w, "\nSubcommands:\n")
 	fmt.Fprintf(w, helpCmdFmt, "ls", "List all documents in the repository.")
 	fmt.Fprintf(w, helpCmdFmt, "ls-label", "List all unique labels in the repository.")
+	fmt.Fprintf(w, helpCmdFmt, "ls-topic", "List all unique topics in the repository.")
 	fmt.Fprintf(w, helpCmdFmt, "set-label", "Add one or more labels to a document.")
 	fmt.Fprintf(w, helpCmdFmt, "show", "Show document contents or statistics.")
 	fmt.Fprintf(w, helpCmdFmt, "show-sent", "Show sentence details or statistics.")
+	fmt.Fprintf(w, helpCmdFmt, "show-topic", "Show expressions for a specific topic.")
 	fmt.Fprintf(w, helpCmdFmt, "find", "Find sentences matching a topic expression.")
 	fmt.Fprintf(w, helpCmdFmt, "query", "Enter interactive query mode.")
 	fmt.Fprintf(w, helpCmdFmt, "edit", "Enter interactive edit mode.")
@@ -46,6 +48,28 @@ func runLiveCommand(args []string, setup *Setup, ui UI) error {
 			return err
 		}
 		return liveLsCommand(repo, opts, ui)
+
+	case "ls-topic":
+		opts, _, err := parseLiveLsTopicArgs(subArgs, ui)
+		if err != nil {
+			return err
+		}
+		repo, err := setup.NewTopicRepository(opts.TopicPath)
+		if err != nil {
+			return err
+		}
+		return liveLsTopicCommand(repo, opts, ui)
+
+	case "show-topic":
+		opts, name, _, err := parseLiveShowTopicArgs(subArgs, ui)
+		if err != nil {
+			return err
+		}
+		repo, err := setup.NewTopicRepository(opts.TopicPath)
+		if err != nil {
+			return err
+		}
+		return liveShowTopicCommand(repo, opts, name, ui)
 
 	case "find":
 		opts, cmdArgs, _, err := parseLiveFindArgs(subArgs, ui)
