@@ -9,21 +9,28 @@ import (
 func printLiveUsage(w io.Writer) {
 	fmt.Fprintf(w, "Usage: %s live <subcommand> [options]\n\n", os.Args[0])
 	fmt.Fprintf(w, "  Manage the live production database.\n")
-	fmt.Fprintf(w, "\nSubcommands:\n")
+
+	fmt.Fprintf(w, "\nSubcommands: Doc - Sentences\n")
 	fmt.Fprintf(w, helpCmdFmt, "ls", "List all documents in the repository.")
-	fmt.Fprintf(w, helpCmdFmt, "ls-label", "List all unique labels in the repository.")
-	fmt.Fprintf(w, helpCmdFmt, "ls-topic", "List all unique topics in the repository.")
-	fmt.Fprintf(w, helpCmdFmt, "set-label", "Add one or more labels to a document.")
 	fmt.Fprintf(w, helpCmdFmt, "show", "Show document contents or statistics.")
 	fmt.Fprintf(w, helpCmdFmt, "show-sent", "Show sentence details or statistics.")
-	fmt.Fprintf(w, helpCmdFmt, "show-topic", "Show expressions for a specific topic.")
 	fmt.Fprintf(w, helpCmdFmt, "find", "Find sentences matching a topic expression.")
 	fmt.Fprintf(w, helpCmdFmt, "find-topics", "Show topics for a specific sentence.")
 	fmt.Fprintf(w, helpCmdFmt, "query", "Enter interactive query mode.")
+
+	fmt.Fprintf(w, "\nSubcommands: Labels\n")
+	fmt.Fprintf(w, helpCmdFmt, "ls-label", "List all unique labels in the repository.")
+	fmt.Fprintf(w, helpCmdFmt, "set-label", "Add one or more labels to a document.")
+
+	fmt.Fprintf(w, "\nSubcommands: Topics\n")
+	fmt.Fprintf(w, helpCmdFmt, "ls-topic", "List all unique topics in the repository.")
+	fmt.Fprintf(w, helpCmdFmt, "show-topic", "Show expressions for a specific topic.")
 	fmt.Fprintf(w, helpCmdFmt, "edit", "Enter interactive edit mode.")
-	fmt.Fprintf(w, helpCmdFmt, "init", "Initialize a new SQLite database with the required schema.")
 	fmt.Fprintf(w, helpCmdFmt, "import-topic", "Import topics from filesystem to SQLite.")
 	fmt.Fprintf(w, helpCmdFmt, "export-topic", "Export topics from SQLite to filesystem.")
+
+	fmt.Fprintf(w, "\nSubcommands: Other\n")
+	fmt.Fprintf(w, helpCmdFmt, "init", "Initialize a new SQLite database with the required schema.")
 }
 
 func runLiveCommand(args []string, setup *Setup, ui UI) error {
