@@ -7,7 +7,7 @@ import (
 	"github.com/revelaction/segrob/storage/sqlite/zombiezen"
 )
 
-func importTopicCommand(opts ImportTopicOptions, ui UI) error {
+func liveImportTopicCommand(opts LiveImportTopicOptions, ui UI) error {
 
 	src := filesystem.NewTopicStore(opts.From)
 

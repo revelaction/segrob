@@ -84,16 +84,6 @@ func runCommand(cmd string, args []string, ui UI) error {
 		}
 		return completeCommand(completeArgs, ui)
 
-	case "import-topic":
-		opts, err := parseImportTopicArgs(args, ui)
-		if err != nil {
-			if errors.Is(err, flag.ErrHelp) {
-				return nil
-			}
-			return err
-		}
-		return importTopicCommand(opts, ui)
-
 	case "export-topic":
 		opts, err := parseExportTopicArgs(args, ui)
 		if err != nil {

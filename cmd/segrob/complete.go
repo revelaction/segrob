@@ -8,7 +8,6 @@ import (
 var commands = []string{
 	"corpus",
 	"live",
-	"import-topic",
 	"export-topic",
 	"bash",
 	"version",
@@ -38,6 +37,7 @@ var liveSubcommands = []string{
 	"show-topic",
 	"query",
 	"edit",
+	"import-topic",
 }
 
 // completeCommand handles the autocompletion requests triggered by the bash completion script.
