@@ -51,8 +51,9 @@ func (s *CorpusStore) List() ([]storage.CorpusRecord, error) {
 	err = sqlitex.Execute(conn,
 		`SELECT 
 			id, labels, epub, txt_hash, txt_created_at, 
-			txt_edited, txt_edited_at, txt_editor, txt_edit_notes, 
-			nlp_created_at, nlp_reviewed, nlp_reviewed_at, nlp_reviewer, nlp_review_notes, 
+			txt_edit, txt_edit_at, txt_edit_by, txt_edit_notes, 
+			txt_ack, txt_ack_at, txt_ack_by,
+			nlp_created_at, nlp_ack, nlp_ack_at, nlp_ack_by, 
 			deleted_at, created_at, updated_at 
 		 FROM corpus`,
 		&sqlitex.ExecOptions{
@@ -61,17 +62,21 @@ func (s *CorpusStore) List() ([]storage.CorpusRecord, error) {
 				if err != nil {
 					return fmt.Errorf("error parsing txt_created_at: %w", err)
 				}
-				txtEditedAt, err := storage.TimeParse(stmt.GetText("txt_edited_at"))
+				txtEditAt, err := storage.TimeParse(stmt.GetText("txt_edit_at"))
 				if err != nil {
-					return fmt.Errorf("error parsing txt_edited_at: %w", err)
+					return fmt.Errorf("error parsing txt_edit_at: %w", err)
+				}
+				txtAckAt, err := storage.TimeParse(stmt.GetText("txt_ack_at"))
+				if err != nil {
+					return fmt.Errorf("error parsing txt_ack_at: %w", err)
 				}
 				nlpCreatedAt, err := storage.TimeParse(stmt.GetText("nlp_created_at"))
 				if err != nil {
 					return fmt.Errorf("error parsing nlp_created_at: %w", err)
 				}
-				nlpReviewedAt, err := storage.TimeParse(stmt.GetText("nlp_reviewed_at"))
+				nlpAckAt, err := storage.TimeParse(stmt.GetText("nlp_ack_at"))
 				if err != nil {
-					return fmt.Errorf("error parsing nlp_reviewed_at: %w", err)
+					return fmt.Errorf("error parsing nlp_ack_at: %w", err)
 				}
 				deletedAt, err := storage.TimeParse(stmt.GetText("deleted_at"))
 				if err != nil {
@@ -92,20 +97,22 @@ func (s *CorpusStore) List() ([]storage.CorpusRecord, error) {
 						Labels: stmt.GetText("labels"),
 						Epub:   stmt.GetText("epub"),
 					},
-					TxtHash:        stmt.GetText("txt_hash"),
-					TxtCreatedAt:   txtCreatedAt,
-					TxtEdited:      stmt.GetBool("txt_edited"),
-					TxtEditedAt:    txtEditedAt,
-					TxtEditor:      stmt.GetText("txt_editor"),
-					TxtEditNotes:   stmt.GetText("txt_edit_notes"),
-					NlpCreatedAt:   nlpCreatedAt,
-					NlpReviewed:    stmt.GetBool("nlp_reviewed"),
-					NlpReviewedAt:  nlpReviewedAt,
-					NlpReviewer:    stmt.GetText("nlp_reviewer"),
-					NlpReviewNotes: stmt.GetText("nlp_review_notes"),
-					DeletedAt:      deletedAt,
-					CreatedAt:      createdAt,
-					UpdatedAt:      updatedAt,
+					TxtHash:      stmt.GetText("txt_hash"),
+					TxtCreatedAt: txtCreatedAt,
+					TxtEdit:      stmt.GetBool("txt_edit"),
+					TxtEditAt:    txtEditAt,
+					TxtEditBy:    stmt.GetText("txt_edit_by"),
+					TxtEditNotes: stmt.GetText("txt_edit_notes"),
+					TxtAck:       stmt.GetBool("txt_ack"),
+					TxtAckAt:     txtAckAt,
+					TxtAckBy:     stmt.GetText("txt_ack_by"),
+					NlpCreatedAt: nlpCreatedAt,
+					NlpAck:       stmt.GetBool("nlp_ack"),
+					NlpAckAt:     nlpAckAt,
+					NlpAckBy:     stmt.GetText("nlp_ack_by"),
+					DeletedAt:    deletedAt,
+					CreatedAt:    createdAt,
+					UpdatedAt:    updatedAt,
 				})
 				return nil
 			},

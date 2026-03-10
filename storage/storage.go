@@ -124,21 +124,23 @@ type CorpusReader interface {
 // inserted as one row in the corpus docs table.
 type CorpusRecord struct {
 	CorpusMeta
-	Txt            string // full plain text from pandoc
-	TxtHash        string // SHA-256 hex of txt bytes
-	TxtCreatedAt   time.Time
-	TxtEdited      bool
-	TxtEditedAt    time.Time
-	TxtEditor      string
-	TxtEditNotes   string
-	NlpCreatedAt   time.Time
-	NlpReviewed    bool
-	NlpReviewedAt  time.Time
-	NlpReviewer    string
-	NlpReviewNotes string
-	DeletedAt      time.Time
-	CreatedAt      time.Time
-	UpdatedAt      time.Time
+	Txt          string // full plain text from pandoc
+	TxtHash      string // SHA-256 hex of txt bytes
+	TxtCreatedAt time.Time
+	TxtEdit      bool
+	TxtEditAt    time.Time
+	TxtEditBy    string
+	TxtEditNotes string
+	TxtAck       bool
+	TxtAckAt     time.Time
+	TxtAckBy     string
+	NlpCreatedAt time.Time
+	NlpAck       bool
+	NlpAckAt     time.Time
+	NlpAckBy     string
+	DeletedAt    time.Time
+	CreatedAt    time.Time
+	UpdatedAt    time.Time
 }
 
 // TimeParse parses a RFC3339 string into a time.Time.
