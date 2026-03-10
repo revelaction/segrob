@@ -21,6 +21,7 @@ func printCorpusUsage(w io.Writer) {
 	fmt.Fprintf(w, "\nSubcommands: Ingest\n")
 	fmt.Fprintf(w, helpCmdFmt, "ingest-nlp", "Process document text with NLP and store in corpus.")
 	fmt.Fprintf(w, helpCmdFmt, "ingest-meta", "Scan a directory for epub files and build a corpus database.")
+	fmt.Fprintf(w, helpCmdFmt, "push-txt", "Update a corpus document text from a file.")
 
 	fmt.Fprintf(w, "\nSubcommands: Publish\n")
 	fmt.Fprintf(w, helpCmdFmt, "publish", "Move a document from corpus to live production tables.")
@@ -125,6 +126,17 @@ func runCorpusCommand(args []string, setup *Setup, ui UI) error {
 			return err
 		}
 		return corpusIngestMetaCommand(pool, repo, opts, ui)
+
+	case "push-txt":
+		opts, err := parseCorpusPushTxtArgs(subArgs, ui)
+		if err != nil {
+			return err
+		}
+		repo, err := setup.NewCorpusRepository(opts.DbPath)
+		if err != nil {
+			return err
+		}
+		return corpusPushTxtCommand(repo, opts, ui)
 
 	default:
 		printCorpusUsage(ui.Err)

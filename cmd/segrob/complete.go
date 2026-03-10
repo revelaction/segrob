@@ -21,6 +21,7 @@ var corpusSubcommands = []string{
 	"dump-nlp",
 	"ingest-nlp",
 	"ingest-meta",
+	"push-txt",
 }
 
 var liveSubcommands = []string{

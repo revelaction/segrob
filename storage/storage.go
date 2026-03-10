@@ -184,6 +184,9 @@ type CorpusWriter interface {
 
 	// ClearNlp sets the nlp field to NULL for the given document ID.
 	ClearNlp(id string) error
+
+	// UpdateTxt updates the txt field and its associated metadata for the given document ID.
+	UpdateTxt(id string, txt []byte, txtHash string, by string, notes string) error
 }
 
 // CorpusRepository combines read and write operations

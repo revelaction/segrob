@@ -1274,6 +1274,59 @@ func parseCorpusLsArgs(args []string, ui UI) (CorpusLsOptions, error) {
 	return opts, nil
 }
 
+type CorpusPushTxtOptions struct {
+	By     string
+	Note   string
+	ID     string
+	File   string
+	DbPath string
+}
+
+func parseCorpusPushTxtArgs(args []string, ui UI) (CorpusPushTxtOptions, error) {
+	fs := flag.NewFlagSet("corpus push-txt", flag.ContinueOnError)
+	fs.SetOutput(io.Discard)
+
+	var opts CorpusPushTxtOptions
+	fs.StringVar(&opts.By, "by", "", "Author of the text edit")
+	fs.StringVar(&opts.Note, "note", "", "Optional note for the text edit")
+	fs.StringVar(&opts.DbPath, "db", os.Getenv("SEGROB_CORPUS_PATH"), "Corpus SQLite file (or SEGROB_CORPUS_PATH)")
+
+	fs.Usage = func() {
+		w := fs.Output()
+		fmt.Fprintf(w, "Usage: %s corpus push-txt [options] <id> <file>\n\n", os.Args[0])
+		fmt.Fprintf(w, "  Update a corpus document text from a file.\n")
+		fmt.Fprintf(w, "\nArguments:\n")
+		fmt.Fprintf(w, helpArgFmt, "id", "Document ID")
+		fmt.Fprintf(w, helpArgFmt, "file", "Path to the plain text file")
+		fmt.Fprintf(w, "\nOptions:\n")
+		printOpt(w, "--by", "NAME", "Author of the text edit")
+		printOpt(w, "--note", "TEXT", "Optional note for the text edit")
+		printOpt(w, "--db", "FILE", "Corpus SQLite file (or SEGROB_CORPUS_PATH)")
+	}
+
+	if err := fs.Parse(args); err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			fs.SetOutput(ui.Out)
+			fs.Usage()
+			return opts, err
+		}
+		return opts, err
+	}
+
+	if fs.NArg() != 2 {
+		return opts, errors.New("corpus push-txt requires exactly two arguments: <id> <file>")
+	}
+
+	opts.ID = fs.Arg(0)
+	opts.File = fs.Arg(1)
+
+	if opts.DbPath == "" {
+		return opts, errors.New("corpus database must be specified via --db or SEGROB_CORPUS_PATH")
+	}
+
+	return opts, nil
+}
+
 func setupUsage(fs *flag.FlagSet) {
 	fs.Usage = func() {
 		w := fs.Output()

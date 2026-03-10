@@ -277,3 +277,25 @@ func (s *CorpusStore) ClearNlp(id string) error {
 			Args: []interface{}{id},
 		})
 }
+
+func (s *CorpusStore) UpdateTxt(id string, txt []byte, txtHash string, by string, notes string) error {
+	conn, err := s.pool.Take(context.TODO())
+	if err != nil {
+		return err
+	}
+	defer s.pool.Put(conn)
+
+	return sqlitex.Execute(conn,
+		`UPDATE corpus SET 
+			txt = ?, 
+			txt_hash = ?, 
+			txt_edit = 1, 
+			txt_edit_at = (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')), 
+			txt_edit_by = ?, 
+			txt_edit_notes = ?, 
+			updated_at = (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')) 
+		 WHERE id = ?`,
+		&sqlitex.ExecOptions{
+			Args: []interface{}{string(txt), txtHash, by, notes, id},
+		})
+}
