@@ -15,6 +15,7 @@ func printLiveUsage(w io.Writer) {
 	fmt.Fprintf(w, helpCmdFmt, "set-label", "Add one or more labels to a document.")
 	fmt.Fprintf(w, helpCmdFmt, "show", "Show document contents or statistics.")
 	fmt.Fprintf(w, helpCmdFmt, "show-sent", "Show sentence details or statistics.")
+	fmt.Fprintf(w, helpCmdFmt, "find", "Find sentences matching a topic expression.")
 	fmt.Fprintf(w, helpCmdFmt, "query", "Enter interactive query mode.")
 	fmt.Fprintf(w, helpCmdFmt, "edit", "Enter interactive edit mode.")
 }
@@ -44,6 +45,17 @@ func runLiveCommand(args []string, setup *Setup, ui UI) error {
 			return err
 		}
 		return liveLsCommand(repo, opts, ui)
+
+	case "find":
+		opts, cmdArgs, _, err := parseLiveFindArgs(subArgs, ui)
+		if err != nil {
+			return err
+		}
+		dr, err := setup.NewDocRepository(opts.DocPath)
+		if err != nil {
+			return err
+		}
+		return liveFindCommand(dr, opts, cmdArgs, ui)
 
 	case "ls-label":
 		opts, err := parseLiveLsLabelArgs(subArgs, ui)

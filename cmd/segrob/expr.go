@@ -11,9 +11,9 @@ import (
 	"github.com/revelaction/segrob/topic"
 )
 
-func exprCommand(dr storage.DocRepository, opts ExprOptions, args []string, ui UI) error {
+func liveFindCommand(dr storage.DocRepository, opts LiveFindOptions, args []string, ui UI) error {
 
-	// args is guaranteed to have at least 1 element by parseExprArgs
+	// args is guaranteed to have at least 1 element by parseLiveFindArgs
 	// Flatten arguments to support quoted expressions containing spaces,
 	// matching the behavior of the query REPL.
 	//

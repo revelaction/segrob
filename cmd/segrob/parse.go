@@ -32,7 +32,7 @@ func printOpt(w io.Writer, flags, meta, desc string) {
 }
 
 // Option structs for subcommands that have flags
-type ExprOptions struct {
+type LiveFindOptions struct {
 	Labels    []string
 	NoColor   bool
 	NoPrefix  bool
@@ -523,11 +523,11 @@ func parseTopicsArgs(args []string, ui UI) (TopicsOptions, string, int, error) {
 	return opts, docId, sentId, nil
 }
 
-func parseExprArgs(args []string, ui UI) (ExprOptions, []string, bool, error) {
-	fs := flag.NewFlagSet("expr", flag.ContinueOnError)
+func parseLiveFindArgs(args []string, ui UI) (LiveFindOptions, []string, bool, error) {
+	fs := flag.NewFlagSet("live find", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
 
-	var opts ExprOptions
+	var opts LiveFindOptions
 	labels := (*stringSliceFlag)(&opts.Labels)
 	fs.Var(labels, "label", "")
 	fs.Var(labels, "l", "")
@@ -559,8 +559,8 @@ func parseExprArgs(args []string, ui UI) (ExprOptions, []string, bool, error) {
 
 	fs.Usage = func() {
 		w := fs.Output()
-		fmt.Fprintf(w, "Usage: %s expr [options] <expr>...\n\n", os.Args[0])
-		fmt.Fprintf(w, "  Evaluate a topic expression.\n")
+		fmt.Fprintf(w, "Usage: %s live find [options] <expr>...\n\n", os.Args[0])
+		fmt.Fprintf(w, "  Find sentences matching a topic expression.\n")
 		fmt.Fprintf(w, "\nArguments:\n")
 		fmt.Fprintf(w, helpArgFmt, "expr", "One or more topic expression items")
 		fmt.Fprintf(w, "\nOptions:\n")
@@ -590,7 +590,7 @@ func parseExprArgs(args []string, ui UI) (ExprOptions, []string, bool, error) {
 	if fs.NArg() < 1 {
 		fs.SetOutput(ui.Err)
 		fs.Usage()
-		return opts, nil, false, errors.New("expr command needs at least one argument")
+		return opts, nil, false, errors.New("find command needs at least one argument")
 	}
 
 	if opts.DocPath == "" {
@@ -1220,7 +1220,6 @@ func setupUsage(fs *flag.FlagSet) {
 		fmt.Fprintf(w, "\nCommands: Doc - Live - Production\n")
 		fmt.Fprintf(w, helpCmdFmt, "live", "Manage the live production database.")
 		fmt.Fprintf(w, helpCmdFmt, "topics", "Show topics for a specific sentence.")
-		fmt.Fprintf(w, helpCmdFmt, "expr", "Evaluate a topic expression.")
 		fmt.Fprintf(w, helpCmdFmt, "topic", "List topics or show expressions of a topic.")
 		fmt.Fprintf(w, helpCmdFmt, "import-topic", "Import topics from filesystem to SQLite.")
 		fmt.Fprintf(w, helpCmdFmt, "export-topic", "Export topics from SQLite to filesystem.")

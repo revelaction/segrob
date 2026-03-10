@@ -86,20 +86,6 @@ func runCommand(cmd string, args []string, ui UI) error {
 		}
 		return topicsCommand(dr, tr, opts, docId, sentId, ui)
 
-	case "expr":
-		opts, cmdArgs, _, err := parseExprArgs(args, ui)
-		if err != nil {
-			if errors.Is(err, flag.ErrHelp) {
-				return nil
-			}
-			return err
-		}
-		dr, err := setup.NewDocRepository(opts.DocPath)
-		if err != nil {
-			return err
-		}
-		return exprCommand(dr, opts, cmdArgs, ui)
-
 	case "topic":
 		opts, name, _, err := parseTopicArgs(args, ui)
 		if err != nil {

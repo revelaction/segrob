@@ -9,7 +9,6 @@ var commands = []string{
 	"corpus",
 	"live",
 	"topics",
-	"expr",
 	"topic",
 	"import-topic",
 	"export-topic",
@@ -31,6 +30,7 @@ var corpusSubcommands = []string{
 
 var liveSubcommands = []string{
 	"ls",
+	"find",
 	"ls-label",
 	"set-label",
 	"show",
