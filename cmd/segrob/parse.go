@@ -197,7 +197,10 @@ type CorpusDumpNlpOptions struct {
 type CorpusLsOptions struct {
 	DbPath  string // --db / SEGROB_CORPUS_PATH
 	Filter  string // optional positional filter
-	WithNlp bool   // --with-nlp / -n
+	WithNlp bool   // --with-nlp / -w
+	NlpAck  bool   // --nlp-ack / -n
+	TxtAck  bool   // --txt-ack / -t
+	Ack     bool   // --ack / -a
 }
 
 // stringSliceFlag implements flag.Value for multi-value strings
@@ -1229,17 +1232,26 @@ func parseCorpusLsArgs(args []string, ui UI) (CorpusLsOptions, error) {
 	var opts CorpusLsOptions
 	fs.StringVar(&opts.DbPath, "db", os.Getenv("SEGROB_CORPUS_PATH"), "")
 	fs.BoolVar(&opts.WithNlp, "with-nlp", false, "")
-	fs.BoolVar(&opts.WithNlp, "n", false, "")
+	fs.BoolVar(&opts.WithNlp, "w", false, "")
+	fs.BoolVar(&opts.NlpAck, "nlp-ack", false, "")
+	fs.BoolVar(&opts.NlpAck, "n", false, "")
+	fs.BoolVar(&opts.TxtAck, "txt-ack", false, "")
+	fs.BoolVar(&opts.TxtAck, "t", false, "")
+	fs.BoolVar(&opts.Ack, "ack", false, "")
+	fs.BoolVar(&opts.Ack, "a", false, "")
 
 	fs.Usage = func() {
 		w := fs.Output()
 		fmt.Fprintf(w, "Usage: %s corpus ls [options] [filter]\n\n", os.Args[0])
 		fmt.Fprintf(w, "  List all documents in the corpus staging database.\n")
 		fmt.Fprintf(w, "\nArguments:\n")
-		fmt.Fprintf(w, helpArgFmt, "filter", "Optional substring filter on document ID")
+		fmt.Fprintf(w, helpArgFmt, "filter", "Optional substring filter on document labels")
 		fmt.Fprintf(w, "\nOptions:\n")
 		printOpt(w, "--db", "FILE", "Corpus SQLite file (or SEGROB_CORPUS_PATH)")
-		printOpt(w, "-n, --with-nlp", "", "Only list records that have NLP data")
+		printOpt(w, "-w, --with-nlp", "", "Only list records that have NLP data")
+		printOpt(w, "-n, --nlp-ack", "", "Only list records with NLP acknowledged")
+		printOpt(w, "-t, --txt-ack", "", "Only list records with text acknowledged")
+		printOpt(w, "-a, --ack", "", "Only list records with both NLP and text acknowledged")
 	}
 
 	if err := fs.Parse(args); err != nil {

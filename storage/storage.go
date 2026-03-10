@@ -156,12 +156,19 @@ func TimeParse(s string) (time.Time, error) {
 	return time.Parse(time.RFC3339, s)
 }
 
+// HasTxt reports whether plain-text content has been generated and stored.
+// The Txt field is not populated by most queries due to its size — TxtHash
+// is the authoritative signal for text presence.
 func (r CorpusRecord) HasTxt() bool {
 	return r.TxtHash != ""
 }
 
 func (r CorpusRecord) HasNlp() bool {
 	return !r.NlpCreatedAt.IsZero()
+}
+
+func (r CorpusRecord) HasAck() bool {
+	return r.TxtAck && r.NlpAck
 }
 
 // CorpusWriter defines write operations for corpus storage
