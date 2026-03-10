@@ -100,7 +100,7 @@ type LiveImportTopicOptions struct {
 	To   string
 }
 
-type ExportTopicOptions struct {
+type LiveExportTopicOptions struct {
 	From string
 	To   string
 }
@@ -884,17 +884,17 @@ func parseLiveImportTopicArgs(args []string, ui UI) (LiveImportTopicOptions, err
 	return opts, nil
 }
 
-func parseExportTopicArgs(args []string, ui UI) (ExportTopicOptions, error) {
-	fs := flag.NewFlagSet("export-topic", flag.ContinueOnError)
+func parseLiveExportTopicArgs(args []string, ui UI) (LiveExportTopicOptions, error) {
+	fs := flag.NewFlagSet("live export-topic", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
 
-	var opts ExportTopicOptions
+	var opts LiveExportTopicOptions
 	fs.StringVar(&opts.From, "from", "", "")
 	fs.StringVar(&opts.To, "to", "", "")
 
 	fs.Usage = func() {
 		w := fs.Output()
-		fmt.Fprintf(w, "Usage: %s export-topic --from <sqlite_file> --to <dir>\n\n", os.Args[0])
+		fmt.Fprintf(w, "Usage: %s live export-topic --from <sqlite_file> --to <dir>\n\n", os.Args[0])
 		fmt.Fprintf(w, "  Export topics from a SQLite database to a JSON directory.\n")
 		fmt.Fprintf(w, "\nOptions:\n")
 		printOpt(w, "--from", "FILE", "Source SQLite database file")
@@ -902,6 +902,11 @@ func parseExportTopicArgs(args []string, ui UI) (ExportTopicOptions, error) {
 	}
 
 	if err := fs.Parse(args); err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			fs.SetOutput(ui.Out)
+			fs.Usage()
+			return opts, err
+		}
 		return opts, err
 	}
 
@@ -1268,7 +1273,6 @@ func setupUsage(fs *flag.FlagSet) {
 
 		fmt.Fprintf(w, "\nCommands: Doc - Live - Production\n")
 		fmt.Fprintf(w, helpCmdFmt, "live", "Manage the live production database.")
-		fmt.Fprintf(w, helpCmdFmt, "export-topic", "Export topics from SQLite to filesystem.")
 
 		fmt.Fprintf(w, "\nCommands: Other\n")
 		fmt.Fprintf(w, helpCmdFmt, "bash", "Output bash completion script.")

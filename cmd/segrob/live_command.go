@@ -23,6 +23,7 @@ func printLiveUsage(w io.Writer) {
 	fmt.Fprintf(w, helpCmdFmt, "edit", "Enter interactive edit mode.")
 	fmt.Fprintf(w, helpCmdFmt, "init", "Initialize a new SQLite database with the required schema.")
 	fmt.Fprintf(w, helpCmdFmt, "import-topic", "Import topics from filesystem to SQLite.")
+	fmt.Fprintf(w, helpCmdFmt, "export-topic", "Export topics from SQLite to filesystem.")
 }
 
 func runLiveCommand(args []string, setup *Setup, ui UI) error {
@@ -186,6 +187,13 @@ func runLiveCommand(args []string, setup *Setup, ui UI) error {
 			return err
 		}
 		return liveImportTopicCommand(opts, ui)
+
+	case "export-topic":
+		opts, err := parseLiveExportTopicArgs(subArgs, ui)
+		if err != nil {
+			return err
+		}
+		return liveExportTopicCommand(opts, ui)
 
 	default:
 		printLiveUsage(ui.Err)

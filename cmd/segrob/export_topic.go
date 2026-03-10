@@ -7,7 +7,7 @@ import (
 	"github.com/revelaction/segrob/storage/sqlite/zombiezen"
 )
 
-func exportTopicCommand(opts ExportTopicOptions, ui UI) error {
+func liveExportTopicCommand(opts LiveExportTopicOptions, ui UI) error {
 	pool, err := zombiezen.NewPool(opts.From)
 	if err != nil {
 		return err
