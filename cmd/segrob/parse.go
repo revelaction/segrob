@@ -1268,13 +1268,9 @@ func setupUsage(fs *flag.FlagSet) {
 		fmt.Fprintf(w, "Usage: %s command [command options] [arguments...]\n\n", os.Args[0])
 		fmt.Fprintf(w, "  Sentence dictionary based on NLP topics\n")
 
-		fmt.Fprintf(w, "\nCommands: Corpus - Stage\n")
+		fmt.Fprintf(w, "\nCommands:\n")
 		fmt.Fprintf(w, helpCmdFmt, "corpus", "Manage the corpus staging database.")
-
-		fmt.Fprintf(w, "\nCommands: Doc - Live - Production\n")
 		fmt.Fprintf(w, helpCmdFmt, "live", "Manage the live production database.")
-
-		fmt.Fprintf(w, "\nCommands: Other\n")
 		fmt.Fprintf(w, helpCmdFmt, "bash", "Output bash completion script.")
 		fmt.Fprintf(w, helpCmdFmt, "version", "Show version information.")
 		fmt.Fprintf(w, helpCmdFmt, "help", "Show help for a command.")
