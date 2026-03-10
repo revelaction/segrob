@@ -1264,7 +1264,6 @@ func setupUsage(fs *flag.FlagSet) {
 		fmt.Fprintf(w, "\nCommands: Doc - Live - Production\n")
 		fmt.Fprintf(w, helpCmdFmt, "live", "Manage the live production database.")
 		fmt.Fprintf(w, helpCmdFmt, "topics", "Show topics for a specific sentence.")
-		fmt.Fprintf(w, helpCmdFmt, "topic", "List topics or show expressions of a topic.")
 		fmt.Fprintf(w, helpCmdFmt, "import-topic", "Import topics from filesystem to SQLite.")
 		fmt.Fprintf(w, helpCmdFmt, "export-topic", "Export topics from SQLite to filesystem.")
 
