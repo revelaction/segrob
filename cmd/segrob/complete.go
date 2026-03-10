@@ -8,7 +8,6 @@ import (
 var commands = []string{
 	"corpus",
 	"live",
-	"topics",
 	"import-topic",
 	"export-topic",
 	"bash",
@@ -29,6 +28,7 @@ var corpusSubcommands = []string{
 var liveSubcommands = []string{
 	"ls",
 	"find",
+	"find-topics",
 	"init",
 	"ls-label",
 	"ls-topic",

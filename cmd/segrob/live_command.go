@@ -18,6 +18,7 @@ func printLiveUsage(w io.Writer) {
 	fmt.Fprintf(w, helpCmdFmt, "show-sent", "Show sentence details or statistics.")
 	fmt.Fprintf(w, helpCmdFmt, "show-topic", "Show expressions for a specific topic.")
 	fmt.Fprintf(w, helpCmdFmt, "find", "Find sentences matching a topic expression.")
+	fmt.Fprintf(w, helpCmdFmt, "find-topics", "Show topics for a specific sentence.")
 	fmt.Fprintf(w, helpCmdFmt, "query", "Enter interactive query mode.")
 	fmt.Fprintf(w, helpCmdFmt, "edit", "Enter interactive edit mode.")
 	fmt.Fprintf(w, helpCmdFmt, "init", "Initialize a new SQLite database with the required schema.")
@@ -81,6 +82,21 @@ func runLiveCommand(args []string, setup *Setup, ui UI) error {
 			return err
 		}
 		return liveFindCommand(dr, opts, cmdArgs, ui)
+
+	case "find-topics":
+		opts, docId, sentId, err := parseLiveFindTopicsArgs(subArgs, ui)
+		if err != nil {
+			return err
+		}
+		dr, err := setup.NewDocRepository(opts.DocPath)
+		if err != nil {
+			return err
+		}
+		tr, err := setup.NewTopicRepository(opts.TopicPath)
+		if err != nil {
+			return err
+		}
+		return liveFindTopicsCommand(dr, tr, opts, docId, sentId, ui)
 
 	case "init":
 		opts, err := parseLiveInitArgs(subArgs, ui)

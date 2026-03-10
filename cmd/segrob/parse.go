@@ -54,7 +54,7 @@ type LiveQueryOptions struct {
 	DocPath   string
 }
 
-type TopicsOptions struct {
+type LiveFindTopicsOptions struct {
 	Format    string
 	TopicPath string
 	DocPath   string
@@ -463,11 +463,11 @@ func parseLiveShowSentArgs(args []string, ui UI) (LiveShowSentOptions, string, i
 	return opts, docId, sentId, nil
 }
 
-func parseTopicsArgs(args []string, ui UI) (TopicsOptions, string, int, error) {
-	fs := flag.NewFlagSet("topics", flag.ContinueOnError)
+func parseLiveFindTopicsArgs(args []string, ui UI) (LiveFindTopicsOptions, string, int, error) {
+	fs := flag.NewFlagSet("live find-topics", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
 
-	var opts TopicsOptions
+	var opts LiveFindTopicsOptions
 	fs.StringVar(&opts.TopicPath, "topic-path", os.Getenv("SEGROB_TOPIC_PATH"), "")
 	fs.StringVar(&opts.TopicPath, "t", os.Getenv("SEGROB_TOPIC_PATH"), "")
 
@@ -481,7 +481,7 @@ func parseTopicsArgs(args []string, ui UI) (TopicsOptions, string, int, error) {
 
 	fs.Usage = func() {
 		w := fs.Output()
-		fmt.Fprintf(w, "Usage: %s topics [options] <doc_id> <sentence_id>\n\n", os.Args[0])
+		fmt.Fprintf(w, "Usage: %s live find-topics [options] <doc_id> <sentence_id>\n\n", os.Args[0])
 		fmt.Fprintf(w, "  Show topics for a specific sentence from the configured repository.\n")
 		fmt.Fprintf(w, "\nArguments:\n")
 		fmt.Fprintf(w, helpArgFmt, "doc_id", "ID of the document")
@@ -510,7 +510,7 @@ func parseTopicsArgs(args []string, ui UI) (TopicsOptions, string, int, error) {
 	}
 
 	if fs.NArg() != 2 {
-		return opts, "", 0, errors.New("topics command needs exactly two arguments: <doc_id> <sentence_id>")
+		return opts, "", 0, errors.New("find-topics command needs exactly two arguments: <doc_id> <sentence_id>")
 	}
 
 	docId := fs.Arg(0)
@@ -1263,7 +1263,6 @@ func setupUsage(fs *flag.FlagSet) {
 
 		fmt.Fprintf(w, "\nCommands: Doc - Live - Production\n")
 		fmt.Fprintf(w, helpCmdFmt, "live", "Manage the live production database.")
-		fmt.Fprintf(w, helpCmdFmt, "topics", "Show topics for a specific sentence.")
 		fmt.Fprintf(w, helpCmdFmt, "import-topic", "Import topics from filesystem to SQLite.")
 		fmt.Fprintf(w, helpCmdFmt, "export-topic", "Export topics from SQLite to filesystem.")
 

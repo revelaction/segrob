@@ -68,24 +68,6 @@ func runCommand(cmd string, args []string, ui UI) error {
 	case "live":
 		return runLiveCommand(args, setup, ui)
 
-	case "topics":
-		opts, docId, sentId, err := parseTopicsArgs(args, ui)
-		if err != nil {
-			if errors.Is(err, flag.ErrHelp) {
-				return nil
-			}
-			return err
-		}
-		dr, err := setup.NewDocRepository(opts.DocPath)
-		if err != nil {
-			return err
-		}
-		tr, err := setup.NewTopicRepository(opts.TopicPath)
-		if err != nil {
-			return err
-		}
-		return topicsCommand(dr, tr, opts, docId, sentId, ui)
-
 	case "bash":
 		if err := parseBashArgs(args, ui); err != nil {
 			if errors.Is(err, flag.ErrHelp) {

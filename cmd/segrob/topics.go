@@ -9,7 +9,7 @@ import (
 	"github.com/revelaction/segrob/storage"
 )
 
-func topicsCommand(docRepo storage.DocRepository, topicRepo storage.TopicRepository, opts TopicsOptions, docId string, sentId int, ui UI) error {
+func liveFindTopicsCommand(docRepo storage.DocRepository, topicRepo storage.TopicRepository, opts LiveFindTopicsOptions, docId string, sentId int, ui UI) error {
 	sentences, err := docRepo.Nlp(docId)
 	if err != nil {
 		return err
@@ -18,7 +18,7 @@ func topicsCommand(docRepo storage.DocRepository, topicRepo storage.TopicReposit
 	return renderTopics(sentences, sentId, topicRepo, opts, ui)
 }
 
-func renderTopics(sentences []sent.Sentence, sentId int, topicRepo storage.TopicRepository, opts TopicsOptions, ui UI) error {
+func renderTopics(sentences []sent.Sentence, sentId int, topicRepo storage.TopicRepository, opts LiveFindTopicsOptions, ui UI) error {
 	if sentId < 0 || sentId >= len(sentences) {
 		return fmt.Errorf("sentence index %d out of range (0-%d)", sentId, len(sentences)-1)
 	}
