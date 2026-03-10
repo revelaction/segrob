@@ -12,7 +12,6 @@ var commands = []string{
 	"topic",
 	"import-topic",
 	"export-topic",
-	"init-db",
 	"bash",
 	"version",
 	"help",
@@ -31,6 +30,7 @@ var corpusSubcommands = []string{
 var liveSubcommands = []string{
 	"ls",
 	"find",
+	"init",
 	"ls-label",
 	"set-label",
 	"show",

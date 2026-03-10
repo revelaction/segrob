@@ -136,20 +136,6 @@ func runCommand(cmd string, args []string, ui UI) error {
 		}
 		return exportTopicCommand(opts, ui)
 
-	case "init-db":
-		opts, err := parseInitDbArgs(args, ui)
-		if err != nil {
-			if errors.Is(err, flag.ErrHelp) {
-				return nil
-			}
-			return err
-		}
-		pool, err := setup.GetPool(opts.DbPath)
-		if err != nil {
-			return err
-		}
-		return initDbCommand(pool, opts, ui)
-
 	case "corpus":
 		return runCorpusCommand(args, setup, ui)
 	}

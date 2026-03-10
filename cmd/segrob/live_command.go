@@ -18,6 +18,7 @@ func printLiveUsage(w io.Writer) {
 	fmt.Fprintf(w, helpCmdFmt, "find", "Find sentences matching a topic expression.")
 	fmt.Fprintf(w, helpCmdFmt, "query", "Enter interactive query mode.")
 	fmt.Fprintf(w, helpCmdFmt, "edit", "Enter interactive edit mode.")
+	fmt.Fprintf(w, helpCmdFmt, "init", "Initialize a new SQLite database with the required schema.")
 }
 
 func runLiveCommand(args []string, setup *Setup, ui UI) error {
@@ -56,6 +57,17 @@ func runLiveCommand(args []string, setup *Setup, ui UI) error {
 			return err
 		}
 		return liveFindCommand(dr, opts, cmdArgs, ui)
+
+	case "init":
+		opts, err := parseLiveInitArgs(subArgs, ui)
+		if err != nil {
+			return err
+		}
+		pool, err := setup.GetPool(opts.DbPath)
+		if err != nil {
+			return err
+		}
+		return liveInitCommand(pool, opts, ui)
 
 	case "ls-label":
 		opts, err := parseLiveLsLabelArgs(subArgs, ui)

@@ -101,7 +101,7 @@ type ExportTopicOptions struct {
 	To   string
 }
 
-type InitDbOptions struct {
+type LiveInitOptions struct {
 	DbPath string
 }
 
@@ -863,15 +863,15 @@ func parseExportTopicArgs(args []string, ui UI) (ExportTopicOptions, error) {
 	return opts, nil
 }
 
-func parseInitDbArgs(args []string, ui UI) (InitDbOptions, error) {
-	fs := flag.NewFlagSet("init-db", flag.ContinueOnError)
+func parseLiveInitArgs(args []string, ui UI) (LiveInitOptions, error) {
+	fs := flag.NewFlagSet("live init", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
 
-	var opts InitDbOptions
+	var opts LiveInitOptions
 
 	fs.Usage = func() {
 		w := fs.Output()
-		fmt.Fprintf(w, "Usage: %s init-db <db>\n\n", os.Args[0])
+		fmt.Fprintf(w, "Usage: %s live init <db>\n\n", os.Args[0])
 		fmt.Fprintf(w, "  Initialize a new SQLite database with the required schema.\n")
 		fmt.Fprintf(w, "\nArguments:\n")
 		fmt.Fprintf(w, helpArgFmt, "db", "Path to the SQLite file to create")
@@ -887,7 +887,7 @@ func parseInitDbArgs(args []string, ui UI) (InitDbOptions, error) {
 	}
 
 	if fs.NArg() != 1 {
-		return opts, errors.New("init-db requires exactly one argument: <db>")
+		return opts, errors.New("init command requires exactly one argument: <db>")
 	}
 
 	opts.DbPath = fs.Arg(0)
@@ -1223,7 +1223,6 @@ func setupUsage(fs *flag.FlagSet) {
 		fmt.Fprintf(w, helpCmdFmt, "topic", "List topics or show expressions of a topic.")
 		fmt.Fprintf(w, helpCmdFmt, "import-topic", "Import topics from filesystem to SQLite.")
 		fmt.Fprintf(w, helpCmdFmt, "export-topic", "Export topics from SQLite to filesystem.")
-		fmt.Fprintf(w, helpCmdFmt, "init-db", "Initialize a new SQLite database with the required schema.")
 
 		fmt.Fprintf(w, "\nCommands: Other\n")
 		fmt.Fprintf(w, helpCmdFmt, "bash", "Output bash completion script.")

@@ -8,7 +8,7 @@ import (
 	"github.com/revelaction/segrob/storage/sqlite/zombiezen"
 )
 
-func initDbCommand(pool *sqlitex.Pool, opts InitDbOptions, ui UI) error {
+func liveInitCommand(pool *sqlitex.Pool, opts LiveInitOptions, ui UI) error {
 
 	if err := zombiezen.CreateSchemas(pool, "doc_canonical.sql"); err != nil {
 		return err
