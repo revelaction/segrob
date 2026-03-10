@@ -163,6 +163,9 @@ func (r CorpusRecord) HasTxt() bool {
 	return r.TxtHash != ""
 }
 
+// HasNlp reports whether Nlp content has been generated and stored.
+// The Nlp field is not even in the CorpusRecord — NlpCreatedAt
+// is the authoritative signal for Nlp presence.
 func (r CorpusRecord) HasNlp() bool {
 	return !r.NlpCreatedAt.IsZero()
 }
