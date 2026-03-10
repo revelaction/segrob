@@ -9,14 +9,21 @@ import (
 func printCorpusUsage(w io.Writer) {
 	fmt.Fprintf(w, "Usage: %s corpus <subcommand> [options]\n\n", os.Args[0])
 	fmt.Fprintf(w, "  Manage the corpus staging database.\n")
-	fmt.Fprintf(w, "\nSubcommands:\n")
+
+	fmt.Fprintf(w, "\nSubcommands: Documents\n")
 	fmt.Fprintf(w, helpCmdFmt, "ls", "List documents in the corpus staging database.")
 	fmt.Fprintf(w, helpCmdFmt, "show", "Show rendered contents of a document's NLP field.")
-	fmt.Fprintf(w, helpCmdFmt, "publish", "Move a document from corpus to live production tables.")
+
+	fmt.Fprintf(w, "\nSubcommands: Dump\n")
 	fmt.Fprintf(w, helpCmdFmt, "dump-txt", "Output the txt field of a corpus document byte-exact.")
 	fmt.Fprintf(w, helpCmdFmt, "dump-nlp", "Output the nlp field of a corpus document.")
+
+	fmt.Fprintf(w, "\nSubcommands: Ingest\n")
 	fmt.Fprintf(w, helpCmdFmt, "ingest-nlp", "Process document text with NLP and store in corpus.")
 	fmt.Fprintf(w, helpCmdFmt, "ingest-meta", "Scan a directory for epub files and build a corpus database.")
+
+	fmt.Fprintf(w, "\nSubcommands: Publish\n")
+	fmt.Fprintf(w, helpCmdFmt, "publish", "Move a document from corpus to live production tables.")
 }
 
 func runCorpusCommand(args []string, setup *Setup, ui UI) error {
