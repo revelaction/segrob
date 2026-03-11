@@ -213,7 +213,19 @@ func extractTextFromXHTML(content []byte) (string, error) {
 
 	// Iterate through the XML stream one token at a time.
 	for {
-		token, err := decoder.Token()
+		// Use RawToken instead of Token to bypass the strict stack validation
+		// (matching start/end tags) which causes errors like "unexpected end element"
+        // This often happens in older or poorly generated EPUBs where:
+        // * A tag is closed without being opened (orphaned </font>).
+        // * Tags are improperly nested (e.g., <b><i>...</b></i>).
+        // * The file claims to be XHTML (strict XML) but contains "tag soup" HTML.
+		// in malformed XHTML/HTML. 
+        // RawToken returns the next token from the stream regardless of
+        // nesting correctness. For the purpose of extracting plain text
+        // (<p>Hello</p> -> "Hello"), structural validation is unnecessary; we
+        // only need the character data and the knowledge of block-level tags
+        // for spacing.
+		token, err := decoder.RawToken()
 		if err == io.EOF {
 			break // End of file
 		}
