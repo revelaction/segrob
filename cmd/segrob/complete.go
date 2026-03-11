@@ -16,6 +16,7 @@ var commands = []string{
 var corpusSubcommands = []string{
 	"ls",
 	"show",
+	"ack",
 	"publish",
 	"dump-txt",
 	"dump-nlp",

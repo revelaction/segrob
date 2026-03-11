@@ -187,6 +187,12 @@ type CorpusWriter interface {
 
 	// UpdateTxt updates the txt field and its associated metadata for the given document ID.
 	UpdateTxt(id string, txt []byte, txtHash string, by string, notes string) error
+
+	// AckTxt updates the txt_ack fields for the given document ID.
+	AckTxt(id string, by string) error
+
+	// AckNlp updates the nlp_ack fields for the given document ID.
+	AckNlp(id string, by string) error
 }
 
 // CorpusRepository combines read and write operations

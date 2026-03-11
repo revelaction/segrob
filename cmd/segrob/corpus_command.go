@@ -13,6 +13,7 @@ func printCorpusUsage(w io.Writer) {
 	fmt.Fprintf(w, "\nSubcommands: Documents\n")
 	fmt.Fprintf(w, helpCmdFmt, "ls", "List documents in the corpus staging database.")
 	fmt.Fprintf(w, helpCmdFmt, "show", "Show rendered contents of a document's NLP field.")
+	fmt.Fprintf(w, helpCmdFmt, "ack", "Acknowledge a corpus document text or NLP.")
 
 	fmt.Fprintf(w, "\nSubcommands: Dump\n")
 	fmt.Fprintf(w, helpCmdFmt, "dump-txt", "Output the txt field of a corpus document byte-exact.")
@@ -63,6 +64,17 @@ func runCorpusCommand(args []string, setup *Setup, ui UI) error {
 			return err
 		}
 		return corpusShowCommand(repo, opts, id, ui)
+
+	case "ack":
+		opts, err := parseCorpusAckArgs(subArgs, ui)
+		if err != nil {
+			return err
+		}
+		repo, err := setup.NewCorpusRepository(opts.DbPath)
+		if err != nil {
+			return err
+		}
+		return corpusAckCommand(repo, opts, ui)
 
 	case "publish":
 		opts, err := parseCorpusPublishArgs(subArgs, ui)

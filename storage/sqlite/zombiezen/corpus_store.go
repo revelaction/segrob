@@ -299,3 +299,41 @@ func (s *CorpusStore) UpdateTxt(id string, txt []byte, txtHash string, by string
 			Args: []interface{}{string(txt), txtHash, by, notes, id},
 		})
 }
+
+func (s *CorpusStore) AckTxt(id string, by string) error {
+	conn, err := s.pool.Take(context.TODO())
+	if err != nil {
+		return err
+	}
+	defer s.pool.Put(conn)
+
+	return sqlitex.Execute(conn,
+		`UPDATE corpus SET 
+			txt_ack = 1, 
+			txt_ack_at = (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')), 
+			txt_ack_by = ?, 
+			updated_at = (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')) 
+		 WHERE id = ?`,
+		&sqlitex.ExecOptions{
+			Args: []interface{}{by, id},
+		})
+}
+
+func (s *CorpusStore) AckNlp(id string, by string) error {
+	conn, err := s.pool.Take(context.TODO())
+	if err != nil {
+		return err
+	}
+	defer s.pool.Put(conn)
+
+	return sqlitex.Execute(conn,
+		`UPDATE corpus SET 
+			nlp_ack = 1, 
+			nlp_ack_at = (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')), 
+			nlp_ack_by = ?, 
+			updated_at = (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')) 
+		 WHERE id = ?`,
+		&sqlitex.ExecOptions{
+			Args: []interface{}{by, id},
+		})
+}

@@ -109,6 +109,21 @@ type LiveInitOptions struct {
 	DbPath string
 }
 
+type CorpusAckOptions struct {
+	Nlp    bool
+	By     string
+	ID     string
+	DbPath string
+}
+
+type CorpusPushTxtOptions struct {
+	By     string
+	Note   string
+	ID     string
+	File   string
+	DbPath string
+}
+
 type CorpusIngestNlpOptions struct {
 	NlpScript string
 	DbPath    string // corpus db path
@@ -1274,14 +1289,6 @@ func parseCorpusLsArgs(args []string, ui UI) (CorpusLsOptions, error) {
 	return opts, nil
 }
 
-type CorpusPushTxtOptions struct {
-	By     string
-	Note   string
-	ID     string
-	File   string
-	DbPath string
-}
-
 func parseCorpusPushTxtArgs(args []string, ui UI) (CorpusPushTxtOptions, error) {
 	fs := flag.NewFlagSet("corpus push-txt", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
@@ -1319,6 +1326,50 @@ func parseCorpusPushTxtArgs(args []string, ui UI) (CorpusPushTxtOptions, error) 
 
 	opts.ID = fs.Arg(0)
 	opts.File = fs.Arg(1)
+
+	if opts.DbPath == "" {
+		return opts, errors.New("corpus database must be specified via --db or SEGROB_CORPUS_PATH")
+	}
+
+	return opts, nil
+}
+
+func parseCorpusAckArgs(args []string, ui UI) (CorpusAckOptions, error) {
+	fs := flag.NewFlagSet("corpus ack", flag.ContinueOnError)
+	fs.SetOutput(io.Discard)
+
+	var opts CorpusAckOptions
+	fs.BoolVar(&opts.Nlp, "nlp", false, "Acknowledge NLP instead of text")
+	fs.BoolVar(&opts.Nlp, "n", false, "alias for -nlp")
+	fs.StringVar(&opts.By, "by", "", "Who is acknowledging")
+	fs.StringVar(&opts.DbPath, "db", os.Getenv("SEGROB_CORPUS_PATH"), "Corpus SQLite file (or SEGROB_CORPUS_PATH)")
+
+	fs.Usage = func() {
+		w := fs.Output()
+		fmt.Fprintf(w, "Usage: %s corpus ack [options] <id>\n\n", os.Args[0])
+		fmt.Fprintf(w, "  Acknowledge a corpus document text or NLP.\n")
+		fmt.Fprintf(w, "\nArguments:\n")
+		fmt.Fprintf(w, helpArgFmt, "id", "Document ID")
+		fmt.Fprintf(w, "\nOptions:\n")
+		printOpt(w, "-n, --nlp", "", "Acknowledge NLP instead of text")
+		printOpt(w, "--by", "NAME", "Who is acknowledging")
+		printOpt(w, "--db", "FILE", "Corpus SQLite file (or SEGROB_CORPUS_PATH)")
+	}
+
+	if err := fs.Parse(args); err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			fs.SetOutput(ui.Out)
+			fs.Usage()
+			return opts, err
+		}
+		return opts, err
+	}
+
+	if fs.NArg() != 1 {
+		return opts, errors.New("corpus ack requires exactly one argument: <id>")
+	}
+
+	opts.ID = fs.Arg(0)
 
 	if opts.DbPath == "" {
 		return opts, errors.New("corpus database must be specified via --db or SEGROB_CORPUS_PATH")
