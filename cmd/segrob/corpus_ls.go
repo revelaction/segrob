@@ -7,12 +7,17 @@ import (
 	"github.com/revelaction/segrob/storage"
 )
 
+// Column format for corpus ls tabular output.
+// FLAGS(5) ID(16) CREATOR(15) TITLE(35) DATE(4) LANG
+const corpusLsFmt = "%-5s  %-16s  %-15s  %-35s  %-4s  %s\n"
+
 func corpusLsCommand(repo storage.CorpusReader, opts CorpusLsOptions, ui UI) error {
 	metas, err := repo.List()
 	if err != nil {
 		return err
 	}
 
+	var matches []storage.CorpusMeta
 	for _, m := range metas {
 		if opts.Filter != "" && !strings.Contains(m.Labels, opts.Filter) {
 			continue
@@ -29,27 +34,69 @@ func corpusLsCommand(repo storage.CorpusReader, opts CorpusLsOptions, ui UI) err
 		if opts.Ack && !m.HasAck() {
 			continue
 		}
+		matches = append(matches, m)
+	}
 
-		txtStatus := "❌"
-		if m.HasTxt() {
-			txtStatus = "✅"
-			if m.TxtAck {
-				txtStatus = "👍"
-			}
-		}
-		nlpStatus := "❌"
-		if m.HasNlp() {
-			nlpStatus = "✅"
-			if m.NlpAck {
-				nlpStatus = "👍"
-			}
-		}
-		ackStatus := "❌"
-		if m.HasAck() {
-			ackStatus = "👍"
-		}
-		fmt.Fprintf(ui.Out, "📖 %s 🔖 %s txt:%s nlp:%s ack:%s\n", m.ID, m.Labels, txtStatus, nlpStatus, ackStatus)
+	if len(matches) == 0 {
+		return nil
+	}
+
+	// Print header
+	fmt.Fprintf(ui.Out, corpusLsFmt, "FLAGS", "ID", "CREATOR", "TITLE", "DATE", "LANG")
+
+	for _, m := range matches {
+		creator := extractLabelValue(m.Labels, "creator:")
+		title := extractLabelValue(m.Labels, "title:")
+		date := extractLabelValue(m.Labels, "date:")
+		lang := extractLabelValue(m.Labels, "language:")
+
+		fmt.Fprintf(ui.Out, corpusLsFmt,
+			corpusChars(m),
+			m.ID,
+			truncate(creator, 15),
+			truncate(title, 35),
+			date,
+			lang,
+		)
 	}
 
 	return nil
+}
+
+// truncate returns s shortened to max runes, with trailing "…" if truncated.
+func truncate(s string, max int) string {
+	r := []rune(s)
+	if len(r) <= max {
+		return s
+	}
+	return string(r[:max-1]) + "…"
+}
+
+// extractLabelValue returns the value for a given prefix from the comma-separated Labels string.
+// If the label is missing, it returns "-".
+// Example: extractLabelValue("creator:carroll,title:foo", "creator:") → "carroll"
+func extractLabelValue(labels, prefix string) string {
+	for _, part := range strings.Split(labels, ",") {
+		if strings.HasPrefix(part, prefix) {
+			return part[len(prefix):]
+		}
+	}
+	return "-"
+}
+
+// corpusChars returns a 5-char status string for the given CorpusMeta.
+func corpusChars(m storage.CorpusMeta) string {
+	ch := func(set bool, c byte) byte {
+		if set {
+			return c
+		}
+		return '-'
+	}
+	return string([]byte{
+		ch(m.HasTxt(), 't'),
+		ch(m.TxtEdit, 'e'),
+		ch(m.TxtAck, 'a'),
+		ch(m.HasNlp(), 'n'),
+		ch(m.NlpAck, 'a'),
+	})
 }
