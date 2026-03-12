@@ -133,6 +133,7 @@ type CorpusIngestNlpOptions struct {
 	NlpScript string
 	DbPath    string // corpus db path
 	ID        string
+	Force     bool   // -f/--force
 }
 
 type CorpusPublishOptions struct {
@@ -979,6 +980,8 @@ func parseCorpusIngestNlpArgs(args []string, ui UI) (CorpusIngestNlpOptions, err
 	fs.StringVar(&opts.NlpScript, "nlp-script", os.Getenv("SEGROB_NLP_SCRIPT"), "")
 	fs.StringVar(&opts.NlpScript, "s", os.Getenv("SEGROB_NLP_SCRIPT"), "")
 	fs.StringVar(&opts.DbPath, "db", os.Getenv("SEGROB_CORPUS_PATH"), "")
+	fs.BoolVar(&opts.Force, "force", false, "")
+	fs.BoolVar(&opts.Force, "f", false, "")
 
 	fs.Usage = func() {
 		w := fs.Output()
@@ -989,6 +992,7 @@ func parseCorpusIngestNlpArgs(args []string, ui UI) (CorpusIngestNlpOptions, err
 		fmt.Fprintf(w, "\nOptions:\n")
 		printOpt(w, "-s, --nlp-script", "PATH", "Path to the Python NLP script (or SEGROB_NLP_SCRIPT)")
 		printOpt(w, "--db", "FILE", "Path to the corpus SQLite database (or SEGROB_CORPUS_PATH)")
+		printOpt(w, "-f, --force", "", "Force processing even if TxtAck is false")
 	}
 
 	if err := fs.Parse(args); err != nil {

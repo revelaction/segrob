@@ -10,6 +10,17 @@ import (
 )
 
 func corpusIngestNlpCommand(corpusRepo storage.CorpusRepository, opts CorpusIngestNlpOptions, ui UI) error {
+	// Check TxtAck status unless forced
+	if !opts.Force {
+		meta, err := corpusRepo.ReadMeta(opts.ID)
+		if err != nil {
+			return fmt.Errorf("failed to read corpus meta: %w", err)
+		}
+		if !meta.TxtAck {
+			return fmt.Errorf("text not acknowledged for doc ID %s (use -f/--force to override)", opts.ID)
+		}
+	}
+
 	// Read raw text
 	txtBytes, err := corpusRepo.ReadTxt(opts.ID)
 	if err != nil {
