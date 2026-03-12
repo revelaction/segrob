@@ -8,8 +8,8 @@ import (
 )
 
 // Column format for corpus ls tabular output.
-// FLAGS(5) ID(16) CREATOR(15) TITLE(27) DATE(4) LANG
-const corpusLsFmt = "%-5s  %-16s  %-15s  %-27s  %-4s  %s\n"
+// FLAGS(5) ID(16) TITLE(25) CREATOR(14) TRANSLATOR(14) DATE(4) LANG
+const corpusLsFmt = "%-5s  %-16s  %-25s  %-14s  %-14s  %-4s  %s\n"
 
 func corpusLsCommand(repo storage.CorpusReader, opts CorpusLsOptions, ui UI) error {
 	metas, err := repo.List()
@@ -42,21 +42,17 @@ func corpusLsCommand(repo storage.CorpusReader, opts CorpusLsOptions, ui UI) err
 	}
 
 	// Print header
-	fmt.Fprintf(ui.Out, corpusLsFmt, "FLAGS", "ID", "CREATOR", "TITLE", "DATE", "LANG")
+	fmt.Fprintf(ui.Out, corpusLsFmt, "FLAGS", "ID", "TITLE", "CREATOR", "TRANSLATOR", "DATE", "LANG")
 
 	for _, m := range matches {
-		creator := extractLabelValue(m.Labels, "creator:")
-		title := extractLabelValue(m.Labels, "title:")
-		date := extractLabelValue(m.Labels, "date:")
-		lang := extractLabelValue(m.Labels, "language:")
-
 		fmt.Fprintf(ui.Out, corpusLsFmt,
 			corpusChars(m),
 			m.ID,
-			truncate(creator, 15),
-			truncate(title, 27),
-			date,
-			lang,
+			truncate(extractLabelValue(m.Labels, "title:"), 25),
+			truncate(extractLabelValue(m.Labels, "creator:"), 14),
+			truncate(extractLabelValue(m.Labels, "translator:"), 14),
+			extractLabelValue(m.Labels, "date:"),
+			extractLabelValue(m.Labels, "language:"),
 		)
 	}
 
