@@ -116,6 +116,11 @@ type CorpusAckOptions struct {
 	DbPath string
 }
 
+type CorpusRmOptions struct {
+	ID     string
+	DbPath string
+}
+
 type CorpusPushTxtOptions struct {
 	By     string
 	Note   string
@@ -1367,6 +1372,45 @@ func parseCorpusAckArgs(args []string, ui UI) (CorpusAckOptions, error) {
 
 	if fs.NArg() != 1 {
 		return opts, errors.New("corpus ack requires exactly one argument: <id>")
+	}
+
+	opts.ID = fs.Arg(0)
+
+	if opts.DbPath == "" {
+		return opts, errors.New("corpus database must be specified via --db or SEGROB_CORPUS_PATH")
+	}
+
+	return opts, nil
+}
+
+func parseCorpusRmArgs(args []string, ui UI) (CorpusRmOptions, error) {
+	fs := flag.NewFlagSet("corpus rm", flag.ContinueOnError)
+	fs.SetOutput(io.Discard)
+
+	var opts CorpusRmOptions
+	fs.StringVar(&opts.DbPath, "db", os.Getenv("SEGROB_CORPUS_PATH"), "Corpus SQLite file (or SEGROB_CORPUS_PATH)")
+
+	fs.Usage = func() {
+		w := fs.Output()
+		fmt.Fprintf(w, "Usage: %s corpus rm [options] <id>\n\n", os.Args[0])
+		fmt.Fprintf(w, "  Remove a document from the corpus database.\n")
+		fmt.Fprintf(w, "\nArguments:\n")
+		fmt.Fprintf(w, helpArgFmt, "id", "Document ID")
+		fmt.Fprintf(w, "\nOptions:\n")
+		printOpt(w, "--db", "FILE", "Corpus SQLite file (or SEGROB_CORPUS_PATH)")
+	}
+
+	if err := fs.Parse(args); err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			fs.SetOutput(ui.Out)
+			fs.Usage()
+			return opts, err
+		}
+		return opts, err
+	}
+
+	if fs.NArg() != 1 {
+		return opts, errors.New("corpus rm requires exactly one argument: <id>")
 	}
 
 	opts.ID = fs.Arg(0)

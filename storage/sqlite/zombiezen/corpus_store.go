@@ -337,3 +337,18 @@ func (s *CorpusStore) AckNlp(id string, by string) error {
 			Args: []interface{}{by, id},
 		})
 }
+
+// Delete removes a document from the corpus by its ID.
+func (s *CorpusStore) Delete(id string) error {
+	conn, err := s.pool.Take(context.TODO())
+	if err != nil {
+		return err
+	}
+	defer s.pool.Put(conn)
+
+	return sqlitex.Execute(conn,
+		"DELETE FROM corpus WHERE id = ?",
+		&sqlitex.ExecOptions{
+			Args: []interface{}{id},
+		})
+}

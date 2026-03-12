@@ -193,6 +193,9 @@ type CorpusWriter interface {
 
 	// AckNlp updates the nlp_ack fields for the given document ID.
 	AckNlp(id string, by string) error
+
+	// Delete removes a document from the corpus by its ID.
+	Delete(id string) error
 }
 
 // CorpusRepository combines read and write operations
