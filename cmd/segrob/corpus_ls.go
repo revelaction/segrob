@@ -8,47 +8,47 @@ import (
 )
 
 func corpusLsCommand(repo storage.CorpusReader, opts CorpusLsOptions, ui UI) error {
-	records, err := repo.List()
+	metas, err := repo.List()
 	if err != nil {
 		return err
 	}
 
-	for _, r := range records {
-		if opts.Filter != "" && !strings.Contains(r.Labels, opts.Filter) {
+	for _, m := range metas {
+		if opts.Filter != "" && !strings.Contains(m.Labels, opts.Filter) {
 			continue
 		}
-		if opts.WithNlp && !r.HasNlp() {
+		if opts.WithNlp && !m.HasNlp() {
 			continue
 		}
-		if opts.NlpAck && !r.NlpAck {
+		if opts.NlpAck && !m.NlpAck {
 			continue
 		}
-		if opts.TxtAck && !r.TxtAck {
+		if opts.TxtAck && !m.TxtAck {
 			continue
 		}
-		if opts.Ack && !r.HasAck() {
+		if opts.Ack && !m.HasAck() {
 			continue
 		}
 
 		txtStatus := "❌"
-		if r.HasTxt() {
+		if m.HasTxt() {
 			txtStatus = "✅"
-			if r.TxtAck {
+			if m.TxtAck {
 				txtStatus = "👍"
 			}
 		}
 		nlpStatus := "❌"
-		if r.HasNlp() {
+		if m.HasNlp() {
 			nlpStatus = "✅"
-			if r.NlpAck {
+			if m.NlpAck {
 				nlpStatus = "👍"
 			}
 		}
 		ackStatus := "❌"
-		if r.HasAck() {
+		if m.HasAck() {
 			ackStatus = "👍"
 		}
-		fmt.Fprintf(ui.Out, "📖 %s 🔖 %s txt:%s nlp:%s ack:%s\n", r.ID, r.Labels, txtStatus, nlpStatus, ackStatus)
+		fmt.Fprintf(ui.Out, "📖 %s 🔖 %s txt:%s nlp:%s ack:%s\n", m.ID, m.Labels, txtStatus, nlpStatus, ackStatus)
 	}
 
 	return nil

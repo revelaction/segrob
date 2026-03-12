@@ -40,14 +40,14 @@ func (s *CorpusStore) Exists(id string) (bool, error) {
 	return exists, err
 }
 
-func (s *CorpusStore) List() ([]storage.CorpusRecord, error) {
+func (s *CorpusStore) List() ([]storage.CorpusMeta, error) {
 	conn, err := s.pool.Take(context.TODO())
 	if err != nil {
 		return nil, err
 	}
 	defer s.pool.Put(conn)
 
-	var records []storage.CorpusRecord
+	var records []storage.CorpusMeta
 	err = sqlitex.Execute(conn,
 		`SELECT 
 			id, labels, epub, txt_hash, txt_created_at, 
@@ -58,62 +58,11 @@ func (s *CorpusStore) List() ([]storage.CorpusRecord, error) {
 		 FROM corpus`,
 		&sqlitex.ExecOptions{
 			ResultFunc: func(stmt *sqlite.Stmt) error {
-				txtCreatedAt, err := storage.TimeParse(stmt.GetText("txt_created_at"))
+				meta, err := scanCorpusMeta(stmt)
 				if err != nil {
-					return fmt.Errorf("error parsing txt_created_at: %w", err)
+					return err
 				}
-				txtEditAt, err := storage.TimeParse(stmt.GetText("txt_edit_at"))
-				if err != nil {
-					return fmt.Errorf("error parsing txt_edit_at: %w", err)
-				}
-				txtAckAt, err := storage.TimeParse(stmt.GetText("txt_ack_at"))
-				if err != nil {
-					return fmt.Errorf("error parsing txt_ack_at: %w", err)
-				}
-				nlpCreatedAt, err := storage.TimeParse(stmt.GetText("nlp_created_at"))
-				if err != nil {
-					return fmt.Errorf("error parsing nlp_created_at: %w", err)
-				}
-				nlpAckAt, err := storage.TimeParse(stmt.GetText("nlp_ack_at"))
-				if err != nil {
-					return fmt.Errorf("error parsing nlp_ack_at: %w", err)
-				}
-				deletedAt, err := storage.TimeParse(stmt.GetText("deleted_at"))
-				if err != nil {
-					return fmt.Errorf("error parsing deleted_at: %w", err)
-				}
-				createdAt, err := storage.TimeParse(stmt.GetText("created_at"))
-				if err != nil {
-					return fmt.Errorf("error parsing created_at: %w", err)
-				}
-				updatedAt, err := storage.TimeParse(stmt.GetText("updated_at"))
-				if err != nil {
-					return fmt.Errorf("error parsing updated_at: %w", err)
-				}
-
-				records = append(records, storage.CorpusRecord{
-					CorpusMeta: storage.CorpusMeta{
-						ID:     stmt.GetText("id"),
-						Labels: stmt.GetText("labels"),
-						Epub:   stmt.GetText("epub"),
-					},
-					TxtHash:      stmt.GetText("txt_hash"),
-					TxtCreatedAt: txtCreatedAt,
-					TxtEdit:      stmt.GetBool("txt_edit"),
-					TxtEditAt:    txtEditAt,
-					TxtEditBy:    stmt.GetText("txt_edit_by"),
-					TxtEditNotes: stmt.GetText("txt_edit_notes"),
-					TxtAck:       stmt.GetBool("txt_ack"),
-					TxtAckAt:     txtAckAt,
-					TxtAckBy:     stmt.GetText("txt_ack_by"),
-					NlpCreatedAt: nlpCreatedAt,
-					NlpAck:       stmt.GetBool("nlp_ack"),
-					NlpAckAt:     nlpAckAt,
-					NlpAckBy:     stmt.GetText("nlp_ack_by"),
-					DeletedAt:    deletedAt,
-					CreatedAt:    createdAt,
-					UpdatedAt:    updatedAt,
-				})
+				records = append(records, meta)
 				return nil
 			},
 		})
@@ -155,7 +104,7 @@ func (s *CorpusStore) WriteStream(seq func(yield func(storage.CorpusRecord, erro
 	return nil
 }
 
-// ReadMeta retrieves id, epub, and labels for a given document ID.
+// ReadMeta retrieves full metadata for a given document ID.
 func (s *CorpusStore) ReadMeta(id string) (storage.CorpusMeta, error) {
 	conn, err := s.pool.Take(context.TODO())
 	if err != nil {
@@ -166,13 +115,21 @@ func (s *CorpusStore) ReadMeta(id string) (storage.CorpusMeta, error) {
 	var meta storage.CorpusMeta
 	var found bool
 	err = sqlitex.Execute(conn,
-		"SELECT id, epub, labels FROM corpus WHERE id = ?",
+		`SELECT 
+			id, labels, epub, txt_hash, txt_created_at, 
+			txt_edit, txt_edit_at, txt_edit_by, txt_edit_notes, 
+			txt_ack, txt_ack_at, txt_ack_by,
+			nlp_created_at, nlp_ack, nlp_ack_at, nlp_ack_by, 
+			deleted_at, created_at, updated_at 
+		 FROM corpus WHERE id = ?`,
 		&sqlitex.ExecOptions{
 			Args: []interface{}{id},
 			ResultFunc: func(stmt *sqlite.Stmt) error {
-				meta.ID = stmt.ColumnText(0)
-				meta.Epub = stmt.ColumnText(1)
-				meta.Labels = stmt.ColumnText(2)
+				var err error
+				meta, err = scanCorpusMeta(stmt)
+				if err != nil {
+					return err
+				}
 				found = true
 				return nil
 			},
@@ -184,6 +141,64 @@ func (s *CorpusStore) ReadMeta(id string) (storage.CorpusMeta, error) {
 		return storage.CorpusMeta{}, fmt.Errorf("document %s not found in corpus", id)
 	}
 	return meta, nil
+}
+
+// scanCorpusMeta helper to scan a row into CorpusMeta
+func scanCorpusMeta(stmt *sqlite.Stmt) (storage.CorpusMeta, error) {
+	txtCreatedAt, err := storage.TimeParse(stmt.GetText("txt_created_at"))
+	if err != nil {
+		return storage.CorpusMeta{}, fmt.Errorf("error parsing txt_created_at: %w", err)
+	}
+	txtEditAt, err := storage.TimeParse(stmt.GetText("txt_edit_at"))
+	if err != nil {
+		return storage.CorpusMeta{}, fmt.Errorf("error parsing txt_edit_at: %w", err)
+	}
+	txtAckAt, err := storage.TimeParse(stmt.GetText("txt_ack_at"))
+	if err != nil {
+		return storage.CorpusMeta{}, fmt.Errorf("error parsing txt_ack_at: %w", err)
+	}
+	nlpCreatedAt, err := storage.TimeParse(stmt.GetText("nlp_created_at"))
+	if err != nil {
+		return storage.CorpusMeta{}, fmt.Errorf("error parsing nlp_created_at: %w", err)
+	}
+	nlpAckAt, err := storage.TimeParse(stmt.GetText("nlp_ack_at"))
+	if err != nil {
+		return storage.CorpusMeta{}, fmt.Errorf("error parsing nlp_ack_at: %w", err)
+	}
+	deletedAt, err := storage.TimeParse(stmt.GetText("deleted_at"))
+	if err != nil {
+		return storage.CorpusMeta{}, fmt.Errorf("error parsing deleted_at: %w", err)
+	}
+	createdAt, err := storage.TimeParse(stmt.GetText("created_at"))
+	if err != nil {
+		return storage.CorpusMeta{}, fmt.Errorf("error parsing created_at: %w", err)
+	}
+	updatedAt, err := storage.TimeParse(stmt.GetText("updated_at"))
+	if err != nil {
+		return storage.CorpusMeta{}, fmt.Errorf("error parsing updated_at: %w", err)
+	}
+
+	return storage.CorpusMeta{
+		ID:           stmt.GetText("id"),
+		Labels:       stmt.GetText("labels"),
+		Epub:         stmt.GetText("epub"),
+		TxtHash:      stmt.GetText("txt_hash"),
+		TxtCreatedAt: txtCreatedAt,
+		TxtEdit:      stmt.GetBool("txt_edit"),
+		TxtEditAt:    txtEditAt,
+		TxtEditBy:    stmt.GetText("txt_edit_by"),
+		TxtEditNotes: stmt.GetText("txt_edit_notes"),
+		TxtAck:       stmt.GetBool("txt_ack"),
+		TxtAckAt:     txtAckAt,
+		TxtAckBy:     stmt.GetText("txt_ack_by"),
+		NlpCreatedAt: nlpCreatedAt,
+		NlpAck:       stmt.GetBool("nlp_ack"),
+		NlpAckAt:     nlpAckAt,
+		NlpAckBy:     stmt.GetText("nlp_ack_by"),
+		DeletedAt:    deletedAt,
+		CreatedAt:    createdAt,
+		UpdatedAt:    updatedAt,
+	}, nil
 }
 
 // ReadTxt retrieves the txt field for a given document ID as raw bytes.

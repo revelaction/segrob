@@ -95,36 +95,12 @@ type DocRepository interface {
 	DocWriter
 }
 
-// CorpusMeta holds the metadata fields needed for import.
+// CorpusMeta holds all collected data collected for a single epub that will be
+// inserted as one row in the corpus docs table, excluding heavy text/nlp fields.
 type CorpusMeta struct {
-	ID     string // SHA-256 truncated hex of epub bytes
-	Epub   string // epub file name (basename), used as source
-	Labels string // comma-separated DC labels
-}
-
-// CorpusReader defines read operations for corpus storage
-type CorpusReader interface {
-	// List returns records (ID, Labels, txt_hash, nlp_created_at, etc.).
-	List() ([]CorpusRecord, error)
-
-	// ReadMeta retrieves id, epub, and labels for a given document ID.
-	ReadMeta(id string) (CorpusMeta, error)
-
-	// ReadTxt retrieves the txt field for a given document ID as raw bytes.
-	ReadTxt(id string) ([]byte, error)
-
-	// ReadNlp retrieves the raw NLP JSON payload for a given document ID.
-	ReadNlp(id string) ([]byte, error)
-
-	// Exists returns true if a record with the given ID is present in the docs table.
-	Exists(id string) (bool, error)
-}
-
-// CorpusRecord holds all data collected for a single epub that will be
-// inserted as one row in the corpus docs table.
-type CorpusRecord struct {
-	CorpusMeta
-	Txt          string // full plain text from pandoc
+	ID           string // SHA-256 truncated hex of epub bytes
+	Epub         string // epub file name (basename), used as source
+	Labels       string // comma-separated DC labels
 	TxtHash      string // SHA-256 hex of txt bytes
 	TxtCreatedAt time.Time
 	TxtEdit      bool
@@ -143,6 +119,31 @@ type CorpusRecord struct {
 	UpdatedAt    time.Time
 }
 
+// CorpusReader defines read operations for corpus storage
+type CorpusReader interface {
+	// List returns records (metadata only).
+	List() ([]CorpusMeta, error)
+
+	// ReadMeta retrieves full metadata for a given document ID.
+	ReadMeta(id string) (CorpusMeta, error)
+
+	// ReadTxt retrieves the txt field for a given document ID as raw bytes.
+	ReadTxt(id string) ([]byte, error)
+
+	// ReadNlp retrieves the raw NLP JSON payload for a given document ID.
+	ReadNlp(id string) ([]byte, error)
+
+	// Exists returns true if a record with the given ID is present in the docs table.
+	Exists(id string) (bool, error)
+}
+
+// CorpusRecord holds all data collected for a single epub that will be
+// inserted as one row in the corpus docs table.
+type CorpusRecord struct {
+	CorpusMeta
+	Txt string // full plain text from pandoc
+}
+
 // TimeParse parses a RFC3339 string into a time.Time.
 // This should be used when reading timestamps from SQLite to convert them
 // back to time.Time values. Returns an error if the input string is not
@@ -159,19 +160,19 @@ func TimeParse(s string) (time.Time, error) {
 // HasTxt reports whether plain-text content has been generated and stored.
 // The Txt field is not populated by most queries due to its size — TxtHash
 // is the authoritative signal for text presence.
-func (r CorpusRecord) HasTxt() bool {
-	return r.TxtHash != ""
+func (m CorpusMeta) HasTxt() bool {
+	return m.TxtHash != ""
 }
 
 // HasNlp reports whether Nlp content has been generated and stored.
 // The Nlp field is not even in the CorpusRecord — NlpCreatedAt
 // is the authoritative signal for Nlp presence.
-func (r CorpusRecord) HasNlp() bool {
-	return !r.NlpCreatedAt.IsZero()
+func (m CorpusMeta) HasNlp() bool {
+	return !m.NlpCreatedAt.IsZero()
 }
 
-func (r CorpusRecord) HasAck() bool {
-	return r.TxtAck && r.NlpAck
+func (m CorpusMeta) HasAck() bool {
+	return m.TxtAck && m.NlpAck
 }
 
 // CorpusWriter defines write operations for corpus storage
