@@ -8,8 +8,8 @@ import (
 )
 
 // Column format for corpus ls tabular output.
-// FLAGS(5) ID(16) CREATOR(15) TITLE(35) DATE(4) LANG
-const corpusLsFmt = "%-5s  %-16s  %-15s  %-35s  %-4s  %s\n"
+// FLAGS(5) ID(16) CREATOR(15) TITLE(27) DATE(4) LANG
+const corpusLsFmt = "%-5s  %-16s  %-15s  %-27s  %-4s  %s\n"
 
 func corpusLsCommand(repo storage.CorpusReader, opts CorpusLsOptions, ui UI) error {
 	metas, err := repo.List()
@@ -54,7 +54,7 @@ func corpusLsCommand(repo storage.CorpusReader, opts CorpusLsOptions, ui UI) err
 			corpusChars(m),
 			m.ID,
 			truncate(creator, 15),
-			truncate(title, 35),
+			truncate(title, 27),
 			date,
 			lang,
 		)
