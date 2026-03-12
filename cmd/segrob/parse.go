@@ -137,10 +137,11 @@ type CorpusIngestNlpOptions struct {
 }
 
 type CorpusPublishOptions struct {
-	From string // corpus.db path (--from / SEGROB_CORPUS_PATH)
-	To   string // segrob.db path (--to / SEGROB_DOC_PATH)
-	ID   string // positional arg: document id
-	Move bool   // -m/--move: delete nlp from corpus after success
+	From  string // corpus.db path (--from / SEGROB_CORPUS_PATH)
+	To    string // segrob.db path (--to / SEGROB_DOC_PATH)
+	ID    string // positional arg: document id
+	Move  bool   // -m/--move: delete nlp from corpus after success
+	Force bool   // -f/--force
 }
 
 func parseCorpusPublishArgs(args []string, ui UI) (CorpusPublishOptions, error) {
@@ -152,6 +153,8 @@ func parseCorpusPublishArgs(args []string, ui UI) (CorpusPublishOptions, error) 
 	fs.StringVar(&opts.To, "to", os.Getenv("SEGROB_DOC_PATH"), "Target segrob SQLite file")
 	fs.BoolVar(&opts.Move, "move", false, "Delete nlp data from corpus after successful live")
 	fs.BoolVar(&opts.Move, "m", false, "alias for -move")
+	fs.BoolVar(&opts.Force, "force", false, "Force publishing even if not acknowledged")
+	fs.BoolVar(&opts.Force, "f", false, "alias for -force")
 
 	fs.Usage = func() {
 		w := fs.Output()
@@ -163,6 +166,7 @@ func parseCorpusPublishArgs(args []string, ui UI) (CorpusPublishOptions, error) 
 		printOpt(w, "--from", "PATH", "Source corpus SQLite file (or SEGROB_CORPUS_PATH)")
 		printOpt(w, "--to", "PATH", "Target segrob SQLite file (or SEGROB_DOC_PATH)")
 		printOpt(w, "-m, --move", "", "Delete NLP data from corpus after successful live")
+		printOpt(w, "-f, --force", "", "Force publishing even if not acknowledged")
 	}
 
 	if err := fs.Parse(args); err != nil {

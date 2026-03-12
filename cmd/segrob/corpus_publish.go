@@ -33,6 +33,12 @@ func corpusPublishCommand(corpusRepo storage.CorpusRepository, docRepo storage.D
 		return fmt.Errorf("failed to read corpus meta for %s: %w", opts.ID, err)
 	}
 
+	if !opts.Force {
+		if !meta.HasAck() {
+			return fmt.Errorf("document %s is not fully acknowledged (use -f/--force to override)", opts.ID)
+		}
+	}
+
 	var labels []string
 	var labelIDs []int
 
