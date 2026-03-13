@@ -19,7 +19,7 @@ func corpusShowCommand(repo storage.CorpusRepository, opts ShowOptions, id strin
 	}
 
 	if len(nlpData) == 0 {
-		fmt.Fprintf(ui.Out, "no nlp payload for %s\n", id)
+		fmt.Fprintf(ui.Err, "no nlp payload for %s\n", id)
 		return nil
 	}
 

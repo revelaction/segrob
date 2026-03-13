@@ -18,6 +18,6 @@ func liveInitCommand(pool *sqlitex.Pool, opts LiveInitOptions, ui UI) error {
 		return err
 	}
 
-	fmt.Fprintf(ui.Out, "Database initialized at: %s\n", opts.DbPath)
+	fmt.Fprintf(ui.Err, "Database initialized at: %s\n", opts.DbPath)
 	return nil
 }

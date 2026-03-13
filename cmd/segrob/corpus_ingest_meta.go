@@ -178,7 +178,7 @@ func corpusIterator(repo storage.CorpusRepository, epubPaths []string, process f
 
 			// Print summary line: labels and text length in UTF-8 characters
 			charCount := utf8.RuneCountInString(record.Txt)
-			fmt.Fprintf(ui.Out, "%s | labels: %s | chars: %d\n", record.Epub, record.Labels, charCount)
+			fmt.Fprintf(ui.Err, "%s | labels: %s | chars: %d\n", record.Epub, record.Labels, charCount)
 
 			if !yield(record, nil) {
 				return

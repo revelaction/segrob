@@ -28,6 +28,6 @@ func liveExportTopicCommand(opts LiveExportTopicOptions, ui UI) error {
 		}
 	}
 
-	fmt.Fprintf(ui.Out, "Successfully exported %d topics from %s to %s\n", len(topics), opts.From, opts.To)
+	fmt.Fprintf(ui.Err, "Successfully exported %d topics from %s to %s\n", len(topics), opts.From, opts.To)
 	return nil
 }
