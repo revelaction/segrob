@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"os/exec"
 	"strings"
@@ -42,6 +43,12 @@ func corpusIngestNlpCommand(corpusRepo storage.CorpusRepository, opts CorpusInge
 
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("NLP script failed: %w", err)
+	}
+
+	// Validate JSON output (O(N) time, 0 allocations)
+	// This catches trailing garbage like "{} -" or leaked debug logs.
+	if !json.Valid(out.Bytes()) {
+		return fmt.Errorf("NLP script produced invalid JSON output (check for leaked logs or extra arguments)")
 	}
 
 	// Store raw JSON in corpus.nlp
