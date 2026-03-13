@@ -28,22 +28,22 @@ func corpusPublishCommand(corpusRepo storage.CorpusRepository, docRepo storage.D
 	}
 
 	if len(candidates) == 0 {
-		fmt.Fprintf(ui.Out, "No ACKed documents to publish.\n")
+		fmt.Fprintf(ui.Err, "No ACKed documents to publish.\n")
 		return nil
 	}
 
-	fmt.Fprintf(ui.Out, "Publishing %d ACKed document(s)...\n\n", len(candidates))
+	fmt.Fprintf(ui.Err, "Publishing %d ACKed document(s)...\n\n", len(candidates))
 
 	for i, m := range candidates {
-		fmt.Fprintf(ui.Out, "[%d/%d] %s\n", i+1, len(candidates), m.ID)
+		fmt.Fprintf(ui.Err, "[%d/%d] %s\n", i+1, len(candidates), m.ID)
 		// force is always false: the HasAck() filter above already guarantees ACK
 		if err := publishOne(corpusRepo, docRepo, m.ID, opts.Move, false, ui); err != nil {
 			return fmt.Errorf("failed to publish %s: %w\n\nFix the issue and re-run the command to continue", m.ID, err)
 		}
-		fmt.Fprintln(ui.Out)
+		fmt.Fprintln(ui.Err)
 	}
 
-	fmt.Fprintf(ui.Out, "Published %d document(s).\n", len(candidates))
+	fmt.Fprintf(ui.Err, "Published %d document(s).\n", len(candidates))
 	return nil
 }
 
@@ -95,12 +95,12 @@ func publishOne(corpusRepo storage.CorpusRepository, docRepo storage.DocReposito
 		// WriteMeta: upserts labels, INSERT docs with label_ids, returns IDs
 		labelIDs, err = docRepo.WriteMeta(meta.ID, meta.Epub, labels) // [3, 7, 12, 15]
 		if err != nil {
-			fmt.Fprintf(ui.Out, "WriteMeta       ❌ %v\n", err)
+			fmt.Fprintf(ui.Err, "WriteMeta       ❌ %v\n", err)
 			return fmt.Errorf("WriteMeta failed: %w", err)
 		}
-		fmt.Fprintf(ui.Out, "WriteMeta       ✅ %s\n", time.Since(start))
+		fmt.Fprintf(ui.Err, "WriteMeta       ✅ %s\n", time.Since(start))
 	} else {
-		fmt.Fprintf(ui.Out, "WriteMeta       ✅ (already exists)\n")
+		fmt.Fprintf(ui.Err, "WriteMeta       ✅ (already exists)\n")
 	}
 
 	// Transaction 2: WriteNlpData (idempotent — skip if sentences exist)
@@ -111,12 +111,12 @@ func publishOne(corpusRepo storage.CorpusRepository, docRepo storage.DocReposito
 	if !hasSentences {
 		start := time.Now()
 		if err := docRepo.WriteNlpData(id, doc.Sentences); err != nil {
-			fmt.Fprintf(ui.Out, "WriteNlpData    ❌ %v\n", err)
+			fmt.Fprintf(ui.Err, "WriteNlpData    ❌ %v\n", err)
 			return fmt.Errorf("WriteNlpData failed: %w", err)
 		}
-		fmt.Fprintf(ui.Out, "WriteNlpData    ✅ %s\n", time.Since(start))
+		fmt.Fprintf(ui.Err, "WriteNlpData    ✅ %s\n", time.Since(start))
 	} else {
-		fmt.Fprintf(ui.Out, "WriteNlpData    ✅ (already exists)\n")
+		fmt.Fprintf(ui.Err, "WriteNlpData    ✅ (already exists)\n")
 	}
 
 	// Transaction 3: WriteLabelsOptimization (idempotent — skip if labels optimization exists)
@@ -127,12 +127,12 @@ func publishOne(corpusRepo storage.CorpusRepository, docRepo storage.DocReposito
 	if !hasLabels {
 		start := time.Now()
 		if err := docRepo.WriteLabelsOptimization(id, labelIDs); err != nil {
-			fmt.Fprintf(ui.Out, "WriteLabelsOpt  ❌ %v\n", err)
+			fmt.Fprintf(ui.Err, "WriteLabelsOpt  ❌ %v\n", err)
 			return fmt.Errorf("WriteLabelsOptimization failed: %w", err)
 		}
-		fmt.Fprintf(ui.Out, "WriteLabelsOpt  ✅ %s\n", time.Since(start))
+		fmt.Fprintf(ui.Err, "WriteLabelsOpt  ✅ %s\n", time.Since(start))
 	} else {
-		fmt.Fprintf(ui.Out, "WriteLabelsOpt  ✅ (already exists)\n")
+		fmt.Fprintf(ui.Err, "WriteLabelsOpt  ✅ (already exists)\n")
 	}
 
 	// Transaction 4: WriteLemmaOptimization — THE LIVE SWITCH (idempotent)
@@ -143,12 +143,12 @@ func publishOne(corpusRepo storage.CorpusRepository, docRepo storage.DocReposito
 	if !hasLemmas {
 		start := time.Now()
 		if err := docRepo.WriteLemmaOptimization(id, doc.Sentences); err != nil {
-			fmt.Fprintf(ui.Out, "WriteLemmaOpt   ❌ %v\n", err)
+			fmt.Fprintf(ui.Err, "WriteLemmaOpt   ❌ %v\n", err)
 			return fmt.Errorf("WriteLemmaOptimization failed: %w", err)
 		}
-		fmt.Fprintf(ui.Out, "WriteLemmaOpt   ✅ %s\n", time.Since(start))
+		fmt.Fprintf(ui.Err, "WriteLemmaOpt   ✅ %s\n", time.Since(start))
 	} else {
-		fmt.Fprintf(ui.Out, "WriteLemmaOpt   ✅ (already exists)\n")
+		fmt.Fprintf(ui.Err, "WriteLemmaOpt   ✅ (already exists)\n")
 	}
 
 	// Optional: delete nlp field from corpus
