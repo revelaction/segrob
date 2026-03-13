@@ -8,9 +8,16 @@ type Sentence struct {
 	Tokens     []Token `json:"tokens"`
 }
 
-type Label struct {
-	ID   int    `json:"id"`
-	Name string `json:"name"`
+// Labels maps a label's Name to its integer ID.
+type Labels map[string]int
+
+// Reverse returns a map from ID to Name.
+func (l Labels) Reverse() map[int]string {
+	rev := make(map[int]string, len(l))
+	for name, id := range l {
+		rev[id] = name
+	}
+	return rev
 }
 
 type Meta struct {

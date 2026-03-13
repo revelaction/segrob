@@ -259,7 +259,7 @@ func (h *DocStore) buildCandidateQuery(lemmas []string, labelIDs []int, after st
 	return queryBuilder.String(), args
 }
 
-func (h *DocStore) ListLabels(labelSubStr string) ([]sent.Label, error) {
+func (h *DocStore) ListLabels(labelSubStr string) (sent.Labels, error) {
 	conn, err := h.pool.Take(context.TODO())
 	if err != nil {
 		return nil, err
@@ -268,14 +268,12 @@ func (h *DocStore) ListLabels(labelSubStr string) ([]sent.Label, error) {
 
 	query, args := h.buildListLabelsQuery(labelSubStr)
 
-	var labels []sent.Label
+	labels := make(sent.Labels)
 	err = sqlitex.Execute(conn, query, &sqlitex.ExecOptions{
 		Args: args,
 		ResultFunc: func(stmt *sqlite.Stmt) error {
-			labels = append(labels, sent.Label{
-				ID:   stmt.ColumnInt(0),
-				Name: stmt.ColumnText(1),
-			})
+			// stmt.ColumnInt(0) is ID, stmt.ColumnText(1) is Name
+			labels[stmt.ColumnText(1)] = stmt.ColumnInt(0)
 			return nil
 		},
 	})

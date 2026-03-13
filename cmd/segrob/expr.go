@@ -39,12 +39,9 @@ func liveFindCommand(dr storage.DocRepository, opts LiveFindOptions, args []stri
 		if err != nil {
 			return err
 		}
-		labelMap := make(map[string]int)
-		for _, l := range allLabels {
-			labelMap[l.Name] = l.ID
-		}
+		
 		for _, name := range opts.Labels {
-			if id, ok := labelMap[name]; ok {
+			if id, ok := allLabels[name]; ok {
 				labelIDs = append(labelIDs, id)
 			}
 		}

@@ -104,12 +104,9 @@ func (h *Handler) Run() error {
 				fmt.Printf("Error listing labels: %v\n", err)
 				continue
 			}
-			labelMap := make(map[string]int)
-			for _, l := range allLabels {
-				labelMap[l.Name] = l.ID
-			}
+			
 			for _, name := range h.Labels {
-				if id, ok := labelMap[name]; ok {
+				if id, ok := allLabels[name]; ok {
 					labelIDs = append(labelIDs, id)
 				}
 			}

@@ -19,10 +19,8 @@ func liveLsCommand(repo storage.DocReader, opts LiveLsOptions, ui UI) error {
 		return err
 	}
 
-	labelMap := make(map[int]string)
-	for _, l := range allLabels {
-		labelMap[l.ID] = l.Name
-	}
+	// Reverse the Name->ID map to an ID->Name map for printing lookups
+	labelMap := allLabels.Reverse()
 
 	for _, doc := range docs {
 		var labelNames []string

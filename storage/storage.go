@@ -53,7 +53,7 @@ type DocReader interface {
 
 	// ListLabels returns all labels (ID and Name). If labelSubStr is not empty,
 	// only labels whose name contains the substring are returned.
-	ListLabels(labelSubStr string) ([]sent.Label, error)
+	ListLabels(labelSubStr string) (sent.Labels, error)
 
 	// HasSentences returns true if at least one sentence exists for the given doc ID.
 	HasSentences(id string) (bool, error)

@@ -2,6 +2,8 @@ package main
 
 import (
 	"fmt"
+	"maps"
+	"slices"
 	"strings"
 
 	"github.com/revelaction/segrob/storage"
@@ -15,10 +17,8 @@ func liveLsLabelCommand(repo storage.DocReader, opts LiveLsLabelOptions, ui UI) 
 	}
 
 	if len(labels) > 0 {
-		var names []string
-		for _, l := range labels {
-			names = append(names, l.Name)
-		}
+		// Use Go 1.23 standard library packages to extract and sort keys
+		names := slices.Sorted(maps.Keys(labels))
 		fmt.Fprintln(ui.Out, strings.Join(names, ", "))
 	}
 
