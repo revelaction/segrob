@@ -26,7 +26,7 @@ func printCorpusUsage(w io.Writer) {
 	fmt.Fprintf(w, helpCmdFmt, "push-txt", "Update a corpus document text from a file.")
 
 	fmt.Fprintf(w, "\nSubcommands: Publish\n")
-	fmt.Fprintf(w, helpCmdFmt, "publish", "Move a document from corpus to live production tables.")
+	fmt.Fprintf(w, helpCmdFmt, "publish", "Move document(s) from corpus to live (all ACKed when no id).")
 }
 
 func runCorpusCommand(args []string, setup *Setup, ui UI) error {

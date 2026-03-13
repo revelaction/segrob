@@ -9,14 +9,53 @@ import (
 	"github.com/revelaction/segrob/storage"
 )
 
+// corpusPublishCommand is the single entry point for both single-doc and all-doc modes.
 func corpusPublishCommand(corpusRepo storage.CorpusRepository, docRepo storage.DocRepository, opts CorpusPublishOptions, ui UI) error {
-	// Read NLP data from corpus
-	nlpBytes, err := corpusRepo.ReadNlp(opts.ID)
+	if !opts.All {
+		return publishOne(corpusRepo, docRepo, opts.ID, opts.Move, opts.Force, ui)
+	}
+
+	metas, err := corpusRepo.List()
 	if err != nil {
-		return fmt.Errorf("failed to read NLP data for %s: %w", opts.ID, err)
+		return fmt.Errorf("failed to list corpus: %w", err)
+	}
+
+	var candidates []storage.CorpusMeta
+	for _, m := range metas {
+		if m.HasAck() {
+			candidates = append(candidates, m)
+		}
+	}
+
+	if len(candidates) == 0 {
+		fmt.Fprintf(ui.Out, "No ACKed documents to publish.\n")
+		return nil
+	}
+
+	fmt.Fprintf(ui.Out, "Publishing %d ACKed document(s)...\n\n", len(candidates))
+
+	for i, m := range candidates {
+		fmt.Fprintf(ui.Out, "[%d/%d] %s\n", i+1, len(candidates), m.ID)
+		// force is always false: the HasAck() filter above already guarantees ACK
+		if err := publishOne(corpusRepo, docRepo, m.ID, opts.Move, false, ui); err != nil {
+			return fmt.Errorf("failed to publish %s: %w\n\nFix the issue and re-run the command to continue", m.ID, err)
+		}
+		fmt.Fprintln(ui.Out)
+	}
+
+	fmt.Fprintf(ui.Out, "Published %d document(s).\n", len(candidates))
+	return nil
+}
+
+// publishOne publishes a single document through the 4 idempotent transactional phases.
+func publishOne(corpusRepo storage.CorpusRepository, docRepo storage.DocRepository, id string, move bool, force bool, ui UI) error {
+	// Read NLP data from corpus
+	nlpBytes, err := corpusRepo.ReadNlp(id)
+	if err != nil {
+		return fmt.Errorf("failed to read NLP data for %s: %w", id, err)
 	}
 	if len(nlpBytes) == 0 {
-		return fmt.Errorf("no NLP data found for %s in corpus", opts.ID)
+		return fmt.Errorf("no NLP data found for %s in corpus", id)
 	}
 
 	// Decode the JSON envelope (tokens stay as json.RawMessage)
@@ -28,14 +67,14 @@ func corpusPublishCommand(corpusRepo storage.CorpusRepository, docRepo storage.D
 	}
 
 	// Read metadata from corpus for WriteMeta
-	meta, err := corpusRepo.ReadMeta(opts.ID)
+	meta, err := corpusRepo.ReadMeta(id)
 	if err != nil {
-		return fmt.Errorf("failed to read corpus meta for %s: %w", opts.ID, err)
+		return fmt.Errorf("failed to read corpus meta for %s: %w", id, err)
 	}
 
-	if !opts.Force {
+	if !force {
 		if !meta.HasAck() {
-			return fmt.Errorf("document %s is not fully acknowledged (use -f/--force to override)", opts.ID)
+			return fmt.Errorf("document %s is not fully acknowledged (use -f/--force to override)", id)
 		}
 	}
 
@@ -47,7 +86,7 @@ func corpusPublishCommand(corpusRepo storage.CorpusRepository, docRepo storage.D
 	}
 
 	// Transaction 1: WriteMeta (idempotent — skip if doc already exists)
-	exists, err := docRepo.Exists(opts.ID)
+	exists, err := docRepo.Exists(id)
 	if err != nil {
 		return fmt.Errorf("failed to check existence: %w", err)
 	}
@@ -65,13 +104,13 @@ func corpusPublishCommand(corpusRepo storage.CorpusRepository, docRepo storage.D
 	}
 
 	// Transaction 2: WriteNlpData (idempotent — skip if sentences exist)
-	hasSentences, err := docRepo.HasSentences(opts.ID)
+	hasSentences, err := docRepo.HasSentences(id)
 	if err != nil {
 		return fmt.Errorf("failed to check sentences: %w", err)
 	}
 	if !hasSentences {
 		start := time.Now()
-		if err := docRepo.WriteNlpData(opts.ID, doc.Sentences); err != nil {
+		if err := docRepo.WriteNlpData(id, doc.Sentences); err != nil {
 			fmt.Fprintf(ui.Out, "WriteNlpData    ❌ %v\n", err)
 			return fmt.Errorf("WriteNlpData failed: %w", err)
 		}
@@ -81,13 +120,13 @@ func corpusPublishCommand(corpusRepo storage.CorpusRepository, docRepo storage.D
 	}
 
 	// Transaction 3: WriteLabelsOptimization (idempotent — skip if labels optimization exists)
-	hasLabels, err := docRepo.HasLabelsOptimization(opts.ID)
+	hasLabels, err := docRepo.HasLabelsOptimization(id)
 	if err != nil {
 		return fmt.Errorf("failed to check labels optimization: %w", err)
 	}
 	if !hasLabels {
 		start := time.Now()
-		if err := docRepo.WriteLabelsOptimization(opts.ID, labelIDs); err != nil {
+		if err := docRepo.WriteLabelsOptimization(id, labelIDs); err != nil {
 			fmt.Fprintf(ui.Out, "WriteLabelsOpt  ❌ %v\n", err)
 			return fmt.Errorf("WriteLabelsOptimization failed: %w", err)
 		}
@@ -97,13 +136,13 @@ func corpusPublishCommand(corpusRepo storage.CorpusRepository, docRepo storage.D
 	}
 
 	// Transaction 4: WriteLemmaOptimization — THE LIVE SWITCH (idempotent)
-	hasLemmas, err := docRepo.HasLemmaOptimization(opts.ID)
+	hasLemmas, err := docRepo.HasLemmaOptimization(id)
 	if err != nil {
 		return fmt.Errorf("failed to check lemma optimization: %w", err)
 	}
 	if !hasLemmas {
 		start := time.Now()
-		if err := docRepo.WriteLemmaOptimization(opts.ID, doc.Sentences); err != nil {
+		if err := docRepo.WriteLemmaOptimization(id, doc.Sentences); err != nil {
 			fmt.Fprintf(ui.Out, "WriteLemmaOpt   ❌ %v\n", err)
 			return fmt.Errorf("WriteLemmaOptimization failed: %w", err)
 		}
@@ -113,8 +152,8 @@ func corpusPublishCommand(corpusRepo storage.CorpusRepository, docRepo storage.D
 	}
 
 	// Optional: delete nlp field from corpus
-	if opts.Move {
-		if err := corpusRepo.ClearNlp(opts.ID); err != nil {
+	if move {
+		if err := corpusRepo.ClearNlp(id); err != nil {
 			fmt.Fprintf(ui.Err, "Warning: failed to clear NLP from corpus: %v\n", err)
 		}
 	}

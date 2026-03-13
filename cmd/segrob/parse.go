@@ -139,7 +139,8 @@ type CorpusIngestNlpOptions struct {
 type CorpusPublishOptions struct {
 	From  string // corpus.db path (--from / SEGROB_CORPUS_PATH)
 	To    string // segrob.db path (--to / SEGROB_DOC_PATH)
-	ID    string // positional arg: document id
+	ID    string // positional arg: document id (empty when All is true)
+	All   bool   // true when no positional arg → publish all ACKed
 	Move  bool   // -m/--move: delete nlp from corpus after success
 	Force bool   // -f/--force
 }
@@ -158,15 +159,16 @@ func parseCorpusPublishArgs(args []string, ui UI) (CorpusPublishOptions, error) 
 
 	fs.Usage = func() {
 		w := fs.Output()
-		fmt.Fprintf(w, "Usage: %s corpus publish [options] <id>\n\n", os.Args[0])
-		fmt.Fprintf(w, "  Move a document from corpus staging to live production tables.\n")
+		fmt.Fprintf(w, "Usage: %s corpus publish [options] [id]\n\n", os.Args[0])
+		fmt.Fprintf(w, "  Move documents from corpus staging to live production tables.\n")
+		fmt.Fprintf(w, "  When no id is given, publishes all acknowledged documents.\n")
 		fmt.Fprintf(w, "\nArguments:\n")
-		fmt.Fprintf(w, helpArgFmt, "id", "Document ID to move to production")
+		fmt.Fprintf(w, helpArgFmt, "id", "Document ID to publish (omit to publish all ACKed)")
 		fmt.Fprintf(w, "\nOptions:\n")
 		printOpt(w, "--from", "PATH", "Source corpus SQLite file (or SEGROB_CORPUS_PATH)")
 		printOpt(w, "--to", "PATH", "Target segrob SQLite file (or SEGROB_DOC_PATH)")
-		printOpt(w, "-m, --move", "", "Delete NLP data from corpus after successful live")
-		printOpt(w, "-f, --force", "", "Force publishing even if not acknowledged")
+		printOpt(w, "-m, --move", "", "Delete NLP data from corpus after successful publish")
+		printOpt(w, "-f, --force", "", "Force publishing even if not acknowledged (only with id)")
 	}
 
 	if err := fs.Parse(args); err != nil {
@@ -178,10 +180,14 @@ func parseCorpusPublishArgs(args []string, ui UI) (CorpusPublishOptions, error) 
 		return opts, err
 	}
 
-	if fs.NArg() != 1 {
-		return opts, errors.New("corpus publish requires exactly one argument: <id>")
+	switch fs.NArg() {
+	case 0:
+		opts.All = true
+	case 1:
+		opts.ID = fs.Arg(0)
+	default:
+		return opts, errors.New("corpus publish accepts zero or one argument: [id]")
 	}
-	opts.ID = fs.Arg(0)
 
 	if opts.From == "" {
 		return opts, errors.New("corpus source must be specified via --from or SEGROB_CORPUS_PATH")
