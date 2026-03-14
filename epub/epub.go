@@ -372,8 +372,12 @@ func normalizeValue(val string) string {
 	if val == "" {
 		return ""
 	}
-	val = strings.ToLower(val)
-	val = strings.ReplaceAll(val, " ", "_")
+
+    // the labels are saved in db in comma separated, we shoudl not have elements with comma.
+    val = strings.ReplaceAll(val, ", ", "_") // "márquez, gabriel" → "márquez_gabriel"
+    val = strings.ReplaceAll(val, ",", "")   // any remaining bare commas
+    val = strings.ToLower(val)
+    val = strings.ReplaceAll(val, " ", "_")
 	val = strings.ReplaceAll(val, "-", "_")
 	return val
 }
