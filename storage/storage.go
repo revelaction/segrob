@@ -51,10 +51,6 @@ type DocReader interface {
 	// AND ALL labelIDs. The caller uses ListLabels() to obtain IDs.
 	FindCandidates(lemmas []string, labelIDs []int, after Cursor, limit int, onCandidate func(sent.Sentence) error) (Cursor, error)
 
-	// ListLabels returns all labels (ID and Name). If labelSubStr is not empty,
-	// only labels whose name contains the substring are returned.
-	ListLabels(labelSubStr string) (sent.Labels, error)
-
 	// HasSentences returns true if at least one sentence exists for the given doc ID.
 	HasSentences(id string) (bool, error)
 
@@ -81,12 +77,6 @@ type DocWriter interface {
 
 	// WriteLemmaOptimization writes sentence_lemmas rows for the given docID.
 	WriteLemmaOptimization(docID string, sentences []SentenceIngest) error
-
-	// AddLabel adds labels to a document and updates optimization tables.
-	AddLabel(docID string, labels ...string) error
-
-	// RemoveLabel removes labels from a document and updates optimization tables.
-	RemoveLabel(docID string, labels ...string) error
 }
 
 // DocRepository combines read and write operations
@@ -132,6 +122,10 @@ type CorpusReader interface {
 
 	// ReadNlp retrieves the raw NLP JSON payload for a given document ID.
 	ReadNlp(id string) ([]byte, error)
+
+	// ListLabels returns all labels (unique names) found in the corpus.
+	// If labelSubStr is not empty, only labels whose name contains the substring are returned.
+	ListLabels(labelSubStr string) ([]string, error)
 
 	// Exists returns true if a record with the given ID is present in the docs table.
 	Exists(id string) (bool, error)
@@ -194,6 +188,12 @@ type CorpusWriter interface {
 
 	// AckNlp updates the nlp_ack fields for the given document ID.
 	AckNlp(id string, by string) error
+
+	// AddLabel adds labels to a document in the corpus.
+	AddLabel(id string, labels ...string) error
+
+	// DeleteLabel deletes labels from a document in the corpus.
+	DeleteLabel(id string, labels ...string) error
 
 	// Delete removes a document from the corpus by its ID.
 	Delete(id string) error
