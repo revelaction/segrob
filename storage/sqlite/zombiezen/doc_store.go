@@ -259,6 +259,55 @@ func (h *DocStore) buildCandidateQuery(lemmas []string, labelIDs []int, after st
 	return queryBuilder.String(), args
 }
 
+func (h *DocStore) ListLabels(labelSubStr string) (sent.Labels, error) {
+	conn, err := h.pool.Take(context.TODO())
+	if err != nil {
+		return nil, err
+	}
+	defer h.pool.Put(conn)
+
+	query, args := h.buildListLabelsQuery(labelSubStr)
+
+	labels := make(sent.Labels)
+	err = sqlitex.Execute(conn, query, &sqlitex.ExecOptions{
+		Args: args,
+		ResultFunc: func(stmt *sqlite.Stmt) error {
+			// stmt.ColumnInt(0) is ID, stmt.ColumnText(1) is Name
+			labels[stmt.ColumnText(1)] = stmt.ColumnInt(0)
+			return nil
+		},
+	})
+	if err != nil {
+		return nil, err
+	}
+	return labels, nil
+}
+
+// buildListLabelsQuery constructs the SQL query for listing labels.
+//
+// Without labelSubStr:
+//
+//	SELECT id, name FROM labels ORDER BY name
+//
+// With labelSubStr:
+//
+//	SELECT id, name FROM labels WHERE name LIKE ? ORDER BY name
+func (h *DocStore) buildListLabelsQuery(labelSubStr string) (string, []interface{}) {
+	var queryBuilder strings.Builder
+	var args []interface{}
+
+	queryBuilder.WriteString("SELECT id, name FROM labels")
+
+	if labelSubStr != "" {
+		queryBuilder.WriteString(" WHERE name LIKE ?")
+		args = append(args, "%"+labelSubStr+"%")
+	}
+
+	queryBuilder.WriteString(" ORDER BY name")
+
+	return queryBuilder.String(), args
+}
+
 func (h *DocStore) WriteMeta(id string, source string, labels []string) (labelIDs []int, err error) {
 	conn, err := h.pool.Take(context.TODO())
 	if err != nil {

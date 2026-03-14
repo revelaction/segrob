@@ -994,50 +994,6 @@ func parseCorpusIngestNlpArgs(args []string, ui UI) (CorpusIngestNlpOptions, err
 	return opts, nil
 }
 
-func parseLiveSetLabelArgs(args []string, ui UI) (LiveSetLabelOptions, error) {
-	fs := flag.NewFlagSet("live set-label", flag.ContinueOnError)
-	fs.SetOutput(io.Discard)
-
-	var opts LiveSetLabelOptions
-	fs.StringVar(&opts.DbPath, "db", os.Getenv("SEGROB_DOC_PATH"), "")
-	fs.BoolVar(&opts.Delete, "delete", false, "")
-	fs.BoolVar(&opts.Delete, "d", false, "")
-
-	fs.Usage = func() {
-		w := fs.Output()
-		fmt.Fprintf(w, "Usage: %s live set-label [options] <doc_id> <label> [<label>...]\n\n", os.Args[0])
-		fmt.Fprintf(w, "  Add or remove one or more labels from a document.\n")
-		fmt.Fprintf(w, "\nArguments:\n")
-		fmt.Fprintf(w, helpArgFmt, "doc_id", "ID of the document")
-		fmt.Fprintf(w, helpArgFmt, "label", "One or more labels to add/remove")
-		fmt.Fprintf(w, "\nOptions:\n")
-		printOpt(w, "--db", "PATH", "Path to SQLite file (or SEGROB_DOC_PATH)")
-		printOpt(w, "-d, --delete", "", "Remove labels instead of adding them")
-	}
-
-	if err := fs.Parse(args); err != nil {
-		if errors.Is(err, flag.ErrHelp) {
-			fs.SetOutput(ui.Out)
-			fs.Usage()
-			return opts, err
-		}
-		return opts, err
-	}
-
-	if fs.NArg() < 2 {
-		return opts, errors.New("live set-label requires at least two arguments: <doc_id> and one or more <label>")
-	}
-
-	opts.DocID = fs.Arg(0)
-	opts.Labels = fs.Args()[1:]
-
-	if opts.DbPath == "" {
-		return opts, errors.New("no document source specified (use --db or SEGROB_DOC_PATH)")
-	}
-
-	return opts, nil
-}
-
 func parseCorpusShowArgs(args []string, ui UI) (ShowOptions, string, error) {
 	fs := flag.NewFlagSet("corpus show", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
