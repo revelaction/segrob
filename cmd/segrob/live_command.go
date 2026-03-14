@@ -18,10 +18,6 @@ func printLiveUsage(w io.Writer) {
 	fmt.Fprintf(w, helpCmdFmt, "find-topics", "Show topics for a specific sentence.")
 	fmt.Fprintf(w, helpCmdFmt, "query", "Enter interactive query mode.")
 
-	fmt.Fprintf(w, "\nSubcommands: Labels\n")
-	fmt.Fprintf(w, helpCmdFmt, "ls-label", "List all unique labels in the repository.")
-	fmt.Fprintf(w, helpCmdFmt, "set-label", "Add one or more labels to a document.")
-
 	fmt.Fprintf(w, "\nSubcommands: Topics\n")
 	fmt.Fprintf(w, helpCmdFmt, "ls-topic", "List all unique topics in the repository.")
 	fmt.Fprintf(w, helpCmdFmt, "show-topic", "Show expressions for a specific topic.")
@@ -117,28 +113,6 @@ func runLiveCommand(args []string, setup *Setup, ui UI) error {
 			return err
 		}
 		return liveInitCommand(pool, opts, ui)
-
-	case "ls-label":
-		opts, err := parseLiveLsLabelArgs(subArgs, ui)
-		if err != nil {
-			return err
-		}
-		repo, err := setup.NewDocRepository(opts.DbPath)
-		if err != nil {
-			return err
-		}
-		return liveLsLabelCommand(repo, opts, ui)
-
-	case "set-label":
-		opts, err := parseLiveSetLabelArgs(subArgs, ui)
-		if err != nil {
-			return err
-		}
-		repo, err := setup.NewDocRepository(opts.DbPath)
-		if err != nil {
-			return err
-		}
-		return liveSetLabelCommand(repo, opts, ui)
 
 	case "show":
 		opts, id, err := parseLiveShowArgs(subArgs, ui)

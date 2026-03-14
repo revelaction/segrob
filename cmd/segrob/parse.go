@@ -81,11 +81,6 @@ type LiveLsOptions struct {
 	Match   string
 }
 
-type LiveLsLabelOptions struct {
-	DbPath string
-	Match  string
-}
-
 type LiveShowSentOptions struct {
 	DbPath string
 	Stats  bool // -s/--stats: show sentence statistics
@@ -197,13 +192,6 @@ func parseCorpusPublishArgs(args []string, ui UI) (CorpusPublishOptions, error) 
 	}
 
 	return opts, nil
-}
-
-type LiveSetLabelOptions struct {
-	DocID  string
-	Labels []string
-	DbPath string
-	Delete bool
 }
 
 type CorpusIngestMetaOptions struct {
@@ -410,43 +398,6 @@ func parseLiveLsArgs(args []string, ui UI) (LiveLsOptions, bool, error) {
 	}
 
 	return opts, info.IsDir(), nil
-}
-
-func parseLiveLsLabelArgs(args []string, ui UI) (LiveLsLabelOptions, error) {
-	fs := flag.NewFlagSet("live ls-label", flag.ContinueOnError)
-	fs.SetOutput(io.Discard)
-
-	var opts LiveLsLabelOptions
-	fs.StringVar(&opts.DbPath, "db", os.Getenv("SEGROB_DOC_PATH"), "")
-	fs.StringVar(&opts.Match, "match", "", "")
-	fs.StringVar(&opts.Match, "m", "", "")
-
-	fs.Usage = func() {
-		w := fs.Output()
-		fmt.Fprintf(w, "Usage: %s live ls-label [options]\n\n", os.Args[0])
-		fmt.Fprintf(w, "  List all unique labels in the repository.\n")
-		fmt.Fprintf(w, "\nOptions:\n")
-		printOpt(w, "--db", "PATH", "Path to docs directory or SQLite file (or SEGROB_DOC_PATH)")
-		printOpt(w, "-m, --match", "STRING", "Only list labels containing STRING")
-	}
-
-	if err := fs.Parse(args); err != nil {
-		if errors.Is(err, flag.ErrHelp) {
-			fs.SetOutput(ui.Out)
-			fs.Usage()
-			return opts, err
-		}
-		fs.SetOutput(ui.Err)
-		fprintErr(ui.Err, err)
-		fs.Usage()
-		return opts, err
-	}
-
-	if opts.DbPath == "" {
-		return opts, errors.New("no document source specified (use --db or SEGROB_DOC_PATH)")
-	}
-
-	return opts, nil
 }
 
 func parseLiveShowSentArgs(args []string, ui UI) (LiveShowSentOptions, string, int, error) {

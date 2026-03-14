@@ -3,6 +3,9 @@ package zombiezen
 import (
 	"context"
 	"fmt"
+	"maps"
+	"slices"
+	"strings"
 
 	"github.com/revelaction/segrob/storage"
 	"zombiezen.com/go/sqlite"
@@ -351,6 +354,118 @@ func (s *CorpusStore) AckNlp(id string, by string) error {
 		&sqlitex.ExecOptions{
 			Args: []interface{}{by, id},
 		})
+}
+
+// AddLabel adds labels to a document in the corpus.
+func (s *CorpusStore) AddLabel(id string, labels ...string) (err error) {
+	conn, err := s.pool.Take(context.TODO())
+	if err != nil {
+		return err
+	}
+	defer s.pool.Put(conn)
+
+	defer sqlitex.Save(conn)(&err)
+
+	var currentLabelsStr string
+	var found bool
+	err = sqlitex.Execute(conn, "SELECT labels FROM corpus WHERE id = ?", &sqlitex.ExecOptions{
+		Args: []interface{}{id},
+		ResultFunc: func(stmt *sqlite.Stmt) error {
+			currentLabelsStr = stmt.ColumnText(0)
+			found = true
+			return nil
+		},
+	})
+	if err != nil {
+		return fmt.Errorf("failed to read corpus %s: %w", id, err)
+	}
+	if !found {
+		return fmt.Errorf("document %s not found in corpus", id)
+	}
+
+	lblMap := make(map[string]bool)
+	if currentLabelsStr != "" {
+		for _, lbl := range strings.Split(currentLabelsStr, ",") {
+			lblMap[lbl] = true
+		}
+	}
+
+	for _, lbl := range labels {
+		lblMap[lbl] = true
+	}
+
+	keys := slices.Sorted(maps.Keys(lblMap))
+
+	newLabelsStr := strings.Join(keys, ",")
+	if newLabelsStr != currentLabelsStr {
+		err = sqlitex.Execute(conn,
+			"UPDATE corpus SET labels = ?, updated_at = (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')) WHERE id = ?",
+			&sqlitex.ExecOptions{
+				Args: []interface{}{newLabelsStr, id},
+			})
+		if err != nil {
+			return fmt.Errorf("failed to update labels for corpus %s: %w", id, err)
+		}
+	}
+
+	return nil
+}
+
+// DeleteLabel deletes labels from a document in the corpus.
+func (s *CorpusStore) DeleteLabel(id string, labels ...string) (err error) {
+	conn, err := s.pool.Take(context.TODO())
+	if err != nil {
+		return err
+	}
+	defer s.pool.Put(conn)
+
+	defer sqlitex.Save(conn)(&err)
+
+	var currentLabelsStr string
+	var found bool
+	err = sqlitex.Execute(conn, "SELECT labels FROM corpus WHERE id = ?", &sqlitex.ExecOptions{
+		Args: []interface{}{id},
+		ResultFunc: func(stmt *sqlite.Stmt) error {
+			currentLabelsStr = stmt.ColumnText(0)
+			found = true
+			return nil
+		},
+	})
+	if err != nil {
+		return fmt.Errorf("failed to read corpus %s: %w", id, err)
+	}
+	if !found {
+		return fmt.Errorf("document %s not found in corpus", id)
+	}
+
+	if currentLabelsStr == "" {
+		return nil
+	}
+
+	lblMap := make(map[string]bool)
+	for _, lbl := range strings.Split(currentLabelsStr, ",") {
+		lblMap[lbl] = true
+	}
+
+	for _, lbl := range labels {
+		delete(lblMap, lbl)
+	}
+
+	keys := slices.Sorted(maps.Keys(lblMap))
+
+	newLabelsStr := strings.Join(keys, ",")
+	if newLabelsStr != currentLabelsStr {
+		err = sqlitex.Execute(conn,
+			"UPDATE corpus SET labels = ?, updated_at = (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')) WHERE id = ?",
+			&sqlitex.ExecOptions{
+				Args: []interface{}{newLabelsStr, id},
+			})
+		if err != nil {
+			return fmt.Errorf("failed to update labels for corpus %s: %w", id, err)
+		}
+	}
+
+	return nil
 }
 
 // Delete removes a document from the corpus by its ID.
