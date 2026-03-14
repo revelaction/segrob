@@ -222,6 +222,20 @@ type CorpusLsOptions struct {
 	Ack     bool   // --ack / -a
 }
 
+// CorpusSetLabelOptions holds options for "corpus set-label".
+type CorpusSetLabelOptions struct {
+	DocID  string
+	Labels []string
+	DbPath string
+	Delete bool
+}
+
+// CorpusLsLabelOptions holds options for "corpus ls-label".
+type CorpusLsLabelOptions struct {
+	DbPath string
+	Match  string
+}
+
 // stringSliceFlag implements flag.Value for multi-value strings
 type stringSliceFlag []string
 
@@ -1426,4 +1440,87 @@ func validatePaths(path1, path2 string) error {
 		}
 	}
 	return nil
+}
+
+// parseCorpusSetLabelArgs parses arguments and flags for "corpus set-label".
+func parseCorpusSetLabelArgs(args []string, ui UI) (CorpusSetLabelOptions, error) {
+	fs := flag.NewFlagSet("corpus set-label", flag.ContinueOnError)
+	fs.SetOutput(io.Discard)
+
+	var opts CorpusSetLabelOptions
+	fs.StringVar(&opts.DbPath, "db", os.Getenv("SEGROB_CORPUS_PATH"), "")
+	fs.BoolVar(&opts.Delete, "delete", false, "")
+	fs.BoolVar(&opts.Delete, "d", false, "")
+
+	fs.Usage = func() {
+		w := fs.Output()
+		fmt.Fprintf(w, "Usage: %s corpus set-label [options] <doc_id> <label> [<label>...]\n\n", os.Args[0])
+		fmt.Fprintf(w, "  Add or remove one or more labels from a corpus document.\n")
+		fmt.Fprintf(w, "\nArguments:\n")
+		fmt.Fprintf(w, helpArgFmt, "doc_id", "ID of the document")
+		fmt.Fprintf(w, helpArgFmt, "label", "One or more labels to add/remove")
+		fmt.Fprintf(w, "\nOptions:\n")
+		printOpt(w, "--db", "PATH", "Path to corpus SQLite file (or SEGROB_CORPUS_PATH)")
+		printOpt(w, "-d, --delete", "", "Remove labels instead of adding them")
+	}
+
+	if err := fs.Parse(args); err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			fs.SetOutput(ui.Out)
+			fs.Usage()
+			return opts, err
+		}
+		return opts, err
+	}
+
+	if fs.NArg() < 2 {
+		return opts, errors.New("corpus set-label requires at least two arguments: <doc_id> and one or more <label>")
+	}
+
+	opts.DocID = fs.Arg(0)
+	opts.Labels = fs.Args()[1:]
+
+	if opts.DbPath == "" {
+		return opts, errors.New("no document source specified (use --db or SEGROB_CORPUS_PATH)")
+	}
+
+	return opts, nil
+}
+
+// parseCorpusLsLabelArgs parses arguments and flags for "corpus ls-label".
+func parseCorpusLsLabelArgs(args []string, ui UI) (CorpusLsLabelOptions, error) {
+	fs := flag.NewFlagSet("corpus ls-label", flag.ContinueOnError)
+	fs.SetOutput(io.Discard)
+
+	var opts CorpusLsLabelOptions
+	fs.StringVar(&opts.DbPath, "db", os.Getenv("SEGROB_CORPUS_PATH"), "")
+	fs.StringVar(&opts.Match, "match", "", "")
+	fs.StringVar(&opts.Match, "m", "", "")
+
+	fs.Usage = func() {
+		w := fs.Output()
+		fmt.Fprintf(w, "Usage: %s corpus ls-label [options]\n\n", os.Args[0])
+		fmt.Fprintf(w, "  List all unique labels in the corpus.\n")
+		fmt.Fprintf(w, "\nOptions:\n")
+		printOpt(w, "--db", "PATH", "Path to corpus SQLite file (or SEGROB_CORPUS_PATH)")
+		printOpt(w, "-m, --match", "STRING", "Only list labels containing STRING")
+	}
+
+	if err := fs.Parse(args); err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			fs.SetOutput(ui.Out)
+			fs.Usage()
+			return opts, err
+		}
+		fs.SetOutput(ui.Err)
+		fprintErr(ui.Err, err)
+		fs.Usage()
+		return opts, err
+	}
+
+	if opts.DbPath == "" {
+		return opts, errors.New("no document source specified (use --db or SEGROB_CORPUS_PATH)")
+	}
+
+	return opts, nil
 }
