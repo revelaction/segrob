@@ -282,6 +282,35 @@ func (s *CorpusStore) ReadNlp(id string) ([]byte, error) {
 	return nlp, nil
 }
 
+// ListLabels returns all labels (unique names) found in the corpus.
+func (s *CorpusStore) ListLabels(labelSubStr string) ([]string, error) {
+	conn, err := s.pool.Take(context.TODO())
+	if err != nil {
+		return nil, err
+	}
+	defer s.pool.Put(conn)
+
+	lblMap := make(map[string]bool)
+
+	err = sqlitex.Execute(conn, "SELECT labels FROM corpus WHERE labels != ''", &sqlitex.ExecOptions{
+		ResultFunc: func(stmt *sqlite.Stmt) error {
+			labelsStr := stmt.ColumnText(0)
+			for _, lbl := range strings.Split(labelsStr, ",") {
+				if strings.Contains(lbl, labelSubStr) {
+					lblMap[lbl] = true
+				}
+			}
+			return nil
+		},
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to list corpus labels: %w", err)
+	}
+
+	keys := slices.Sorted(maps.Keys(lblMap))
+	return keys, nil
+}
+
 func (s *CorpusStore) ClearNlp(id string) error {
 	conn, err := s.pool.Take(context.TODO())
 	if err != nil {
