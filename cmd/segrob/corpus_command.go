@@ -27,6 +27,10 @@ func printCorpusUsage(w io.Writer) {
 
 	fmt.Fprintf(w, "\nSubcommands: Publish\n")
 	fmt.Fprintf(w, helpCmdFmt, "publish", "Move document(s) from corpus to live (all ACKed when no id).")
+
+	fmt.Fprintf(w, "\nSubcommands: Labels\n")
+	fmt.Fprintf(w, helpCmdFmt, "ls-label", "List all unique labels in the corpus.")
+	fmt.Fprintf(w, helpCmdFmt, "set-label", "Add or remove labels from a corpus document.")
 }
 
 func runCorpusCommand(args []string, setup *Setup, ui UI) error {
@@ -161,6 +165,28 @@ func runCorpusCommand(args []string, setup *Setup, ui UI) error {
 			return err
 		}
 		return corpusPushTxtCommand(repo, opts, ui)
+
+	case "ls-label":
+		opts, err := parseCorpusLsLabelArgs(subArgs, ui)
+		if err != nil {
+			return err
+		}
+		repo, err := setup.NewCorpusRepository(opts.DbPath)
+		if err != nil {
+			return err
+		}
+		return corpusLsLabelCommand(repo, opts, ui)
+
+	case "set-label":
+		opts, err := parseCorpusSetLabelArgs(subArgs, ui)
+		if err != nil {
+			return err
+		}
+		repo, err := setup.NewCorpusRepository(opts.DbPath)
+		if err != nil {
+			return err
+		}
+		return corpusSetLabelCommand(repo, opts, ui)
 
 	default:
 		printCorpusUsage(ui.Err)
