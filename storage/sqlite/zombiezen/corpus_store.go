@@ -476,7 +476,7 @@ func (s *CorpusStore) DeleteLabel(id string, labels ...string) (err error) {
 	}
 
 	for _, lbl := range labels {
-		delete(lblMap, lbl)
+		delete(lblMap, storage.NormalizeLabel(lbl))
 	}
 
 	keys := slices.Sorted(maps.Keys(lblMap))
