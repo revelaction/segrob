@@ -8,9 +8,30 @@ import (
 )
 
 func corpusLsLabelCommand(repo storage.CorpusReader, opts CorpusLsLabelOptions, ui UI) error {
-	labels, err := repo.ListLabels(opts.Match)
-	if err != nil {
-		return err
+	var labels []string
+	var err error
+
+	if opts.ID != "" {
+		// List labels for a specific document
+		meta, err := repo.ReadMeta(opts.ID)
+		if err != nil {
+			return err
+		}
+		if meta.Labels != "" {
+			// Split and filter in memory
+			all := strings.Split(meta.Labels, ",")
+			for _, l := range all {
+				if opts.Match == "" || strings.Contains(l, opts.Match) {
+					labels = append(labels, l)
+				}
+			}
+		}
+	} else {
+		// List all labels in the corpus
+		labels, err = repo.ListLabels(opts.Match)
+		if err != nil {
+			return err
+		}
 	}
 
 	if len(labels) > 0 {

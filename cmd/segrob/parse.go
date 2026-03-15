@@ -234,6 +234,7 @@ type CorpusSetLabelOptions struct {
 type CorpusLsLabelOptions struct {
 	DbPath string
 	Match  string
+	ID     string // Optional document ID
 }
 
 // stringSliceFlag implements flag.Value for multi-value strings
@@ -1460,8 +1461,11 @@ func parseCorpusLsLabelArgs(args []string, ui UI) (CorpusLsLabelOptions, error) 
 
 	fs.Usage = func() {
 		w := fs.Output()
-		fmt.Fprintf(w, "Usage: %s corpus ls-label [options]\n\n", os.Args[0])
-		fmt.Fprintf(w, "  List all unique labels in the corpus.\n")
+		fmt.Fprintf(w, "Usage: %s corpus ls-label [options] [id]\n\n", os.Args[0])
+		fmt.Fprintf(w, "  List labels in the corpus.\n")
+		fmt.Fprintf(w, "  When no id is given, lists all unique labels across the corpus.\n")
+		fmt.Fprintf(w, "\nArguments:\n")
+		fmt.Fprintf(w, helpArgFmt, "id", "Document ID to list labels for (omit to list all)")
 		fmt.Fprintf(w, "\nOptions:\n")
 		printOpt(w, "--db", "PATH", "Path to corpus SQLite file (or SEGROB_CORPUS_PATH)")
 		printOpt(w, "-m, --match", "STRING", "Only list labels containing STRING")
@@ -1477,6 +1481,14 @@ func parseCorpusLsLabelArgs(args []string, ui UI) (CorpusLsLabelOptions, error) 
 		fprintErr(ui.Err, err)
 		fs.Usage()
 		return opts, err
+	}
+
+	// Capture optional positional argument
+	if fs.NArg() > 0 {
+		if fs.NArg() > 1 {
+			return opts, errors.New("corpus ls-label accepts at most one argument: [id]")
+		}
+		opts.ID = fs.Arg(0)
 	}
 
 	if opts.DbPath == "" {
