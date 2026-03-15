@@ -73,6 +73,13 @@ type DocWriter interface {
 	// WriteMeta persists document metadata (id, source) and its labels.
 	WriteMeta(id string, source string, labels []string) ([]int, error)
 
+	// UpdateLabels upserts the given labels into the labels table, then updates
+	// the docs row for docID with the new comma-separated label_ids.
+	// Returns the resolved label IDs in the same order as labels.
+	// Note: This operation may leave orphaned entries in the labels table if they
+	// are no longer referenced by any document.
+	UpdateLabels(docID string, labels []string) ([]int, error)
+
 	// WriteNlpData persists sentences for the given docID.
 	WriteNlpData(docID string, sentences []SentenceIngest) error
 

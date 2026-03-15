@@ -145,6 +145,12 @@ type CorpusPublishOptions struct {
 	Force bool   // -f/--force
 }
 
+type CorpusPublishLabelOptions struct {
+	From string // --from / SEGROB_CORPUS_PATH
+	To   string // --to   / SEGROB_DOC_PATH
+	ID   string // positional arg: document id
+}
+
 func parseCorpusPublishArgs(args []string, ui UI) (CorpusPublishOptions, error) {
 	fs := flag.NewFlagSet("corpus publish", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
@@ -188,6 +194,50 @@ func parseCorpusPublishArgs(args []string, ui UI) (CorpusPublishOptions, error) 
 	default:
 		return opts, errors.New("corpus publish accepts zero or one argument: [id]")
 	}
+
+	if opts.From == "" {
+		return opts, errors.New("corpus source must be specified via --from or SEGROB_CORPUS_PATH")
+	}
+	if opts.To == "" {
+		return opts, errors.New("target db must be specified via --to or SEGROB_DOC_PATH")
+	}
+
+	return opts, nil
+}
+
+func parseCorpusPublishLabelArgs(args []string, ui UI) (CorpusPublishLabelOptions, error) {
+	fs := flag.NewFlagSet("corpus publish-label", flag.ContinueOnError)
+	fs.SetOutput(io.Discard)
+
+	var opts CorpusPublishLabelOptions
+	fs.StringVar(&opts.From, "from", os.Getenv("SEGROB_CORPUS_PATH"), "")
+	fs.StringVar(&opts.To, "to", os.Getenv("SEGROB_DOC_PATH"), "")
+
+	fs.Usage = func() {
+		w := fs.Output()
+		fmt.Fprintf(w, "Usage: %s corpus publish-label [options] <id>\n\n", os.Args[0])
+		fmt.Fprintf(w, "  Push the current corpus labels for <id> into the live tables.\n")
+		fmt.Fprintf(w, "\nArguments:\n")
+		fmt.Fprintf(w, helpArgFmt, "id", "Document ID")
+		fmt.Fprintf(w, "\nOptions:\n")
+		printOpt(w, "--from", "PATH", "Source corpus SQLite file (or SEGROB_CORPUS_PATH)")
+		printOpt(w, "--to", "PATH", "Target segrob SQLite file (or SEGROB_DOC_PATH)")
+	}
+
+	if err := fs.Parse(args); err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			fs.SetOutput(ui.Out)
+			fs.Usage()
+			return opts, err
+		}
+		return opts, err
+	}
+
+	if fs.NArg() != 1 {
+		return opts, errors.New("corpus publish-label requires exactly one argument: <id>")
+	}
+
+	opts.ID = fs.Arg(0)
 
 	if opts.From == "" {
 		return opts, errors.New("corpus source must be specified via --from or SEGROB_CORPUS_PATH")

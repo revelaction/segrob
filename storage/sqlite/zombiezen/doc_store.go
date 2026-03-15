@@ -339,6 +339,40 @@ func (h *DocStore) WriteMeta(id string, source string, labels []string) (labelID
 	return labelIDs, nil
 }
 
+// UpdateLabels upserts labels and updates the docs row for docID.
+// Note: This operation does not remove labels from the labels table that are
+// no longer referenced by this or any other document (orphaned labels).
+func (h *DocStore) UpdateLabels(docID string, labels []string) (labelIDs []int, err error) {
+	conn, err := h.pool.Take(context.TODO())
+	if err != nil {
+		return nil, err
+	}
+	defer h.pool.Put(conn)
+
+	defer sqlitex.Save(conn)(&err)
+
+	var labelIDStrs []string
+	for _, label := range labels {
+		labelID, err := h.upsertLabel(conn, label)
+		if err != nil {
+			return nil, fmt.Errorf("failed to upsert label %s: %w", label, err)
+		}
+		labelIDs = append(labelIDs, labelID)
+		labelIDStrs = append(labelIDStrs, strconv.Itoa(labelID))
+	}
+
+	labelIDsStr := strings.Join(labelIDStrs, ",")
+
+	err = sqlitex.Execute(conn, "UPDATE docs SET label_ids = ? WHERE id = ?", &sqlitex.ExecOptions{
+		Args: []interface{}{labelIDsStr, docID},
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to update doc labels for %s: %w", docID, err)
+	}
+
+	return labelIDs, nil
+}
+
 func (h *DocStore) WriteNlpData(docID string, sentences []storage.SentenceIngest) (err error) {
 	conn, err := h.pool.Take(context.TODO())
 	if err != nil {

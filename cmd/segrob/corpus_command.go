@@ -27,6 +27,7 @@ func printCorpusUsage(w io.Writer) {
 
 	fmt.Fprintf(w, "\nSubcommands: Publish\n")
 	fmt.Fprintf(w, helpCmdFmt, "publish", "Move document(s) from corpus to live (all ACKed when no id).")
+	fmt.Fprintf(w, helpCmdFmt, "publish-label", "Push corpus labels into live tables for a document.")
 
 	fmt.Fprintf(w, "\nSubcommands: Labels\n")
 	fmt.Fprintf(w, helpCmdFmt, "ls-label", "List all unique labels in the corpus.")
@@ -106,6 +107,21 @@ func runCorpusCommand(args []string, setup *Setup, ui UI) error {
 			return err
 		}
 		return corpusPublishCommand(corpusRepo, docRepo, opts, ui)
+
+	case "publish-label":
+		opts, err := parseCorpusPublishLabelArgs(subArgs, ui)
+		if err != nil {
+			return err
+		}
+		corpusRepo, err := setup.NewCorpusRepository(opts.From)
+		if err != nil {
+			return err
+		}
+		docRepo, err := setup.NewDocRepository(opts.To)
+		if err != nil {
+			return err
+		}
+		return corpusPublishLabelCommand(corpusRepo, docRepo, opts, ui)
 
 	case "dump-txt":
 		opts, err := parseCorpusDumpTxtArgs(subArgs, ui)

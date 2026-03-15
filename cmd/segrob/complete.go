@@ -19,6 +19,7 @@ var corpusSubcommands = []string{
 	"ack",
 	"rm",
 	"publish",
+	"publish-label",
 	"dump-txt",
 	"dump-nlp",
 	"ingest-nlp",
