@@ -106,7 +106,7 @@ func processEpubGo(epubBytes []byte, name, id string) (storage.CorpusRecord, err
 	if err != nil {
 		return record, err
 	}
-	record.Labels = book.Labels()
+	record.Labels = storage.SerializeLabels(book.Labels())
 	txt, err := book.Text()
 	if err != nil {
 		return record, fmt.Errorf("failed to extract text from %s: %w", name, err)
@@ -121,7 +121,7 @@ func processEpubPandoc(epubBytes []byte, name, id string) (storage.CorpusRecord,
 	if err != nil {
 		return record, err
 	}
-	record.Labels = book.Labels()
+	record.Labels = storage.SerializeLabels(book.Labels())
 	cmd := exec.Command("pandoc", "-f", "epub", "-t", "plain", "--wrap=preserve")
 	cmd.Stdin = bytes.NewReader(epubBytes)
 	out, err := cmd.Output()

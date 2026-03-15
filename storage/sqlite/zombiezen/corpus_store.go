@@ -420,7 +420,7 @@ func (s *CorpusStore) AddLabel(id string, labels ...string) (err error) {
 	}
 
 	for _, lbl := range labels {
-		lblMap[lbl] = true
+		lblMap[storage.NormalizeLabel(lbl)] = true
 	}
 
 	keys := slices.Sorted(maps.Keys(lblMap))

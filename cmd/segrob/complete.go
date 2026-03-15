@@ -24,6 +24,8 @@ var corpusSubcommands = []string{
 	"ingest-nlp",
 	"ingest-meta",
 	"push-txt",
+	"ls-label",
+	"set-label",
 }
 
 var liveSubcommands = []string{
@@ -31,9 +33,7 @@ var liveSubcommands = []string{
 	"find",
 	"find-topics",
 	"init",
-	"ls-label",
 	"ls-topic",
-	"set-label",
 	"show",
 	"show-sent",
 	"show-topic",

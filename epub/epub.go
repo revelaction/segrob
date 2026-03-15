@@ -74,47 +74,48 @@ func (b *Book) getContent(name string) ([]byte, error) {
 }
 
 // Metadata Accessors (wrapping the unexported extract* and normalize* helpers)
-func (b *Book) Creator() string {
-	return normalizeValue(extractCreator(b.Package.Metadata))
+func (b *Book) creator() string {
+	return extractCreator(b.Package.Metadata)
 }
 
-func (b *Book) Title() string {
-	return normalizeValue(extractTitle(b.Package.Metadata))
+func (b *Book) title() string {
+	return extractTitle(b.Package.Metadata)
 }
 
-func (b *Book) Date() string {
+func (b *Book) date() string {
 	return normalizeDate(extractDatePublication(b.Package.Metadata))
 }
 
-func (b *Book) Language() string {
-	return normalizeValue(extractLanguage(b.Package.Metadata))
+func (b *Book) language() string {
+	return extractLanguage(b.Package.Metadata)
 }
 
-func (b *Book) Translator() string {
-	return normalizeValue(extractTranslator(b.Package.Metadata))
+func (b *Book) translator() string {
+	return extractTranslator(b.Package.Metadata)
 }
 
-// Labels extracts DC metadata and returns a comma-separated string of labels.
-// This method does not return an error because it operates purely on the
-// pre-parsed Book.Package.Metadata struct fully populated during epub.New().
-func (b *Book) Labels() string {
-	var labels []string
-	if v := b.Creator(); v != "" {
-		labels = append(labels, "creator:"+v)
+// Labels extracts DC metadata as a map of prefix → raw value.
+// Only non-empty fields are included. Values are returned without
+// normalization — the caller or storage layer is responsible for
+// sanitization before persistence.
+func (b *Book) Labels() map[string]string {
+	labels := make(map[string]string)
+	if v := b.creator(); v != "" {
+		labels["creator"] = v
 	}
-	if v := b.Title(); v != "" {
-		labels = append(labels, "title:"+v)
+	if v := b.title(); v != "" {
+		labels["title"] = v
 	}
-	if v := b.Date(); v != "" {
-		labels = append(labels, "date:"+v)
+	if v := b.date(); v != "" {
+		labels["date"] = v
 	}
-	if v := b.Language(); v != "" {
-		labels = append(labels, "language:"+v)
+	if v := b.language(); v != "" {
+		labels["language"] = v
 	}
-	if v := b.Translator(); v != "" {
-		labels = append(labels, "translator:"+v)
+	if v := b.translator(); v != "" {
+		labels["translator"] = v
 	}
-	return strings.Join(labels, ",")
+	return labels
 }
 
 // Text extracts the plain text content of the EPUB in reading order.
@@ -366,20 +367,6 @@ func parseOPF(r *zip.Reader, opfPath string) (PackageXML, error) {
 		}
 	}
 	return pkg, fmt.Errorf("OPF file not found in zip archive")
-}
-
-func normalizeValue(val string) string {
-	if val == "" {
-		return ""
-	}
-
-    // the labels are saved in db in comma separated, we shoudl not have elements with comma.
-    val = strings.ReplaceAll(val, ", ", "_") // "márquez, gabriel" → "márquez_gabriel"
-    val = strings.ReplaceAll(val, ",", "")   // any remaining bare commas
-    val = strings.ToLower(val)
-    val = strings.ReplaceAll(val, " ", "_")
-	val = strings.ReplaceAll(val, "-", "_")
-	return val
 }
 
 func normalizeDate(val string) string {
