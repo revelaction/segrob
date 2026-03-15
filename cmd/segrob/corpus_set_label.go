@@ -12,7 +12,6 @@ func corpusSetLabelCommand(repo storage.CorpusRepository, opts CorpusSetLabelOpt
 		if err := repo.DeleteLabel(opts.DocID, opts.Labels...); err != nil {
 			return fmt.Errorf("failed to delete labels: %w", err)
 		}
-		fmt.Fprintf(ui.Err, "Successfully deleted %d labels from corpus doc ID %s\n", len(opts.Labels), opts.DocID)
 		return nil
 	}
 
@@ -20,6 +19,5 @@ func corpusSetLabelCommand(repo storage.CorpusRepository, opts CorpusSetLabelOpt
 		return fmt.Errorf("failed to add labels: %w", err)
 	}
 
-	fmt.Fprintf(ui.Err, "Successfully added %d labels to corpus doc ID %s\n", len(opts.Labels), opts.DocID)
 	return nil
 }
