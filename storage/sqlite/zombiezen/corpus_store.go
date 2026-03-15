@@ -426,15 +426,14 @@ func (s *CorpusStore) AddLabel(id string, labels ...string) (err error) {
 	keys := slices.Sorted(maps.Keys(lblMap))
 
 	newLabelsStr := strings.Join(keys, ",")
-	if newLabelsStr != currentLabelsStr {
-		err = sqlitex.Execute(conn,
-			"UPDATE corpus SET labels = ?, updated_at = (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')) WHERE id = ?",
-			&sqlitex.ExecOptions{
-				Args: []interface{}{newLabelsStr, id},
-			})
-		if err != nil {
-			return fmt.Errorf("failed to update labels for corpus %s: %w", id, err)
-		}
+	// Always update unconditionally to simplify code and avoid brittle string comparison of serialized labels.
+	err = sqlitex.Execute(conn,
+		"UPDATE corpus SET labels = ?, updated_at = (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')) WHERE id = ?",
+		&sqlitex.ExecOptions{
+			Args: []interface{}{newLabelsStr, id},
+		})
+	if err != nil {
+		return fmt.Errorf("failed to update labels for corpus %s: %w", id, err)
 	}
 
 	return nil
@@ -483,15 +482,14 @@ func (s *CorpusStore) DeleteLabel(id string, labels ...string) (err error) {
 	keys := slices.Sorted(maps.Keys(lblMap))
 
 	newLabelsStr := strings.Join(keys, ",")
-	if newLabelsStr != currentLabelsStr {
-		err = sqlitex.Execute(conn,
-			"UPDATE corpus SET labels = ?, updated_at = (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')) WHERE id = ?",
-			&sqlitex.ExecOptions{
-				Args: []interface{}{newLabelsStr, id},
-			})
-		if err != nil {
-			return fmt.Errorf("failed to update labels for corpus %s: %w", id, err)
-		}
+	// Always update unconditionally to simplify code and avoid brittle string comparison of serialized labels.
+	err = sqlitex.Execute(conn,
+		"UPDATE corpus SET labels = ?, updated_at = (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')) WHERE id = ?",
+		&sqlitex.ExecOptions{
+			Args: []interface{}{newLabelsStr, id},
+		})
+	if err != nil {
+		return fmt.Errorf("failed to update labels for corpus %s: %w", id, err)
 	}
 
 	return nil
