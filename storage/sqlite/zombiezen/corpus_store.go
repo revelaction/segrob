@@ -61,7 +61,7 @@ func (s *CorpusStore) List() ([]storage.CorpusMeta, error) {
 		 FROM corpus`,
 		&sqlitex.ExecOptions{
 			ResultFunc: func(stmt *sqlite.Stmt) error {
-				meta, err := scanCorpusMeta(stmt)
+				meta, err := buildCorpusMeta(stmt)
 				if err != nil {
 					return err
 				}
@@ -129,7 +129,7 @@ func (s *CorpusStore) ReadMeta(id string) (storage.CorpusMeta, error) {
 			Args: []interface{}{id},
 			ResultFunc: func(stmt *sqlite.Stmt) error {
 				var err error
-				meta, err = scanCorpusMeta(stmt)
+				meta, err = buildCorpusMeta(stmt)
 				if err != nil {
 					return err
 				}
@@ -146,8 +146,8 @@ func (s *CorpusStore) ReadMeta(id string) (storage.CorpusMeta, error) {
 	return meta, nil
 }
 
-// scanCorpusMeta helper to scan a row into CorpusMeta
-func scanCorpusMeta(stmt *sqlite.Stmt) (storage.CorpusMeta, error) {
+// buildCorpusMeta helper to scan a row into CorpusMeta
+func buildCorpusMeta(stmt *sqlite.Stmt) (storage.CorpusMeta, error) {
 	txtCreatedAt, err := storage.TimeParse(stmt.GetText("txt_created_at"))
 	if err != nil {
 		return storage.CorpusMeta{}, fmt.Errorf("error parsing txt_created_at: %w", err)
