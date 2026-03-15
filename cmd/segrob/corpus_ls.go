@@ -14,8 +14,10 @@ func corpusLsCommand(repo storage.CorpusReader, opts CorpusLsOptions, ui UI) err
 	}
 
 	var matches []storage.CorpusMeta
+	filter := storage.NormalizeLabel(opts.Filter)
+
 	for _, m := range metas {
-		if opts.Filter != "" && !strings.Contains(m.Labels, opts.Filter) {
+		if !strings.Contains(m.Labels, filter) {
 			continue
 		}
 		if opts.WithNlp && !m.HasNlp() {

@@ -20,8 +20,9 @@ func corpusLsLabelCommand(repo storage.CorpusReader, opts CorpusLsLabelOptions, 
 		if meta.Labels != "" {
 			// Split and filter in memory
 			all := strings.Split(meta.Labels, ",")
+			match := storage.NormalizeLabel(opts.Match)
 			for _, l := range all {
-				if opts.Match == "" || strings.Contains(l, opts.Match) {
+				if strings.Contains(l, match) {
 					labels = append(labels, l)
 				}
 			}

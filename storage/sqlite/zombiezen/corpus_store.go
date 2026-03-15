@@ -291,12 +291,13 @@ func (s *CorpusStore) ListLabels(labelSubStr string) ([]string, error) {
 	defer s.pool.Put(conn)
 
 	lblMap := make(map[string]bool)
+	match := storage.NormalizeLabel(labelSubStr)
 
 	err = sqlitex.Execute(conn, "SELECT labels FROM corpus WHERE labels != ''", &sqlitex.ExecOptions{
 		ResultFunc: func(stmt *sqlite.Stmt) error {
 			labelsStr := stmt.ColumnText(0)
 			for _, lbl := range strings.Split(labelsStr, ",") {
-				if strings.Contains(lbl, labelSubStr) {
+				if strings.Contains(lbl, match) {
 					lblMap[lbl] = true
 				}
 			}
