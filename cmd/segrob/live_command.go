@@ -14,6 +14,7 @@ func printLiveUsage(w io.Writer) {
 	fmt.Fprintf(w, helpCmdFmt, "ls", "List all documents in the repository.")
 	fmt.Fprintf(w, helpCmdFmt, "show", "Show document contents or statistics.")
 	fmt.Fprintf(w, helpCmdFmt, "show-sent", "Show sentence details or statistics.")
+	fmt.Fprintf(w, helpCmdFmt, "unpublish", "Remove a document from all live tables by id.")
 	fmt.Fprintf(w, helpCmdFmt, "find", "Find sentences matching a topic expression.")
 	fmt.Fprintf(w, helpCmdFmt, "find-topics", "Show topics for a specific sentence.")
 	fmt.Fprintf(w, helpCmdFmt, "query", "Enter interactive query mode.")
@@ -135,6 +136,17 @@ func runLiveCommand(args []string, setup *Setup, ui UI) error {
 			return err
 		}
 		return liveShowSentCommand(repo, opts, docId, sentId, ui)
+
+	case "unpublish":
+		opts, err := parseLiveUnpublishArgs(subArgs, ui)
+		if err != nil {
+			return err
+		}
+		repo, err := setup.NewDocRepository(opts.DbPath)
+		if err != nil {
+			return err
+		}
+		return liveUnpublishCommand(repo, opts, ui)
 
 	case "query":
 		opts, _, _, err := parseLiveQueryArgs(subArgs, ui)

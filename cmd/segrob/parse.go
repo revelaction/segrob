@@ -104,6 +104,11 @@ type LiveInitOptions struct {
 	DbPath string
 }
 
+type LiveUnpublishOptions struct {
+	DbPath string // --db / SEGROB_DOC_PATH
+	ID     string // positional arg: document id
+}
+
 type CorpusAckOptions struct {
 	Nlp    bool
 	By     string
@@ -945,6 +950,47 @@ func parseLiveInitArgs(args []string, ui UI) (LiveInitOptions, error) {
 	}
 
 	opts.DbPath = fs.Arg(0)
+	return opts, nil
+}
+
+func parseLiveUnpublishArgs(args []string, ui UI) (LiveUnpublishOptions, error) {
+	fs := flag.NewFlagSet("live unpublish", flag.ContinueOnError)
+	fs.SetOutput(io.Discard)
+
+	var opts LiveUnpublishOptions
+	fs.StringVar(&opts.DbPath, "db", os.Getenv("SEGROB_DOC_PATH"), "")
+
+	fs.Usage = func() {
+		w := fs.Output()
+		fmt.Fprintf(w, "Usage: %s live unpublish [options] <id>\n\n", os.Args[0])
+		fmt.Fprintf(w, "  Remove a document from all live tables.\n")
+		fmt.Fprintf(w, "  The removal is the reverse of publish: the live switch (lemma index) is\n")
+		fmt.Fprintf(w, "  cut first, then labels, sentences, and finally the doc row.\n")
+		fmt.Fprintf(w, "\nArguments:\n")
+		fmt.Fprintf(w, helpArgFmt, "id", "Document ID to unpublish")
+		fmt.Fprintf(w, "\nOptions:\n")
+		printOpt(w, "--db", "PATH", "Target segrob SQLite file (or SEGROB_DOC_PATH)")
+	}
+
+	if err := fs.Parse(args); err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			fs.SetOutput(ui.Out)
+			fs.Usage()
+			return opts, err
+		}
+		return opts, err
+	}
+
+	if fs.NArg() != 1 {
+		return opts, errors.New("live unpublish requires exactly one argument: <id>")
+	}
+
+	opts.ID = fs.Arg(0)
+
+	if opts.DbPath == "" {
+		return opts, errors.New("document source must be specified via --db or SEGROB_DOC_PATH")
+	}
+
 	return opts, nil
 }
 

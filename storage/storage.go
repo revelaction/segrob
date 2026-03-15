@@ -81,6 +81,20 @@ type DocWriter interface {
 
 	// WriteLemmaOptimization writes sentence_lemmas rows for the given docID.
 	WriteLemmaOptimization(docID string, sentences []SentenceIngest) error
+
+	// DeleteLemmaOptimization removes all sentence_lemmas rows for the given docID.
+	// This is the live switch: after this call the document disappears from FindCandidates.
+	DeleteLemmaOptimization(docID string) error
+
+	// DeleteLabelsOptimization removes all sentence_labels rows for the given docID.
+	DeleteLabelsOptimization(docID string) error
+
+	// DeleteNlpData removes all sentences rows for the given docID.
+	DeleteNlpData(docID string) error
+
+	// DeleteMeta removes the docs row for the given docID.
+	// Labels in the labels table are shared and are not removed.
+	DeleteMeta(docID string) error
 }
 
 // DocRepository combines read and write operations

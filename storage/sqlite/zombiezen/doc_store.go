@@ -477,3 +477,72 @@ func (h *DocStore) Exists(id string) (bool, error) {
 		})
 	return exists, err
 }
+
+// DeleteLemmaOptimization removes sentence_lemmas rows for docID.
+func (h *DocStore) DeleteLemmaOptimization(docID string) error {
+	conn, err := h.pool.Take(context.TODO())
+	if err != nil {
+		return err
+	}
+	defer h.pool.Put(conn)
+
+	err = sqlitex.Execute(conn,
+		`DELETE FROM sentence_lemmas WHERE sentence_rowid IN (SELECT rowid FROM sentences WHERE doc_id = ?)`,
+		&sqlitex.ExecOptions{Args: []interface{}{docID}})
+	if err != nil {
+		return fmt.Errorf("failed to delete lemma optimization: %w", err)
+	}
+	return nil
+}
+
+// DeleteLabelsOptimization removes sentence_labels rows for docID.
+func (h *DocStore) DeleteLabelsOptimization(docID string) error {
+	conn, err := h.pool.Take(context.TODO())
+	if err != nil {
+		return err
+	}
+	defer h.pool.Put(conn)
+
+	err = sqlitex.Execute(conn,
+		`DELETE FROM sentence_labels WHERE sentence_rowid IN (SELECT rowid FROM sentences WHERE doc_id = ?)`,
+		&sqlitex.ExecOptions{Args: []interface{}{docID}})
+	if err != nil {
+		return fmt.Errorf("failed to delete labels optimization: %w", err)
+	}
+	return nil
+}
+
+// DeleteNlpData removes all sentences rows for docID.
+func (h *DocStore) DeleteNlpData(docID string) error {
+	conn, err := h.pool.Take(context.TODO())
+	if err != nil {
+		return err
+	}
+	defer h.pool.Put(conn)
+
+	err = sqlitex.Execute(conn,
+		`DELETE FROM sentences WHERE doc_id = ?`,
+		&sqlitex.ExecOptions{Args: []interface{}{docID}})
+	if err != nil {
+		return fmt.Errorf("failed to delete nlp data: %w", err)
+	}
+	return nil
+}
+
+// DeleteMeta removes the docs row for docID.
+// Rows in the labels table are shared across documents and are not touched.
+func (h *DocStore) DeleteMeta(docID string) error {
+	conn, err := h.pool.Take(context.TODO())
+	if err != nil {
+		return err
+	}
+	defer h.pool.Put(conn)
+
+	err = sqlitex.Execute(conn,
+		`DELETE FROM docs WHERE id = ?`,
+		&sqlitex.ExecOptions{Args: []interface{}{docID}})
+	if err != nil {
+		return fmt.Errorf("failed to delete meta: %w", err)
+	}
+	return nil
+}
