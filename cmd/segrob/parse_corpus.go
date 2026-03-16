@@ -8,33 +8,6 @@ import (
 	"os"
 )
 
-type CorpusAckOptions struct {
-	Nlp    bool
-	By     string
-	ID     string
-	DbPath string
-}
-
-type CorpusRmOptions struct {
-	ID     string
-	DbPath string
-}
-
-type CorpusPushTxtOptions struct {
-	By     string
-	Note   string
-	ID     string
-	File   string
-	DbPath string
-}
-
-type CorpusIngestNlpOptions struct {
-	NlpScript string
-	DbPath    string // corpus db path
-	ID        string
-	Force     bool // -f/--force
-}
-
 type CorpusPublishOptions struct {
 	From  string // corpus.db path (--from / SEGROB_CORPUS_DB)
 	To    string // segrob.db path (--to / SEGROB_LIVE_DB)
@@ -42,12 +15,6 @@ type CorpusPublishOptions struct {
 	All   bool   // true when no positional arg → publish all ACKed
 	Move  bool   // -m/--move: delete nlp from corpus after success
 	Force bool   // -f/--force
-}
-
-type CorpusPublishLabelOptions struct {
-	From string // --from / SEGROB_CORPUS_DB
-	To   string // --to   / SEGROB_LIVE_DB
-	ID   string // positional arg: document id
 }
 
 func parseCorpusPublishArgs(args []string, ui UI) (CorpusPublishOptions, error) {
@@ -104,6 +71,12 @@ func parseCorpusPublishArgs(args []string, ui UI) (CorpusPublishOptions, error) 
 	return opts, nil
 }
 
+type CorpusPublishLabelOptions struct {
+	From string // --from / SEGROB_CORPUS_DB
+	To   string // --to   / SEGROB_LIVE_DB
+	ID   string // positional arg: document id
+}
+
 func parseCorpusPublishLabelArgs(args []string, ui UI) (CorpusPublishLabelOptions, error) {
 	fs := flag.NewFlagSet("corpus publish-label", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
@@ -148,48 +121,13 @@ func parseCorpusPublishLabelArgs(args []string, ui UI) (CorpusPublishLabelOption
 	return opts, nil
 }
 
-type CorpusIngestMetaOptions struct {
-	DbPath string
-	Dir    string
-	Pandoc bool
+type CorpusIngestNlpOptions struct {
+	NlpScript string
+	DbPath    string // corpus db path
+	ID        string
+	Force     bool // -f/--force
 }
 
-type CorpusDumpTxtOptions struct {
-	DbPath string // --db / SEGROB_CORPUS_DB
-	Output string // --output file path (empty = stdout)
-	ID     string // positional arg: document id
-}
-
-type CorpusDumpNlpOptions struct {
-	DbPath   string // --db / SEGROB_CORPUS_DB
-	NoLemmas bool   // -n, --no-lemmas
-	Output   string // --output file path (empty = stdout)
-	ID       string // positional arg: document id
-}
-
-type CorpusLsOptions struct {
-	DbPath  string // --db / SEGROB_CORPUS_DB
-	Filter  string // optional positional filter
-	WithNlp bool   // --with-nlp / -w
-	NlpAck  bool   // --nlp-ack / -n
-	TxtAck  bool   // --txt-ack / -t
-	Ack     bool   // --ack / -a
-}
-
-// CorpusSetLabelOptions holds options for "corpus set-label".
-type CorpusSetLabelOptions struct {
-	DocID  string
-	Labels []string
-	DbPath string
-	Delete bool
-}
-
-// CorpusLsLabelOptions holds options for "corpus ls-label".
-type CorpusLsLabelOptions struct {
-	DbPath string
-	Match  string
-	ID     string // Optional document ID
-}
 
 func parseCorpusIngestNlpArgs(args []string, ui UI) (CorpusIngestNlpOptions, error) {
 	fs := flag.NewFlagSet("corpus ingest-nlp", flag.ContinueOnError)
@@ -287,6 +225,12 @@ func parseCorpusShowArgs(args []string, ui UI) (ShowOptions, string, error) {
 	return opts, arg, nil
 }
 
+type CorpusIngestMetaOptions struct {
+	DbPath string
+	Dir    string
+	Pandoc bool
+}
+
 func parseCorpusIngestMetaArgs(args []string, ui UI) (CorpusIngestMetaOptions, error) {
 	fs := flag.NewFlagSet("corpus ingest-meta", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
@@ -338,6 +282,12 @@ func parseCorpusIngestMetaArgs(args []string, ui UI) (CorpusIngestMetaOptions, e
 	return opts, nil
 }
 
+type CorpusDumpTxtOptions struct {
+	DbPath string // --db / SEGROB_CORPUS_DB
+	Output string // --output file path (empty = stdout)
+	ID     string // positional arg: document id
+}
+
 func parseCorpusDumpTxtArgs(args []string, ui UI) (CorpusDumpTxtOptions, error) {
 	fs := flag.NewFlagSet("corpus dump-txt", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
@@ -378,6 +328,13 @@ func parseCorpusDumpTxtArgs(args []string, ui UI) (CorpusDumpTxtOptions, error) 
 	}
 
 	return opts, nil
+}
+
+type CorpusDumpNlpOptions struct {
+	DbPath   string // --db / SEGROB_CORPUS_DB
+	NoLemmas bool   // -n, --no-lemmas
+	Output   string // --output file path (empty = stdout)
+	ID       string // positional arg: document id
 }
 
 func parseCorpusDumpNlpArgs(args []string, ui UI) (CorpusDumpNlpOptions, error) {
@@ -422,6 +379,15 @@ func parseCorpusDumpNlpArgs(args []string, ui UI) (CorpusDumpNlpOptions, error) 
 	}
 
 	return opts, nil
+}
+
+type CorpusLsOptions struct {
+	DbPath  string // --db / SEGROB_CORPUS_DB
+	Filter  string // optional positional filter
+	WithNlp bool   // --with-nlp / -w
+	NlpAck  bool   // --nlp-ack / -n
+	TxtAck  bool   // --txt-ack / -t
+	Ack     bool   // --ack / -a
 }
 
 func parseCorpusLsArgs(args []string, ui UI) (CorpusLsOptions, error) {
@@ -473,6 +439,15 @@ func parseCorpusLsArgs(args []string, ui UI) (CorpusLsOptions, error) {
 	return opts, nil
 }
 
+type CorpusPushTxtOptions struct {
+	By     string
+	Note   string
+	ID     string
+	File   string
+	DbPath string
+}
+
+
 func parseCorpusPushTxtArgs(args []string, ui UI) (CorpusPushTxtOptions, error) {
 	fs := flag.NewFlagSet("corpus push-txt", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
@@ -516,6 +491,13 @@ func parseCorpusPushTxtArgs(args []string, ui UI) (CorpusPushTxtOptions, error) 
 	}
 
 	return opts, nil
+}
+
+type CorpusAckOptions struct {
+	Nlp    bool
+	By     string
+	ID     string
+	DbPath string
 }
 
 func parseCorpusAckArgs(args []string, ui UI) (CorpusAckOptions, error) {
@@ -562,6 +544,12 @@ func parseCorpusAckArgs(args []string, ui UI) (CorpusAckOptions, error) {
 	return opts, nil
 }
 
+type CorpusRmOptions struct {
+	ID     string
+	DbPath string
+}
+
+
 func parseCorpusRmArgs(args []string, ui UI) (CorpusRmOptions, error) {
 	fs := flag.NewFlagSet("corpus rm", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
@@ -599,6 +587,14 @@ func parseCorpusRmArgs(args []string, ui UI) (CorpusRmOptions, error) {
 	}
 
 	return opts, nil
+}
+
+// CorpusSetLabelOptions holds options for "corpus set-label".
+type CorpusSetLabelOptions struct {
+	DocID  string
+	Labels []string
+	DbPath string
+	Delete bool
 }
 
 // parseCorpusSetLabelArgs parses arguments and flags for "corpus set-label".
@@ -649,6 +645,13 @@ func parseCorpusSetLabelArgs(args []string, ui UI) (CorpusSetLabelOptions, error
 	}
 
 	return opts, nil
+}
+
+// CorpusLsLabelOptions holds options for "corpus ls-label".
+type CorpusLsLabelOptions struct {
+	DbPath string
+	Match  string
+	ID     string // Optional document ID
 }
 
 // parseCorpusLsLabelArgs parses arguments and flags for "corpus ls-label".
