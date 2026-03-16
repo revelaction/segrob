@@ -38,7 +38,7 @@ type Book struct {
 //	r.Close()
 func New(z *zip.Reader) (*Book, error) {
 	// Find and parse OPF
-	opfPath, err := findOPFPath(z)
+	opfPath, err := FindOPFPath(z)
 	if err != nil {
 		return nil, err
 	}
@@ -328,7 +328,8 @@ func extractTextFromXHTML(content []byte) (string, error) {
 	return strings.TrimSpace(result), nil
 }
 
-func findOPFPath(r *zip.Reader) (string, error) {
+// FindOPFPath locates the OPF file in the EPUB archive by reading META-INF/container.xml.
+func FindOPFPath(r *zip.Reader) (string, error) {
 	for _, f := range r.File {
 		if f.Name == "META-INF/container.xml" {
 			rc, err := f.Open()
