@@ -16,6 +16,11 @@ Displays a tabular view of metadata (Title, Creator, etc.) for all EPUB files in
 - **Run**: `go run scripts/go_epub_meta.go <directory>`
 - **Compile**: `go build -o go_epub_meta scripts/go_epub_meta.go`
 
+### `opf_metadata.go`
+Extracts the EPUB version and the raw `<metadata>` block from an EPUB's OPF file. Useful for inspecting internal metadata structure and debugging namespace issues.
+- **Run**: `go run scripts/opf_metadata.go <file.epub>`
+- **Compile**: `go build -o opf_metadata scripts/opf_metadata.go`
+
 ---
 
 ## Python Scripts
