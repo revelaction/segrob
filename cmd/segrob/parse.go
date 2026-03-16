@@ -105,7 +105,7 @@ type LiveInitOptions struct {
 }
 
 type LiveUnpublishOptions struct {
-	DbPath string // --db / SEGROB_DOC_PATH
+	DbPath string // --db / SEGROB_LIVE_DB
 	ID     string // positional arg: document id
 }
 
@@ -137,8 +137,8 @@ type CorpusIngestNlpOptions struct {
 }
 
 type CorpusPublishOptions struct {
-	From  string // corpus.db path (--from / SEGROB_CORPUS_PATH)
-	To    string // segrob.db path (--to / SEGROB_DOC_PATH)
+	From  string // corpus.db path (--from / SEGROB_CORPUS_DB)
+	To    string // segrob.db path (--to / SEGROB_LIVE_DB)
 	ID    string // positional arg: document id (empty when All is true)
 	All   bool   // true when no positional arg → publish all ACKed
 	Move  bool   // -m/--move: delete nlp from corpus after success
@@ -146,8 +146,8 @@ type CorpusPublishOptions struct {
 }
 
 type CorpusPublishLabelOptions struct {
-	From string // --from / SEGROB_CORPUS_PATH
-	To   string // --to   / SEGROB_DOC_PATH
+	From string // --from / SEGROB_CORPUS_DB
+	To   string // --to   / SEGROB_LIVE_DB
 	ID   string // positional arg: document id
 }
 
@@ -156,8 +156,8 @@ func parseCorpusPublishArgs(args []string, ui UI) (CorpusPublishOptions, error) 
 	fs.SetOutput(io.Discard)
 
 	var opts CorpusPublishOptions
-	fs.StringVar(&opts.From, "from", os.Getenv("SEGROB_CORPUS_PATH"), "Source corpus SQLite file")
-	fs.StringVar(&opts.To, "to", os.Getenv("SEGROB_DOC_PATH"), "Target segrob SQLite file")
+	fs.StringVar(&opts.From, "from", os.Getenv("SEGROB_CORPUS_DB"), "Source corpus SQLite file")
+	fs.StringVar(&opts.To, "to", os.Getenv("SEGROB_LIVE_DB"), "Target segrob SQLite file")
 	fs.BoolVar(&opts.Move, "move", false, "Delete nlp data from corpus after successful live")
 	fs.BoolVar(&opts.Move, "m", false, "alias for -move")
 	fs.BoolVar(&opts.Force, "force", false, "Force publishing even if not acknowledged")
@@ -171,8 +171,8 @@ func parseCorpusPublishArgs(args []string, ui UI) (CorpusPublishOptions, error) 
 		fmt.Fprintf(w, "\nArguments:\n")
 		fmt.Fprintf(w, helpArgFmt, "id", "Document ID to publish (omit to publish all ACKed)")
 		fmt.Fprintf(w, "\nOptions:\n")
-		printOpt(w, "--from", "PATH", "Source corpus SQLite file (or SEGROB_CORPUS_PATH)")
-		printOpt(w, "--to", "PATH", "Target segrob SQLite file (or SEGROB_DOC_PATH)")
+		printOpt(w, "--from", "PATH", "Source corpus SQLite file (or SEGROB_CORPUS_DB)")
+		printOpt(w, "--to", "PATH", "Target segrob SQLite file (or SEGROB_LIVE_DB)")
 		printOpt(w, "-m, --move", "", "Delete NLP data from corpus after successful publish")
 		printOpt(w, "-f, --force", "", "Force publishing even if not acknowledged (only with id)")
 	}
@@ -196,10 +196,10 @@ func parseCorpusPublishArgs(args []string, ui UI) (CorpusPublishOptions, error) 
 	}
 
 	if opts.From == "" {
-		return opts, errors.New("corpus source must be specified via --from or SEGROB_CORPUS_PATH")
+		return opts, errors.New("corpus source must be specified via --from or SEGROB_CORPUS_DB")
 	}
 	if opts.To == "" {
-		return opts, errors.New("target db must be specified via --to or SEGROB_DOC_PATH")
+		return opts, errors.New("target db must be specified via --to or SEGROB_LIVE_DB")
 	}
 
 	return opts, nil
@@ -210,8 +210,8 @@ func parseCorpusPublishLabelArgs(args []string, ui UI) (CorpusPublishLabelOption
 	fs.SetOutput(io.Discard)
 
 	var opts CorpusPublishLabelOptions
-	fs.StringVar(&opts.From, "from", os.Getenv("SEGROB_CORPUS_PATH"), "")
-	fs.StringVar(&opts.To, "to", os.Getenv("SEGROB_DOC_PATH"), "")
+	fs.StringVar(&opts.From, "from", os.Getenv("SEGROB_CORPUS_DB"), "")
+	fs.StringVar(&opts.To, "to", os.Getenv("SEGROB_LIVE_DB"), "")
 
 	fs.Usage = func() {
 		w := fs.Output()
@@ -220,8 +220,8 @@ func parseCorpusPublishLabelArgs(args []string, ui UI) (CorpusPublishLabelOption
 		fmt.Fprintf(w, "\nArguments:\n")
 		fmt.Fprintf(w, helpArgFmt, "id", "Document ID")
 		fmt.Fprintf(w, "\nOptions:\n")
-		printOpt(w, "--from", "PATH", "Source corpus SQLite file (or SEGROB_CORPUS_PATH)")
-		printOpt(w, "--to", "PATH", "Target segrob SQLite file (or SEGROB_DOC_PATH)")
+		printOpt(w, "--from", "PATH", "Source corpus SQLite file (or SEGROB_CORPUS_DB)")
+		printOpt(w, "--to", "PATH", "Target segrob SQLite file (or SEGROB_LIVE_DB)")
 	}
 
 	if err := fs.Parse(args); err != nil {
@@ -240,10 +240,10 @@ func parseCorpusPublishLabelArgs(args []string, ui UI) (CorpusPublishLabelOption
 	opts.ID = fs.Arg(0)
 
 	if opts.From == "" {
-		return opts, errors.New("corpus source must be specified via --from or SEGROB_CORPUS_PATH")
+		return opts, errors.New("corpus source must be specified via --from or SEGROB_CORPUS_DB")
 	}
 	if opts.To == "" {
-		return opts, errors.New("target db must be specified via --to or SEGROB_DOC_PATH")
+		return opts, errors.New("target db must be specified via --to or SEGROB_LIVE_DB")
 	}
 
 	return opts, nil
@@ -256,20 +256,20 @@ type CorpusIngestMetaOptions struct {
 }
 
 type CorpusDumpTxtOptions struct {
-	DbPath string // --db / SEGROB_CORPUS_PATH
+	DbPath string // --db / SEGROB_CORPUS_DB
 	Output string // --output file path (empty = stdout)
 	ID     string // positional arg: document id
 }
 
 type CorpusDumpNlpOptions struct {
-	DbPath   string // --db / SEGROB_CORPUS_PATH
+	DbPath   string // --db / SEGROB_CORPUS_DB
 	NoLemmas bool   // -n, --no-lemmas
 	Output   string // --output file path (empty = stdout)
 	ID       string // positional arg: document id
 }
 
 type CorpusLsOptions struct {
-	DbPath  string // --db / SEGROB_CORPUS_PATH
+	DbPath  string // --db / SEGROB_CORPUS_DB
 	Filter  string // optional positional filter
 	WithNlp bool   // --with-nlp / -w
 	NlpAck  bool   // --nlp-ack / -n
@@ -389,7 +389,7 @@ func parseLiveShowArgs(args []string, ui UI) (ShowOptions, string, error) {
 	fs.Var(&countOpt, "number", "")
 	fs.Var(&countOpt, "n", "")
 
-	fs.StringVar(&opts.DbPath, "db", os.Getenv("SEGROB_DOC_PATH"), "")
+	fs.StringVar(&opts.DbPath, "db", os.Getenv("SEGROB_LIVE_DB"), "")
 
 	fs.Usage = func() {
 		w := fs.Output()
@@ -401,7 +401,7 @@ func parseLiveShowArgs(args []string, ui UI) (ShowOptions, string, error) {
 		printOpt(w, "--start", "INDEX", "Index of the first sentence to show (default: 0)")
 		printOpt(w, "-n, --number", "N", "Number of sentences to show")
 		printOpt(w, "-s, --stats", "", "Show document statistics")
-		printOpt(w, "--db", "FILE", "Path to docs directory or SQLite file (or SEGROB_DOC_PATH)")
+		printOpt(w, "--db", "FILE", "Path to docs directory or SQLite file (or SEGROB_LIVE_DB)")
 	}
 
 	if err := fs.Parse(args); err != nil {
@@ -416,7 +416,7 @@ func parseLiveShowArgs(args []string, ui UI) (ShowOptions, string, error) {
 	opts.Count = countOpt.value
 
 	if opts.DbPath == "" {
-		return opts, "", errors.New("document source must be specified via --db or SEGROB_DOC_PATH")
+		return opts, "", errors.New("document source must be specified via --db or SEGROB_LIVE_DB")
 	}
 
 	if fs.NArg() != 1 {
@@ -432,8 +432,8 @@ func parseLiveLsArgs(args []string, ui UI) (LiveLsOptions, bool, error) {
 	fs.SetOutput(io.Discard)
 
 	var opts LiveLsOptions
-	fs.StringVar(&opts.DocPath, "doc-path", os.Getenv("SEGROB_DOC_PATH"), "")
-	fs.StringVar(&opts.DocPath, "d", os.Getenv("SEGROB_DOC_PATH"), "")
+	fs.StringVar(&opts.DocPath, "doc-path", os.Getenv("SEGROB_LIVE_DB"), "")
+	fs.StringVar(&opts.DocPath, "d", os.Getenv("SEGROB_LIVE_DB"), "")
 	fs.StringVar(&opts.Match, "match", "", "")
 	fs.StringVar(&opts.Match, "m", "", "")
 
@@ -442,7 +442,7 @@ func parseLiveLsArgs(args []string, ui UI) (LiveLsOptions, bool, error) {
 		fmt.Fprintf(w, "Usage: %s live ls [options]\n\n", os.Args[0])
 		fmt.Fprintf(w, "  List all documents in the repository.\n")
 		fmt.Fprintf(w, "\nOptions:\n")
-		printOpt(w, "-d, --doc-path", "PATH", "Path to docs directory or SQLite file (or SEGROB_DOC_PATH)")
+		printOpt(w, "-d, --doc-path", "PATH", "Path to docs directory or SQLite file (or SEGROB_LIVE_DB)")
 		printOpt(w, "-m, --match", "STRING", "Only list documents with at least one label containing STRING")
 	}
 
@@ -459,7 +459,7 @@ func parseLiveLsArgs(args []string, ui UI) (LiveLsOptions, bool, error) {
 	}
 
 	if opts.DocPath == "" {
-		return opts, false, errors.New("no document source specified (use -d or SEGROB_DOC_PATH)")
+		return opts, false, errors.New("no document source specified (use -d or SEGROB_LIVE_DB)")
 	}
 
 	info, err := os.Stat(opts.DocPath)
@@ -475,7 +475,7 @@ func parseLiveShowSentArgs(args []string, ui UI) (LiveShowSentOptions, string, i
 	fs.SetOutput(io.Discard)
 
 	var opts LiveShowSentOptions
-	fs.StringVar(&opts.DbPath, "db", os.Getenv("SEGROB_DOC_PATH"), "")
+	fs.StringVar(&opts.DbPath, "db", os.Getenv("SEGROB_LIVE_DB"), "")
 	fs.BoolVar(&opts.Stats, "stats", false, "")
 	fs.BoolVar(&opts.Stats, "s", false, "")
 
@@ -488,7 +488,7 @@ func parseLiveShowSentArgs(args []string, ui UI) (LiveShowSentOptions, string, i
 		fmt.Fprintf(w, helpArgFmt, "sentence_id", "Index of the sentence")
 		fmt.Fprintf(w, "\nOptions:\n")
 		printOpt(w, "-s, --stats", "", "Show sentence statistics")
-		printOpt(w, "--db", "PATH", "Path to SQLite file (or SEGROB_DOC_PATH)")
+		printOpt(w, "--db", "PATH", "Path to SQLite file (or SEGROB_LIVE_DB)")
 	}
 
 	if err := fs.Parse(args); err != nil {
@@ -501,7 +501,7 @@ func parseLiveShowSentArgs(args []string, ui UI) (LiveShowSentOptions, string, i
 	}
 
 	if opts.DbPath == "" {
-		return opts, "", 0, errors.New("document source must be specified via --db or SEGROB_DOC_PATH")
+		return opts, "", 0, errors.New("document source must be specified via --db or SEGROB_LIVE_DB")
 	}
 
 	if fs.NArg() != 2 {
@@ -526,8 +526,8 @@ func parseLiveFindTopicsArgs(args []string, ui UI) (LiveFindTopicsOptions, strin
 	fs.StringVar(&opts.TopicPath, "topic-path", os.Getenv("SEGROB_TOPIC_PATH"), "")
 	fs.StringVar(&opts.TopicPath, "t", os.Getenv("SEGROB_TOPIC_PATH"), "")
 
-	fs.StringVar(&opts.DocPath, "doc-path", os.Getenv("SEGROB_DOC_PATH"), "")
-	fs.StringVar(&opts.DocPath, "d", os.Getenv("SEGROB_DOC_PATH"), "")
+	fs.StringVar(&opts.DocPath, "doc-path", os.Getenv("SEGROB_LIVE_DB"), "")
+	fs.StringVar(&opts.DocPath, "d", os.Getenv("SEGROB_LIVE_DB"), "")
 
 	opts.Format = render.Defaultformat
 	formatFlag := &enumFlag{allowed: render.SupportedFormats(), value: &opts.Format}
@@ -542,7 +542,7 @@ func parseLiveFindTopicsArgs(args []string, ui UI) (LiveFindTopicsOptions, strin
 		fmt.Fprintf(w, helpArgFmt, "doc_id", "ID of the document")
 		fmt.Fprintf(w, helpArgFmt, "sentence_id", "Index of the sentence")
 		fmt.Fprintf(w, "\nOptions:\n")
-		printOpt(w, "-d, --doc-path", "PATH", "Path to docs directory or SQLite file (or SEGROB_DOC_PATH)")
+		printOpt(w, "-d, --doc-path", "PATH", "Path to docs directory or SQLite file (or SEGROB_LIVE_DB)")
 		printOpt(w, "-t, --topic-path", "PATH", "Path to topics directory or SQLite file (or SEGROB_TOPIC_PATH)")
 		printOpt(w, "-f, --format", "FORMAT", "Output format: all, part, or lemma (default: "+render.Defaultformat+")")
 	}
@@ -561,7 +561,7 @@ func parseLiveFindTopicsArgs(args []string, ui UI) (LiveFindTopicsOptions, strin
 	}
 
 	if opts.DocPath == "" {
-		return opts, "", 0, errors.New("document source must be specified via -d or SEGROB_DOC_PATH")
+		return opts, "", 0, errors.New("document source must be specified via -d or SEGROB_LIVE_DB")
 	}
 
 	if fs.NArg() != 2 {
@@ -605,8 +605,8 @@ func parseLiveFindArgs(args []string, ui UI) (LiveFindOptions, []string, bool, e
 	fs.Var(formatFlag, "format", "")
 	fs.Var(formatFlag, "f", "")
 
-	fs.StringVar(&opts.DocPath, "doc-path", os.Getenv("SEGROB_DOC_PATH"), "")
-	fs.StringVar(&opts.DocPath, "d", os.Getenv("SEGROB_DOC_PATH"), "")
+	fs.StringVar(&opts.DocPath, "doc-path", os.Getenv("SEGROB_LIVE_DB"), "")
+	fs.StringVar(&opts.DocPath, "d", os.Getenv("SEGROB_LIVE_DB"), "")
 
 	fs.StringVar(&opts.TopicPath, "topic-path", os.Getenv("SEGROB_TOPIC_PATH"), "")
 	fs.StringVar(&opts.TopicPath, "t", os.Getenv("SEGROB_TOPIC_PATH"), "")
@@ -623,7 +623,7 @@ func parseLiveFindArgs(args []string, ui UI) (LiveFindOptions, []string, bool, e
 		fmt.Fprintf(w, "\nArguments:\n")
 		fmt.Fprintf(w, helpArgFmt, "expr", "One or more topic expression items")
 		fmt.Fprintf(w, "\nOptions:\n")
-		printOpt(w, "-d, --doc-path", "PATH", "Path to docs directory or SQLite file (or SEGROB_DOC_PATH)")
+		printOpt(w, "-d, --doc-path", "PATH", "Path to docs directory or SQLite file (or SEGROB_LIVE_DB)")
 		printOpt(w, "-t, --topic-path", "PATH", "Path to topics directory or SQLite file (or SEGROB_TOPIC_PATH)")
 		printOpt(w, "-l, --label", "LABEL", "Only scan documents matching this label (repeatable, all required)")
 		printOpt(w, "-f, --format", "FORMAT", "Output format: all, part, or lemma (default: "+render.Defaultformat+")")
@@ -653,7 +653,7 @@ func parseLiveFindArgs(args []string, ui UI) (LiveFindOptions, []string, bool, e
 	}
 
 	if opts.DocPath == "" {
-		return opts, nil, false, errors.New("Doc path must be specified via -d or SEGROB_DOC_PATH")
+		return opts, nil, false, errors.New("Doc path must be specified via -d or SEGROB_LIVE_DB")
 	}
 
 	info, err := os.Stat(opts.DocPath)
@@ -690,15 +690,15 @@ func parseLiveQueryArgs(args []string, ui UI) (LiveQueryOptions, bool, bool, err
 	fs.StringVar(&opts.TopicPath, "topic-path", os.Getenv("SEGROB_TOPIC_PATH"), "")
 	fs.StringVar(&opts.TopicPath, "t", os.Getenv("SEGROB_TOPIC_PATH"), "")
 
-	fs.StringVar(&opts.DocPath, "doc-path", os.Getenv("SEGROB_DOC_PATH"), "")
-	fs.StringVar(&opts.DocPath, "d", os.Getenv("SEGROB_DOC_PATH"), "")
+	fs.StringVar(&opts.DocPath, "doc-path", os.Getenv("SEGROB_LIVE_DB"), "")
+	fs.StringVar(&opts.DocPath, "d", os.Getenv("SEGROB_LIVE_DB"), "")
 
 	fs.Usage = func() {
 		w := fs.Output()
 		fmt.Fprintf(w, "Usage: %s live query [options]\n\n", os.Args[0])
 		fmt.Fprintf(w, "  Enter interactive query mode.\n")
 		fmt.Fprintf(w, "\nOptions:\n")
-		printOpt(w, "-d, --doc-path", "PATH", "Path to docs directory or SQLite file (or SEGROB_DOC_PATH)")
+		printOpt(w, "-d, --doc-path", "PATH", "Path to docs directory or SQLite file (or SEGROB_LIVE_DB)")
 		printOpt(w, "-t, --topic-path", "PATH", "Path to topics directory or SQLite file (or SEGROB_TOPIC_PATH)")
 		printOpt(w, "-l, --label", "LABEL", "Only scan documents matching this label (repeatable, all required)")
 		printOpt(w, "-f, --format", "FORMAT", "Output format: all, part, or lemma (default: "+render.Defaultformat+")")
@@ -724,7 +724,7 @@ func parseLiveQueryArgs(args []string, ui UI) (LiveQueryOptions, bool, bool, err
 	}
 
 	if opts.DocPath == "" {
-		return opts, false, false, errors.New("Doc path must be specified via -d or SEGROB_DOC_PATH")
+		return opts, false, false, errors.New("Doc path must be specified via -d or SEGROB_LIVE_DB")
 	}
 
 	tinfo, err := os.Stat(opts.TopicPath)
@@ -1008,7 +1008,7 @@ func parseLiveUnpublishArgs(args []string, ui UI) (LiveUnpublishOptions, error) 
 	fs.SetOutput(io.Discard)
 
 	var opts LiveUnpublishOptions
-	fs.StringVar(&opts.DbPath, "db", os.Getenv("SEGROB_DOC_PATH"), "")
+	fs.StringVar(&opts.DbPath, "db", os.Getenv("SEGROB_LIVE_DB"), "")
 
 	fs.Usage = func() {
 		w := fs.Output()
@@ -1019,7 +1019,7 @@ func parseLiveUnpublishArgs(args []string, ui UI) (LiveUnpublishOptions, error) 
 		fmt.Fprintf(w, "\nArguments:\n")
 		fmt.Fprintf(w, helpArgFmt, "id", "Document ID to unpublish")
 		fmt.Fprintf(w, "\nOptions:\n")
-		printOpt(w, "--db", "PATH", "Target segrob SQLite file (or SEGROB_DOC_PATH)")
+		printOpt(w, "--db", "PATH", "Target segrob SQLite file (or SEGROB_LIVE_DB)")
 	}
 
 	if err := fs.Parse(args); err != nil {
@@ -1038,7 +1038,7 @@ func parseLiveUnpublishArgs(args []string, ui UI) (LiveUnpublishOptions, error) 
 	opts.ID = fs.Arg(0)
 
 	if opts.DbPath == "" {
-		return opts, errors.New("document source must be specified via --db or SEGROB_DOC_PATH")
+		return opts, errors.New("document source must be specified via --db or SEGROB_LIVE_DB")
 	}
 
 	return opts, nil
@@ -1051,7 +1051,7 @@ func parseCorpusIngestNlpArgs(args []string, ui UI) (CorpusIngestNlpOptions, err
 	var opts CorpusIngestNlpOptions
 	fs.StringVar(&opts.NlpScript, "nlp-script", os.Getenv("SEGROB_NLP_SCRIPT"), "")
 	fs.StringVar(&opts.NlpScript, "s", os.Getenv("SEGROB_NLP_SCRIPT"), "")
-	fs.StringVar(&opts.DbPath, "db", os.Getenv("SEGROB_CORPUS_PATH"), "")
+	fs.StringVar(&opts.DbPath, "db", os.Getenv("SEGROB_CORPUS_DB"), "")
 	fs.BoolVar(&opts.Force, "force", false, "")
 	fs.BoolVar(&opts.Force, "f", false, "")
 
@@ -1063,7 +1063,7 @@ func parseCorpusIngestNlpArgs(args []string, ui UI) (CorpusIngestNlpOptions, err
 		fmt.Fprintf(w, helpArgFmt, "id", "Document ID to process")
 		fmt.Fprintf(w, "\nOptions:\n")
 		printOpt(w, "-s, --nlp-script", "PATH", "Path to the Python NLP script (or SEGROB_NLP_SCRIPT)")
-		printOpt(w, "--db", "FILE", "Path to the corpus SQLite database (or SEGROB_CORPUS_PATH)")
+		printOpt(w, "--db", "FILE", "Path to the corpus SQLite database (or SEGROB_CORPUS_DB)")
 		printOpt(w, "-f, --force", "", "Force processing even if TxtAck is false")
 	}
 
@@ -1080,7 +1080,7 @@ func parseCorpusIngestNlpArgs(args []string, ui UI) (CorpusIngestNlpOptions, err
 		return opts, fmt.Errorf("--nlp-script must be supplied if SEGROB_NLP_SCRIPT is not set")
 	}
 	if opts.DbPath == "" {
-		return opts, fmt.Errorf("--db must be supplied if SEGROB_CORPUS_PATH is not set")
+		return opts, fmt.Errorf("--db must be supplied if SEGROB_CORPUS_DB is not set")
 	}
 
 	if fs.NArg() != 1 {
@@ -1103,7 +1103,7 @@ func parseCorpusShowArgs(args []string, ui UI) (ShowOptions, string, error) {
 	fs.Var(&countOpt, "number", "")
 	fs.Var(&countOpt, "n", "")
 
-	fs.StringVar(&opts.DbPath, "db", os.Getenv("SEGROB_CORPUS_PATH"), "")
+	fs.StringVar(&opts.DbPath, "db", os.Getenv("SEGROB_CORPUS_DB"), "")
 
 	fs.Usage = func() {
 		w := fs.Output()
@@ -1114,7 +1114,7 @@ func parseCorpusShowArgs(args []string, ui UI) (ShowOptions, string, error) {
 		fmt.Fprintf(w, "\nOptions:\n")
 		printOpt(w, "-s, --start", "INDEX", "Index of the first sentence to show (default: 0)")
 		printOpt(w, "-n, --number", "N", "Number of sentences to show")
-		printOpt(w, "--db", "FILE", "Corpus SQLite file (or SEGROB_CORPUS_PATH)")
+		printOpt(w, "--db", "FILE", "Corpus SQLite file (or SEGROB_CORPUS_DB)")
 	}
 
 	if err := fs.Parse(args); err != nil {
@@ -1129,7 +1129,7 @@ func parseCorpusShowArgs(args []string, ui UI) (ShowOptions, string, error) {
 	opts.Count = countOpt.value
 
 	if opts.DbPath == "" {
-		return opts, "", errors.New("corpus database must be specified via --db or SEGROB_CORPUS_PATH")
+		return opts, "", errors.New("corpus database must be specified via --db or SEGROB_CORPUS_DB")
 	}
 
 	if fs.NArg() != 1 {
@@ -1145,7 +1145,7 @@ func parseCorpusIngestMetaArgs(args []string, ui UI) (CorpusIngestMetaOptions, e
 	fs.SetOutput(io.Discard)
 
 	var opts CorpusIngestMetaOptions
-	fs.StringVar(&opts.DbPath, "db", os.Getenv("SEGROB_CORPUS_PATH"), "")
+	fs.StringVar(&opts.DbPath, "db", os.Getenv("SEGROB_CORPUS_DB"), "")
 	fs.BoolVar(&opts.Pandoc, "pandoc", false, "")
 	fs.BoolVar(&opts.Pandoc, "p", false, "")
 
@@ -1156,7 +1156,7 @@ func parseCorpusIngestMetaArgs(args []string, ui UI) (CorpusIngestMetaOptions, e
 		fmt.Fprintf(w, "\nArguments:\n")
 		fmt.Fprintf(w, helpArgFmt, "dir", "Directory to scan for epub files")
 		fmt.Fprintf(w, "\nOptions:\n")
-		printOpt(w, "--db", "FILE", "Output SQLite file for corpus data (or SEGROB_CORPUS_PATH)")
+		printOpt(w, "--db", "FILE", "Output SQLite file for corpus data (or SEGROB_CORPUS_DB)")
 		printOpt(w, "-p, --pandoc", "", "Use pandoc for text extraction instead of pure Go")
 	}
 
@@ -1185,7 +1185,7 @@ func parseCorpusIngestMetaArgs(args []string, ui UI) (CorpusIngestMetaOptions, e
 	opts.Dir = dir
 
 	if opts.DbPath == "" {
-		return opts, errors.New("corpus database must be specified via --db or SEGROB_CORPUS_PATH")
+		return opts, errors.New("corpus database must be specified via --db or SEGROB_CORPUS_DB")
 	}
 
 	return opts, nil
@@ -1196,7 +1196,7 @@ func parseCorpusDumpTxtArgs(args []string, ui UI) (CorpusDumpTxtOptions, error) 
 	fs.SetOutput(io.Discard)
 
 	var opts CorpusDumpTxtOptions
-	fs.StringVar(&opts.DbPath, "db", os.Getenv("SEGROB_CORPUS_PATH"), "")
+	fs.StringVar(&opts.DbPath, "db", os.Getenv("SEGROB_CORPUS_DB"), "")
 	fs.StringVar(&opts.Output, "output", "", "")
 	fs.StringVar(&opts.Output, "o", "", "")
 
@@ -1207,7 +1207,7 @@ func parseCorpusDumpTxtArgs(args []string, ui UI) (CorpusDumpTxtOptions, error) 
 		fmt.Fprintf(w, "\nArguments:\n")
 		fmt.Fprintf(w, helpArgFmt, "id", "Document ID")
 		fmt.Fprintf(w, "\nOptions:\n")
-		printOpt(w, "--db", "FILE", "Corpus SQLite file (or SEGROB_CORPUS_PATH)")
+		printOpt(w, "--db", "FILE", "Corpus SQLite file (or SEGROB_CORPUS_DB)")
 		printOpt(w, "-o, --output", "FILE", "Write output to FILE instead of stdout")
 	}
 
@@ -1227,7 +1227,7 @@ func parseCorpusDumpTxtArgs(args []string, ui UI) (CorpusDumpTxtOptions, error) 
 	opts.ID = fs.Arg(0)
 
 	if opts.DbPath == "" {
-		return opts, errors.New("corpus database must be specified via --db or SEGROB_CORPUS_PATH")
+		return opts, errors.New("corpus database must be specified via --db or SEGROB_CORPUS_DB")
 	}
 
 	return opts, nil
@@ -1238,7 +1238,7 @@ func parseCorpusDumpNlpArgs(args []string, ui UI) (CorpusDumpNlpOptions, error) 
 	fs.SetOutput(io.Discard)
 
 	var opts CorpusDumpNlpOptions
-	fs.StringVar(&opts.DbPath, "db", os.Getenv("SEGROB_CORPUS_PATH"), "")
+	fs.StringVar(&opts.DbPath, "db", os.Getenv("SEGROB_CORPUS_DB"), "")
 	fs.BoolVar(&opts.NoLemmas, "no-lemmas", false, "")
 	fs.BoolVar(&opts.NoLemmas, "n", false, "")
 	fs.StringVar(&opts.Output, "output", "", "")
@@ -1251,7 +1251,7 @@ func parseCorpusDumpNlpArgs(args []string, ui UI) (CorpusDumpNlpOptions, error) 
 		fmt.Fprintf(w, "\nArguments:\n")
 		fmt.Fprintf(w, helpArgFmt, "id", "Document ID")
 		fmt.Fprintf(w, "\nOptions:\n")
-		printOpt(w, "--db", "FILE", "Corpus SQLite file (or SEGROB_CORPUS_PATH)")
+		printOpt(w, "--db", "FILE", "Corpus SQLite file (or SEGROB_CORPUS_DB)")
 		printOpt(w, "-n, --no-lemmas", "", "Strip lemmas from the JSON payload")
 		printOpt(w, "-o, --output", "FILE", "Write output to FILE instead of stdout")
 	}
@@ -1271,7 +1271,7 @@ func parseCorpusDumpNlpArgs(args []string, ui UI) (CorpusDumpNlpOptions, error) 
 	opts.ID = fs.Arg(0)
 
 	if opts.DbPath == "" {
-		return opts, errors.New("corpus database must be specified via --db or SEGROB_CORPUS_PATH")
+		return opts, errors.New("corpus database must be specified via --db or SEGROB_CORPUS_DB")
 	}
 
 	return opts, nil
@@ -1282,7 +1282,7 @@ func parseCorpusLsArgs(args []string, ui UI) (CorpusLsOptions, error) {
 	fs.SetOutput(io.Discard)
 
 	var opts CorpusLsOptions
-	fs.StringVar(&opts.DbPath, "db", os.Getenv("SEGROB_CORPUS_PATH"), "")
+	fs.StringVar(&opts.DbPath, "db", os.Getenv("SEGROB_CORPUS_DB"), "")
 	fs.BoolVar(&opts.WithNlp, "with-nlp", false, "")
 	fs.BoolVar(&opts.WithNlp, "w", false, "")
 	fs.BoolVar(&opts.NlpAck, "nlp-ack", false, "")
@@ -1299,7 +1299,7 @@ func parseCorpusLsArgs(args []string, ui UI) (CorpusLsOptions, error) {
 		fmt.Fprintf(w, "\nArguments:\n")
 		fmt.Fprintf(w, helpArgFmt, "filter", "Optional substring filter on document labels")
 		fmt.Fprintf(w, "\nOptions:\n")
-		printOpt(w, "--db", "FILE", "Corpus SQLite file (or SEGROB_CORPUS_PATH)")
+		printOpt(w, "--db", "FILE", "Corpus SQLite file (or SEGROB_CORPUS_DB)")
 		printOpt(w, "-w, --with-nlp", "", "Only list records that have NLP data")
 		printOpt(w, "-n, --nlp-ack", "", "Only list records with NLP acknowledged")
 		printOpt(w, "-t, --txt-ack", "", "Only list records with text acknowledged")
@@ -1320,7 +1320,7 @@ func parseCorpusLsArgs(args []string, ui UI) (CorpusLsOptions, error) {
 	}
 
 	if opts.DbPath == "" {
-		return opts, errors.New("corpus database must be specified via --db or SEGROB_CORPUS_PATH")
+		return opts, errors.New("corpus database must be specified via --db or SEGROB_CORPUS_DB")
 	}
 
 	return opts, nil
@@ -1333,7 +1333,7 @@ func parseCorpusPushTxtArgs(args []string, ui UI) (CorpusPushTxtOptions, error) 
 	var opts CorpusPushTxtOptions
 	fs.StringVar(&opts.By, "by", "", "Author of the text edit")
 	fs.StringVar(&opts.Note, "note", "", "Optional note for the text edit")
-	fs.StringVar(&opts.DbPath, "db", os.Getenv("SEGROB_CORPUS_PATH"), "Corpus SQLite file (or SEGROB_CORPUS_PATH)")
+	fs.StringVar(&opts.DbPath, "db", os.Getenv("SEGROB_CORPUS_DB"), "Corpus SQLite file (or SEGROB_CORPUS_DB)")
 
 	fs.Usage = func() {
 		w := fs.Output()
@@ -1345,7 +1345,7 @@ func parseCorpusPushTxtArgs(args []string, ui UI) (CorpusPushTxtOptions, error) 
 		fmt.Fprintf(w, "\nOptions:\n")
 		printOpt(w, "--by", "NAME", "Author of the text edit")
 		printOpt(w, "--note", "TEXT", "Optional note for the text edit")
-		printOpt(w, "--db", "FILE", "Corpus SQLite file (or SEGROB_CORPUS_PATH)")
+		printOpt(w, "--db", "FILE", "Corpus SQLite file (or SEGROB_CORPUS_DB)")
 	}
 
 	if err := fs.Parse(args); err != nil {
@@ -1365,7 +1365,7 @@ func parseCorpusPushTxtArgs(args []string, ui UI) (CorpusPushTxtOptions, error) 
 	opts.File = fs.Arg(1)
 
 	if opts.DbPath == "" {
-		return opts, errors.New("corpus database must be specified via --db or SEGROB_CORPUS_PATH")
+		return opts, errors.New("corpus database must be specified via --db or SEGROB_CORPUS_DB")
 	}
 
 	return opts, nil
@@ -1379,7 +1379,7 @@ func parseCorpusAckArgs(args []string, ui UI) (CorpusAckOptions, error) {
 	fs.BoolVar(&opts.Nlp, "nlp", false, "Acknowledge NLP instead of text")
 	fs.BoolVar(&opts.Nlp, "n", false, "alias for -nlp")
 	fs.StringVar(&opts.By, "by", "", "Who is acknowledging")
-	fs.StringVar(&opts.DbPath, "db", os.Getenv("SEGROB_CORPUS_PATH"), "Corpus SQLite file (or SEGROB_CORPUS_PATH)")
+	fs.StringVar(&opts.DbPath, "db", os.Getenv("SEGROB_CORPUS_DB"), "Corpus SQLite file (or SEGROB_CORPUS_DB)")
 
 	fs.Usage = func() {
 		w := fs.Output()
@@ -1390,7 +1390,7 @@ func parseCorpusAckArgs(args []string, ui UI) (CorpusAckOptions, error) {
 		fmt.Fprintf(w, "\nOptions:\n")
 		printOpt(w, "-n, --nlp", "", "Acknowledge NLP instead of text")
 		printOpt(w, "--by", "NAME", "Who is acknowledging")
-		printOpt(w, "--db", "FILE", "Corpus SQLite file (or SEGROB_CORPUS_PATH)")
+		printOpt(w, "--db", "FILE", "Corpus SQLite file (or SEGROB_CORPUS_DB)")
 	}
 
 	if err := fs.Parse(args); err != nil {
@@ -1409,7 +1409,7 @@ func parseCorpusAckArgs(args []string, ui UI) (CorpusAckOptions, error) {
 	opts.ID = fs.Arg(0)
 
 	if opts.DbPath == "" {
-		return opts, errors.New("corpus database must be specified via --db or SEGROB_CORPUS_PATH")
+		return opts, errors.New("corpus database must be specified via --db or SEGROB_CORPUS_DB")
 	}
 
 	return opts, nil
@@ -1420,7 +1420,7 @@ func parseCorpusRmArgs(args []string, ui UI) (CorpusRmOptions, error) {
 	fs.SetOutput(io.Discard)
 
 	var opts CorpusRmOptions
-	fs.StringVar(&opts.DbPath, "db", os.Getenv("SEGROB_CORPUS_PATH"), "Corpus SQLite file (or SEGROB_CORPUS_PATH)")
+	fs.StringVar(&opts.DbPath, "db", os.Getenv("SEGROB_CORPUS_DB"), "Corpus SQLite file (or SEGROB_CORPUS_DB)")
 
 	fs.Usage = func() {
 		w := fs.Output()
@@ -1429,7 +1429,7 @@ func parseCorpusRmArgs(args []string, ui UI) (CorpusRmOptions, error) {
 		fmt.Fprintf(w, "\nArguments:\n")
 		fmt.Fprintf(w, helpArgFmt, "id", "Document ID")
 		fmt.Fprintf(w, "\nOptions:\n")
-		printOpt(w, "--db", "FILE", "Corpus SQLite file (or SEGROB_CORPUS_PATH)")
+		printOpt(w, "--db", "FILE", "Corpus SQLite file (or SEGROB_CORPUS_DB)")
 	}
 
 	if err := fs.Parse(args); err != nil {
@@ -1448,7 +1448,7 @@ func parseCorpusRmArgs(args []string, ui UI) (CorpusRmOptions, error) {
 	opts.ID = fs.Arg(0)
 
 	if opts.DbPath == "" {
-		return opts, errors.New("corpus database must be specified via --db or SEGROB_CORPUS_PATH")
+		return opts, errors.New("corpus database must be specified via --db or SEGROB_CORPUS_DB")
 	}
 
 	return opts, nil
@@ -1501,7 +1501,7 @@ func parseCorpusSetLabelArgs(args []string, ui UI) (CorpusSetLabelOptions, error
 	fs.SetOutput(io.Discard)
 
 	var opts CorpusSetLabelOptions
-	fs.StringVar(&opts.DbPath, "db", os.Getenv("SEGROB_CORPUS_PATH"), "")
+	fs.StringVar(&opts.DbPath, "db", os.Getenv("SEGROB_CORPUS_DB"), "")
 	fs.BoolVar(&opts.Delete, "delete", false, "")
 	fs.BoolVar(&opts.Delete, "d", false, "")
 
@@ -1518,7 +1518,7 @@ func parseCorpusSetLabelArgs(args []string, ui UI) (CorpusSetLabelOptions, error
 		fmt.Fprintf(w, helpArgFmt, "doc_id", "ID of the document")
 		fmt.Fprintf(w, helpArgFmt, "label", "One or more labels to add/remove")
 		fmt.Fprintf(w, "\nOptions:\n")
-		printOpt(w, "--db", "PATH", "Path to corpus SQLite file (or SEGROB_CORPUS_PATH)")
+		printOpt(w, "--db", "PATH", "Path to corpus SQLite file (or SEGROB_CORPUS_DB)")
 		printOpt(w, "-d, --delete", "", "Remove labels instead of adding them")
 	}
 
@@ -1539,7 +1539,7 @@ func parseCorpusSetLabelArgs(args []string, ui UI) (CorpusSetLabelOptions, error
 	opts.Labels = fs.Args()[1:]
 
 	if opts.DbPath == "" {
-		return opts, errors.New("no document source specified (use --db or SEGROB_CORPUS_PATH)")
+		return opts, errors.New("no document source specified (use --db or SEGROB_CORPUS_DB)")
 	}
 
 	return opts, nil
@@ -1551,7 +1551,7 @@ func parseCorpusLsLabelArgs(args []string, ui UI) (CorpusLsLabelOptions, error) 
 	fs.SetOutput(io.Discard)
 
 	var opts CorpusLsLabelOptions
-	fs.StringVar(&opts.DbPath, "db", os.Getenv("SEGROB_CORPUS_PATH"), "")
+	fs.StringVar(&opts.DbPath, "db", os.Getenv("SEGROB_CORPUS_DB"), "")
 	fs.StringVar(&opts.Match, "match", "", "")
 	fs.StringVar(&opts.Match, "m", "", "")
 
@@ -1563,7 +1563,7 @@ func parseCorpusLsLabelArgs(args []string, ui UI) (CorpusLsLabelOptions, error) 
 		fmt.Fprintf(w, "\nArguments:\n")
 		fmt.Fprintf(w, helpArgFmt, "id", "Document ID to list labels for (omit to list all)")
 		fmt.Fprintf(w, "\nOptions:\n")
-		printOpt(w, "--db", "PATH", "Path to corpus SQLite file (or SEGROB_CORPUS_PATH)")
+		printOpt(w, "--db", "PATH", "Path to corpus SQLite file (or SEGROB_CORPUS_DB)")
 		printOpt(w, "-m, --match", "STRING", "Only list labels containing STRING")
 	}
 
@@ -1588,7 +1588,7 @@ func parseCorpusLsLabelArgs(args []string, ui UI) (CorpusLsLabelOptions, error) 
 	}
 
 	if opts.DbPath == "" {
-		return opts, errors.New("no document source specified (use --db or SEGROB_CORPUS_PATH)")
+		return opts, errors.New("no document source specified (use --db or SEGROB_CORPUS_DB)")
 	}
 
 	return opts, nil
