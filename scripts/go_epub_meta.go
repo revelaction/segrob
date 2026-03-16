@@ -9,34 +9,35 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/revelaction/segrob/epub"
 )
 
-func main() {
-	// Parse arguments
-	outputDir := flag.String("output-dir", "", "Optional output directory for .meta.toml files")
-	flag.Parse()
+// metaLsFmt omits FLAGS and ID columns.
+// TITLE(25) CREATOR(14) TRANSLATOR(14) DATE(4) LANG
+const metaLsFmt = "%-25s  %-14s  %-14s  %-4s  %s\n"
 
+func truncate(s string, max int) string {
+	r := []rune(s)
+	if len(r) <= max {
+		return s
+	}
+	return string(r[:max-1]) + "…"
+}
+
+func main() {
+	flag.Parse()
 	args := flag.Args()
 	if len(args) < 1 {
-		fmt.Println("Usage: go run go_epub_meta.go [--output-dir DIR] <directory>")
+		fmt.Println("Usage: go run go_epub_meta.go <directory>")
 		os.Exit(1)
 	}
 	directory := args[0]
 
-	// Validate directories
 	if info, err := os.Stat(directory); err != nil || !info.IsDir() {
 		log.Fatalf("Error: %s is not a valid directory.", directory)
 	}
-	if *outputDir != "" {
-		if info, err := os.Stat(*outputDir); err != nil || !info.IsDir() {
-			log.Fatalf("Error: Output directory %s is not a valid directory.", *outputDir)
-		}
-	}
 
-	// Glob .epub files
 	files, err := filepath.Glob(filepath.Join(directory, "*.epub"))
 	if err != nil {
 		log.Fatal(err)
@@ -47,99 +48,41 @@ func main() {
 		return
 	}
 
+	// Print header
+	fmt.Printf(metaLsFmt, "TITLE", "CREATOR", "TRANSLATOR", "DATE", "LANG")
+
 	for _, epubPath := range files {
-		processEPUB(epubPath, *outputDir)
+		processEPUB(epubPath)
 	}
 }
 
-func processEPUB(epubPath string, outputDir string) {
+func processEPUB(epubPath string) {
 	r, err := zip.OpenReader(epubPath)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error reading %s: %v\n", filepath.Base(epubPath), err)
 		return
 	}
 	defer r.Close()
 
 	book, err := epub.New(&r.Reader)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error parsing OPF in %s: %v\n", filepath.Base(epubPath), err)
 		return
 	}
 
-	creator := book.Creator()
-	title := book.Title()
-	date := book.Date()
-	language := book.Language()
-	translator := book.Translator()
+	meta := book.Labels()
 
-	// Status output
-	essentials := map[string]string{
-		"creator":  creator,
-		"title":    title,
-		"date":     date,
-		"language": language,
-	}
-	var found, missing []string
-
-	// Check essentials
-	keys := []string{"creator", "title", "date", "language"}
-	for _, k := range keys {
-		if essentials[k] != "" {
-			found = append(found, k)
-		} else {
-			missing = append(missing, k)
+	get := func(key string) string {
+		v := meta[key]
+		if v == "" {
+			return "-"
 		}
-	}
-	if translator != "" {
-		found = append(found, "translator")
+		return v
 	}
 
-	foundStr := "None"
-	if len(found) > 0 {
-		foundStr = strings.Join(found, ", ")
-	}
-	missingStr := "None"
-	if len(missing) > 0 {
-		missingStr = strings.Join(missing, ", ")
-	}
-
-	fmt.Fprintf(os.Stderr, "[%s] Found: %s | Missing: %s\n", filepath.Base(epubPath), foundStr, missingStr)
-
-	// Prepare TOML
-	source := strings.TrimSuffix(filepath.Base(epubPath), filepath.Ext(epubPath))
-	var labels []string
-	if creator != "" {
-		labels = append(labels, fmt.Sprintf("creator:%s", creator))
-	}
-	if title != "" {
-		labels = append(labels, fmt.Sprintf("title:%s", title))
-	}
-	if date != "" {
-		labels = append(labels, fmt.Sprintf("date:%s", date))
-	}
-	if language != "" {
-		labels = append(labels, fmt.Sprintf("language:%s", language))
-	}
-	if translator != "" {
-		labels = append(labels, fmt.Sprintf("translator:%s", translator))
-	}
-
-	// Quote labels
-	for i, l := range labels {
-		labels[i] = fmt.Sprintf("\"%s\"", l)
-	}
-	labelsStr := strings.Join(labels, ", ")
-	tomlString := fmt.Sprintf("source = \"%s\"\nlabels = [%s]\n", source, labelsStr)
-
-	// Determine output path
-	outDir := filepath.Dir(epubPath)
-	if outputDir != "" {
-		outDir = outputDir
-	}
-	outPath := filepath.Join(outDir, source+".meta.toml")
-
-	// Write file
-	if err := os.WriteFile(outPath, []byte(tomlString), 0644); err != nil {
-		fmt.Fprintf(os.Stderr, "Error writing TOML for %s: %v\n", filepath.Base(epubPath), err)
-	}
+	fmt.Printf(metaLsFmt,
+		truncate(get("title"), 25),
+		truncate(get("creator"), 14),
+		truncate(get("translator"), 14),
+		get("date"),
+		get("language"),
+	)
 }
