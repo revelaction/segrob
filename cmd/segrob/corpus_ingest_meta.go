@@ -18,7 +18,7 @@ import (
 )
 
 // sha256Hex returns the hex-encoded SHA-256 of data, truncated to n bytes.
-// Hex chars  Bytes   Bits   Collision probability 
+// Hex chars  Bytes   Bits   Collision probability
 // 16         8       64     ~0.000000000003% 😅 overkill
 func sha256Hex(data []byte, n int) string {
 	h := sha256.Sum256(data)

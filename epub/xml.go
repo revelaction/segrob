@@ -39,9 +39,11 @@ type Date struct {
 // Think of it as an inventory. Each item has a unique 'id' and a 'href' (path).
 //
 // <manifest>
-//   <item id="intro" href="intro.xhtml" media-type="application/xhtml+xml"/>
-//   <item id="chap1" href="chapter1.xhtml" media-type="application/xhtml+xml"/>
-//   <item id="css" href="style.css" media-type="text/css"/>
+//
+//	<item id="intro" href="intro.xhtml" media-type="application/xhtml+xml"/>
+//	<item id="chap1" href="chapter1.xhtml" media-type="application/xhtml+xml"/>
+//	<item id="css" href="style.css" media-type="text/css"/>
+//
 // </manifest>
 type Manifest struct {
 	Items []Item `xml:"item"`
@@ -60,8 +62,10 @@ type Item struct {
 // or just separates the "order" logic from the "file" logic.
 //
 // <spine>
-//   <itemref idref="intro"/>  <!-- First, read the item with id="intro" -->
-//   <itemref idref="chap1"/>  <!-- Then, read the item with id="chap1" -->
+//
+//	<itemref idref="intro"/>  <!-- First, read the item with id="intro" -->
+//	<itemref idref="chap1"/>  <!-- Then, read the item with id="chap1" -->
+//
 // </spine>
 type Spine struct {
 	ItemRefs []ItemRef `xml:"itemref"`

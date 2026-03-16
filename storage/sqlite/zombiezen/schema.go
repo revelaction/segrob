@@ -10,6 +10,7 @@ import (
 )
 
 // sqlFiles embeds all SQL scripts from the sql/ subdirectory.
+//
 //go:embed sql/*.sql
 var sqlFiles embed.FS
 

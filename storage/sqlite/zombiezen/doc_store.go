@@ -79,7 +79,7 @@ func (h *DocStore) List() ([]sent.Meta, error) {
 				Id:     stmt.ColumnText(0),
 				Source: stmt.ColumnText(1),
 			}
-			
+
 			labelIDsStr := stmt.ColumnText(2)
 			var labelIDs []int
 			if labelIDsStr != "" {
@@ -90,7 +90,7 @@ func (h *DocStore) List() ([]sent.Meta, error) {
 				}
 			}
 			meta.LabelIDs = labelIDs
-			
+
 			metas = append(metas, meta)
 			return nil
 		},

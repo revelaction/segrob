@@ -31,10 +31,11 @@ type Book struct {
 // open to allow subsequent calls to methods like Text() to lazily read files.
 //
 // Example usage with a file:
-//   r, _ := zip.OpenReader("file.epub")
-//   book, _ := epub.New(&r.Reader) // Pass the embedded Reader
-//   text, _ := book.Text()         // Must happen BEFORE r.Close()
-//   r.Close()
+//
+//	r, _ := zip.OpenReader("file.epub")
+//	book, _ := epub.New(&r.Reader) // Pass the embedded Reader
+//	text, _ := book.Text()         // Must happen BEFORE r.Close()
+//	r.Close()
 func New(z *zip.Reader) (*Book, error) {
 	// Find and parse OPF
 	opfPath, err := findOPFPath(z)
@@ -141,11 +142,11 @@ func (b *Book) Text() (string, error) {
 
 		content, err := b.getContent(fullPath)
 		if err != nil {
-             // Try fallback (logic from script)
-             content, err = b.getContent(href)
-             if err != nil {
-                 return "", fmt.Errorf("reading content file %s: %w", fullPath, err)
-             }
+			// Try fallback (logic from script)
+			content, err = b.getContent(href)
+			if err != nil {
+				return "", fmt.Errorf("reading content file %s: %w", fullPath, err)
+			}
 		}
 
 		text, err := extractTextFromXHTML(content)
@@ -216,16 +217,16 @@ func extractTextFromXHTML(content []byte) (string, error) {
 	for {
 		// Use RawToken instead of Token to bypass the strict stack validation
 		// (matching start/end tags) which causes errors like "unexpected end element"
-        // This often happens in older or poorly generated EPUBs where:
-        // * A tag is closed without being opened (orphaned </font>).
-        // * Tags are improperly nested (e.g., <b><i>...</b></i>).
-        // * The file claims to be XHTML (strict XML) but contains "tag soup" HTML.
-		// in malformed XHTML/HTML. 
-        // RawToken returns the next token from the stream regardless of
-        // nesting correctness. For the purpose of extracting plain text
-        // (<p>Hello</p> -> "Hello"), structural validation is unnecessary; we
-        // only need the character data and the knowledge of block-level tags
-        // for spacing.
+		// This often happens in older or poorly generated EPUBs where:
+		// * A tag is closed without being opened (orphaned </font>).
+		// * Tags are improperly nested (e.g., <b><i>...</b></i>).
+		// * The file claims to be XHTML (strict XML) but contains "tag soup" HTML.
+		// in malformed XHTML/HTML.
+		// RawToken returns the next token from the stream regardless of
+		// nesting correctness. For the purpose of extracting plain text
+		// (<p>Hello</p> -> "Hello"), structural validation is unnecessary; we
+		// only need the character data and the knowledge of block-level tags
+		// for spacing.
 		token, err := decoder.RawToken()
 		if err == io.EOF {
 			break // End of file
@@ -236,7 +237,7 @@ func extractTextFromXHTML(content []byte) (string, error) {
 
 		// Handle the 3 main types of XML tokens:
 		switch t := token.(type) {
-		
+
 		// 1. Start Element: <tag>
 		//    We check if we are entering an ignored section (like <script>)
 		//    or if we need to insert a newline (like <p>).
@@ -286,15 +287,15 @@ func extractTextFromXHTML(content []byte) (string, error) {
 
 			// Text Normalization Logic:
 			// Goal: "  Hello   \n  World  " -> " Hello World "
-			
+
 			var sb strings.Builder
 			// Optimization: Pre-allocate memory for the builder.
 			// We know the result won't be larger than the input 'text'.
 			// This avoids resizing the buffer multiple times.
 			sb.Grow(len(text))
-			
+
 			spaceCount := 0 // Tracks consecutive spaces to collapse them.
-			
+
 			for _, r := range text {
 				// Treat newlines, tabs, and returns as spaces.
 				if r == '\n' || r == '\r' || r == '\t' || r == ' ' {
@@ -311,7 +312,7 @@ func extractTextFromXHTML(content []byte) (string, error) {
 				}
 			}
 			text = sb.String()
-			
+
 			if len(text) > 0 {
 				buf.WriteString(text)
 			}

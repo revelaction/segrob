@@ -1,4 +1,3 @@
-
 package main
 
 import (
@@ -714,4 +713,3 @@ func parseLiveUnpublishArgs(args []string, ui UI) (LiveUnpublishOptions, error) 
 
 	return opts, nil
 }
-

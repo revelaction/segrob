@@ -78,7 +78,7 @@ func processEPUB(epubPath string, outputDir string) {
 		"language": language,
 	}
 	var found, missing []string
-	
+
 	// Check essentials
 	keys := []string{"creator", "title", "date", "language"}
 	for _, k := range keys {
