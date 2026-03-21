@@ -22,7 +22,6 @@ func printLiveUsage(w io.Writer) {
 	fmt.Fprintf(w, "\nSubcommands: Topics\n")
 	fmt.Fprintf(w, helpCmdFmt, "ls-topic", "List all unique topics in the repository.")
 	fmt.Fprintf(w, helpCmdFmt, "show-topic", "Show expressions for a specific topic.")
-	fmt.Fprintf(w, helpCmdFmt, "edit", "Enter interactive edit mode.")
 	fmt.Fprintf(w, helpCmdFmt, "import-topic", "Import topics from filesystem to SQLite.")
 	fmt.Fprintf(w, helpCmdFmt, "export-topic", "Export topics from SQLite to filesystem.")
 
@@ -61,7 +60,7 @@ func runLiveCommand(args []string, setup *Setup, ui UI) error {
 		if err != nil {
 			return err
 		}
-		repo, err := setup.NewTopicRepository(opts.TopicPath)
+		repo, err := setup.NewLiveTopicRepository(opts.TopicPath)
 		if err != nil {
 			return err
 		}
@@ -72,7 +71,7 @@ func runLiveCommand(args []string, setup *Setup, ui UI) error {
 		if err != nil {
 			return err
 		}
-		repo, err := setup.NewTopicRepository(opts.TopicPath)
+		repo, err := setup.NewLiveTopicRepository(opts.TopicPath)
 		if err != nil {
 			return err
 		}
@@ -98,7 +97,7 @@ func runLiveCommand(args []string, setup *Setup, ui UI) error {
 		if err != nil {
 			return err
 		}
-		tr, err := setup.NewTopicRepository(opts.TopicPath)
+		tr, err := setup.NewLiveTopicRepository(opts.TopicPath)
 		if err != nil {
 			return err
 		}
@@ -157,22 +156,11 @@ func runLiveCommand(args []string, setup *Setup, ui UI) error {
 		if err != nil {
 			return err
 		}
-		tr, err := setup.NewTopicRepository(opts.TopicPath)
+		tr, err := setup.NewLiveTopicRepository(opts.TopicPath)
 		if err != nil {
 			return err
 		}
 		return liveQueryCommand(dr, tr, opts, ui)
-
-	case "edit":
-		opts, _, err := parseLiveEditArgs(subArgs, ui)
-		if err != nil {
-			return err
-		}
-		tr, err := setup.NewTopicRepository(opts.TopicPath)
-		if err != nil {
-			return err
-		}
-		return liveEditCommand(tr, opts, ui)
 
 	case "import-topic":
 		opts, err := parseLiveImportTopicArgs(subArgs, ui)

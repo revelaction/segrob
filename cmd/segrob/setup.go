@@ -1,12 +1,9 @@
 package main
 
 import (
-	"fmt"
-	"os"
 	"path/filepath"
 
 	"github.com/revelaction/segrob/storage"
-	"github.com/revelaction/segrob/storage/filesystem"
 	"github.com/revelaction/segrob/storage/sqlite/zombiezen"
 	"zombiezen.com/go/sqlite/sqlitex"
 )
@@ -58,21 +55,21 @@ func (s *Setup) NewCorpusRepository(path string) (storage.CorpusRepository, erro
 	return zombiezen.NewCorpusStore(pool), nil
 }
 
-func (s *Setup) NewTopicRepository(path string) (storage.TopicRepository, error) {
-	info, err := os.Stat(path)
-	if err != nil {
-		return nil, fmt.Errorf("topic repository not found: %w", err)
-	}
-
-	if info.IsDir() {
-		return filesystem.NewTopicStore(path), nil
-	}
-
+func (s *Setup) NewLiveTopicRepository(path string) (storage.TopicRepository, error) {
 	pool, err := s.GetPool(path)
 	if err != nil {
 		return nil, err
 	}
-	return zombiezen.NewTopicStore(pool), nil
+	return zombiezen.NewLiveTopicStore(pool), nil
+}
+
+func (s *Setup) NewCorpusTopicRepository(path string) (storage.TopicRepository, error) {
+	// Corpus uses sqlite exclusively
+	pool, err := s.GetPool(path)
+	if err != nil {
+		return nil, err
+	}
+	return zombiezen.NewCorpusTopicStore(pool), nil
 }
 
 // Close closes all managed pools.

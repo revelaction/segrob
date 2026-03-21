@@ -27,7 +27,7 @@ func liveImportTopicCommand(opts LiveImportTopicOptions, ui UI) error {
 
 	}
 
-	dst := zombiezen.NewTopicStore(pool)
+	dst := zombiezen.NewLiveTopicStore(pool)
 
 	topics, err := src.ReadAll()
 

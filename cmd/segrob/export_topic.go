@@ -13,7 +13,7 @@ func liveExportTopicCommand(opts LiveExportTopicOptions, ui UI) error {
 		return err
 	}
 	defer pool.Close()
-	src := zombiezen.NewTopicStore(pool)
+	src := zombiezen.NewLiveTopicStore(pool)
 
 	dst := filesystem.NewTopicStore(opts.To)
 

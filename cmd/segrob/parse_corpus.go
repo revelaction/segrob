@@ -702,3 +702,110 @@ func parseCorpusLsLabelArgs(args []string, ui UI) (CorpusLsLabelOptions, error) 
 
 	return opts, nil
 }
+
+type CorpusEditOptions struct {
+	DbPath string
+}
+
+func parseCorpusEditArgs(args []string, ui UI) (CorpusEditOptions, error) {
+	fs := flag.NewFlagSet("corpus edit", flag.ContinueOnError)
+	fs.SetOutput(io.Discard)
+	var opts CorpusEditOptions
+	fs.StringVar(&opts.DbPath, "db", os.Getenv("SEGROB_CORPUS_DB"), "")
+
+	fs.Usage = func() {
+		w := fs.Output()
+		fmt.Fprintf(w, "Usage: %s corpus edit [options]\n\n", os.Args[0])
+		fmt.Fprintf(w, "  Enter interactive edit mode for corpus topics.\n\nOptions:\n")
+		printOpt(w, "--db", "PATH", "Target segrob SQLite file (or SEGROB_CORPUS_DB)")
+	}
+
+	if err := fs.Parse(args); err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			fs.SetOutput(ui.Out)
+			fs.Usage()
+			return opts, err
+		}
+		fs.SetOutput(ui.Err)
+		fprintErr(ui.Err, err)
+		fs.Usage()
+		return opts, err
+	}
+	if opts.DbPath == "" {
+		return opts, errors.New("corpus database must be specified via --db or SEGROB_CORPUS_DB")
+	}
+	return opts, nil
+}
+
+type CorpusLsTopicOptions struct {
+	DbPath string
+}
+
+func parseCorpusLsTopicArgs(args []string, ui UI) (CorpusLsTopicOptions, error) {
+	fs := flag.NewFlagSet("corpus ls-topic", flag.ContinueOnError)
+	fs.SetOutput(io.Discard)
+	var opts CorpusLsTopicOptions
+	fs.StringVar(&opts.DbPath, "db", os.Getenv("SEGROB_CORPUS_DB"), "")
+
+	fs.Usage = func() {
+		w := fs.Output()
+		fmt.Fprintf(w, "Usage: %s corpus ls-topic [options]\n\n", os.Args[0])
+		fmt.Fprintf(w, "  List all topic names in the corpus repository.\n\nOptions:\n")
+		printOpt(w, "--db", "PATH", "Target segrob SQLite file (or SEGROB_CORPUS_DB)")
+	}
+
+	if err := fs.Parse(args); err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			fs.SetOutput(ui.Out)
+			fs.Usage()
+			return opts, err
+		}
+		fs.SetOutput(ui.Err)
+		fprintErr(ui.Err, err)
+		fs.Usage()
+		return opts, err
+	}
+	if opts.DbPath == "" {
+		return opts, errors.New("corpus database must be specified via --db or SEGROB_CORPUS_DB")
+	}
+	return opts, nil
+}
+
+type CorpusShowTopicOptions struct {
+	DbPath string
+}
+
+func parseCorpusShowTopicArgs(args []string, ui UI) (CorpusShowTopicOptions, string, error) {
+	fs := flag.NewFlagSet("corpus show-topic", flag.ContinueOnError)
+	fs.SetOutput(io.Discard)
+	var opts CorpusShowTopicOptions
+	fs.StringVar(&opts.DbPath, "db", os.Getenv("SEGROB_CORPUS_DB"), "")
+
+	fs.Usage = func() {
+		w := fs.Output()
+		fmt.Fprintf(w, "Usage: %s corpus show-topic [options] <name>\n\n", os.Args[0])
+		fmt.Fprintf(w, "  Show expressions of a named corpus topic.\n\nArguments:\n")
+		fmt.Fprintf(w, helpArgFmt, "name", "Topic name to inspect")
+		fmt.Fprintf(w, "\nOptions:\n")
+		printOpt(w, "--db", "PATH", "Target segrob SQLite file (or SEGROB_CORPUS_DB)")
+	}
+
+	if err := fs.Parse(args); err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			fs.SetOutput(ui.Out)
+			fs.Usage()
+			return opts, "", err
+		}
+		fs.SetOutput(ui.Err)
+		fprintErr(ui.Err, err)
+		fs.Usage()
+		return opts, "", err
+	}
+	if opts.DbPath == "" {
+		return opts, "", errors.New("corpus database must be specified via --db or SEGROB_CORPUS_DB")
+	}
+	if fs.NArg() != 1 {
+		return opts, "", errors.New("corpus show-topic requires exactly one argument: <name>")
+	}
+	return opts, fs.Arg(0), nil
+}

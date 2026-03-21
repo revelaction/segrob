@@ -27,6 +27,9 @@ var corpusSubcommands = []string{
 	"push-txt",
 	"ls-label",
 	"set-label",
+	"ls-topic",
+	"show-topic",
+	"edit",
 }
 
 var liveSubcommands = []string{
@@ -40,7 +43,6 @@ var liveSubcommands = []string{
 	"show-sent",
 	"show-topic",
 	"query",
-	"edit",
 	"import-topic",
 	"export-topic",
 }

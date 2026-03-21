@@ -58,10 +58,6 @@ type LiveShowSentOptions struct {
 	Stats  bool // -s/--stats: show sentence statistics
 }
 
-type LiveEditOptions struct {
-	TopicPath string
-}
-
 type LiveImportTopicOptions struct {
 	From string
 	To   string
@@ -447,46 +443,6 @@ func parseLiveQueryArgs(args []string, ui UI) (LiveQueryOptions, bool, bool, err
 	}
 
 	return opts, !tinfo.IsDir(), !dinfo.IsDir(), nil
-}
-
-func parseLiveEditArgs(args []string, ui UI) (LiveEditOptions, bool, error) {
-	fs := flag.NewFlagSet("live edit", flag.ContinueOnError)
-	fs.SetOutput(io.Discard)
-
-	var opts LiveEditOptions
-	fs.StringVar(&opts.TopicPath, "topic-path", os.Getenv("SEGROB_TOPIC_PATH"), "")
-	fs.StringVar(&opts.TopicPath, "t", os.Getenv("SEGROB_TOPIC_PATH"), "")
-
-	fs.Usage = func() {
-		w := fs.Output()
-		fmt.Fprintf(w, "Usage: %s live edit [options]\n\n", os.Args[0])
-		fmt.Fprintf(w, "  Enter interactive edit mode.\n")
-		fmt.Fprintf(w, "\nOptions:\n")
-		printOpt(w, "-t, --topic-path", "PATH", "Path to topics directory or SQLite file (or SEGROB_TOPIC_PATH)")
-	}
-
-	if err := fs.Parse(args); err != nil {
-		if errors.Is(err, flag.ErrHelp) {
-			fs.SetOutput(ui.Out)
-			fs.Usage()
-			return opts, false, err
-		}
-		fs.SetOutput(ui.Err)
-		fprintErr(ui.Err, err)
-		fs.Usage()
-		return opts, false, err
-	}
-
-	if opts.TopicPath == "" {
-		return opts, false, errors.New("Topic path must be specified via -t or SEGROB_TOPIC_PATH")
-	}
-
-	info, err := os.Stat(opts.TopicPath)
-	if err != nil {
-		return opts, false, fmt.Errorf("Topic path not found: %s", opts.TopicPath)
-	}
-
-	return opts, !info.IsDir(), nil
 }
 
 func parseLiveLsTopicArgs(args []string, ui UI) (LiveLsTopicOptions, bool, error) {

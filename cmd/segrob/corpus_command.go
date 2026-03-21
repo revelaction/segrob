@@ -32,6 +32,11 @@ func printCorpusUsage(w io.Writer) {
 	fmt.Fprintf(w, "\nSubcommands: Labels\n")
 	fmt.Fprintf(w, helpCmdFmt, "ls-label", "List all unique labels in the corpus.")
 	fmt.Fprintf(w, helpCmdFmt, "set-label", "Add or remove labels from a corpus document.")
+
+	fmt.Fprintf(w, "\nSubcommands: Topics\n")
+	fmt.Fprintf(w, helpCmdFmt, "ls-topic", "List all unique topics in the repository.")
+	fmt.Fprintf(w, helpCmdFmt, "show-topic", "Show expressions for a specific topic.")
+	fmt.Fprintf(w, helpCmdFmt, "edit", "Enter interactive edit mode.")
 }
 
 func runCorpusCommand(args []string, setup *Setup, ui UI) error {
@@ -203,6 +208,39 @@ func runCorpusCommand(args []string, setup *Setup, ui UI) error {
 			return err
 		}
 		return corpusSetLabelCommand(repo, opts, ui)
+
+	case "ls-topic":
+		opts, err := parseCorpusLsTopicArgs(subArgs, ui)
+		if err != nil {
+			return err
+		}
+		repo, err := setup.NewCorpusTopicRepository(opts.DbPath)
+		if err != nil {
+			return err
+		}
+		return corpusLsTopicCommand(repo, opts, ui)
+
+	case "show-topic":
+		opts, name, err := parseCorpusShowTopicArgs(subArgs, ui)
+		if err != nil {
+			return err
+		}
+		repo, err := setup.NewCorpusTopicRepository(opts.DbPath)
+		if err != nil {
+			return err
+		}
+		return corpusShowTopicCommand(repo, opts, name, ui)
+
+	case "edit":
+		opts, err := parseCorpusEditArgs(subArgs, ui)
+		if err != nil {
+			return err
+		}
+		repo, err := setup.NewCorpusTopicRepository(opts.DbPath)
+		if err != nil {
+			return err
+		}
+		return corpusEditCommand(repo, opts, ui)
 
 	default:
 		printCorpusUsage(ui.Err)

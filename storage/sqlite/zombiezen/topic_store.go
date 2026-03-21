@@ -12,14 +12,19 @@ import (
 )
 
 type TopicStore struct {
-	pool *sqlitex.Pool
+	pool      *sqlitex.Pool
+	tableName string
 }
 
 var _ storage.TopicReader = (*TopicStore)(nil)
 var _ storage.TopicWriter = (*TopicStore)(nil)
 
-func NewTopicStore(pool *sqlitex.Pool) *TopicStore {
-	return &TopicStore{pool: pool}
+func NewLiveTopicStore(pool *sqlitex.Pool) *TopicStore {
+	return &TopicStore{pool: pool, tableName: "topics"}
+}
+
+func NewCorpusTopicStore(pool *sqlitex.Pool) *TopicStore {
+	return &TopicStore{pool: pool, tableName: "corpus_topics"}
 }
 
 func (h *TopicStore) ReadAll() (topic.Library, error) {
@@ -30,7 +35,8 @@ func (h *TopicStore) ReadAll() (topic.Library, error) {
 	defer h.pool.Put(conn)
 
 	var topics topic.Library
-	err = sqlitex.Execute(conn, "SELECT name, exprs FROM topics WHERE user_id IS NULL", &sqlitex.ExecOptions{
+	query := fmt.Sprintf("SELECT name, exprs FROM %s WHERE user_id IS NULL", h.tableName)
+	err = sqlitex.Execute(conn, query, &sqlitex.ExecOptions{
 		ResultFunc: func(stmt *sqlite.Stmt) error {
 			name := stmt.ColumnText(0)
 			exprsJSON := stmt.ColumnText(1)
@@ -61,7 +67,8 @@ func (h *TopicStore) Read(name string) (topic.Topic, error) {
 
 	var t topic.Topic
 	found := false
-	err = sqlitex.Execute(conn, "SELECT name, exprs FROM topics WHERE user_id IS NULL AND name = ? LIMIT 1", &sqlitex.ExecOptions{
+	query := fmt.Sprintf("SELECT name, exprs FROM %s WHERE user_id IS NULL AND name = ? LIMIT 1", h.tableName)
+	err = sqlitex.Execute(conn, query, &sqlitex.ExecOptions{
 		Args: []interface{}{name},
 		ResultFunc: func(stmt *sqlite.Stmt) error {
 			name := stmt.ColumnText(0)
@@ -101,13 +108,15 @@ func (h *TopicStore) Write(tp topic.Topic) error {
 		return err
 	}
 
-	err = sqlitex.Execute(conn, `
-		INSERT INTO topics (user_id, name, exprs, updated)
-		VALUES (NULL, ?, ?, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
+	query := fmt.Sprintf(`
+		INSERT INTO %s (user_id, name, exprs, updated)
+		VALUES (NULL, ?, ?, strftime('%s', 'now'))
 		ON CONFLICT(user_id, name) DO UPDATE SET
 			exprs = excluded.exprs,
 			updated = excluded.updated
-	`, &sqlitex.ExecOptions{
+	`, h.tableName, "%Y-%m-%dT%H:%M:%SZ")
+
+	err = sqlitex.Execute(conn, query, &sqlitex.ExecOptions{
 		Args: []interface{}{tp.Name, string(exprsJSON)},
 	})
 

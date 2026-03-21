@@ -23,3 +23,13 @@ CREATE TABLE IF NOT EXISTS corpus (
     created_at        TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
     updated_at        TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
 );
+
+CREATE TABLE IF NOT EXISTS corpus_topics (
+    id        INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id   TEXT,
+    name      TEXT NOT NULL,
+    exprs     TEXT NOT NULL,
+    created   TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+    updated   TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+    UNIQUE(user_id, name)
+);
