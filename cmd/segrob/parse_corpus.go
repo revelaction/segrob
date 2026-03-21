@@ -8,6 +8,41 @@ import (
 	"os"
 )
 
+type CorpusInitOptions struct {
+	DbPath string
+}
+
+func parseCorpusInitArgs(args []string, ui UI) (CorpusInitOptions, error) {
+	fs := flag.NewFlagSet("corpus init", flag.ContinueOnError)
+	fs.SetOutput(io.Discard)
+
+	var opts CorpusInitOptions
+	fs.StringVar(&opts.DbPath, "db", os.Getenv("SEGROB_CORPUS_DB"), "")
+
+	fs.Usage = func() {
+		w := fs.Output()
+		fmt.Fprintf(w, "Usage: %s corpus init [options]\n\n", os.Args[0])
+		fmt.Fprintf(w, "  Initialize the corpus staging database.\n")
+		fmt.Fprintf(w, "\nOptions:\n")
+		printOpt(w, "--db", "FILE", "Output SQLite file for corpus data (or SEGROB_CORPUS_DB)")
+	}
+
+	if err := fs.Parse(args); err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			fs.SetOutput(ui.Out)
+			fs.Usage()
+			return opts, err
+		}
+		return opts, err
+	}
+
+	if opts.DbPath == "" {
+		return opts, errors.New("corpus database must be specified via --db or SEGROB_CORPUS_DB")
+	}
+
+	return opts, nil
+}
+
 type CorpusPublishOptions struct {
 	From  string // corpus.db path (--from / SEGROB_CORPUS_DB)
 	To    string // segrob.db path (--to / SEGROB_LIVE_DB)

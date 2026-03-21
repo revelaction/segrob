@@ -14,6 +14,7 @@ var commands = []string{
 }
 
 var corpusSubcommands = []string{
+	"init",
 	"ls",
 	"show",
 	"ack",

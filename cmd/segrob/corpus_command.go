@@ -10,6 +10,9 @@ func printCorpusUsage(w io.Writer) {
 	fmt.Fprintf(w, "Usage: %s corpus <subcommand> [options]\n\n", os.Args[0])
 	fmt.Fprintf(w, "  Manage the corpus staging database.\n")
 
+	fmt.Fprintf(w, "\nSubcommands: Init\n")
+	fmt.Fprintf(w, helpCmdFmt, "init", "Initialize the corpus staging database.")
+
 	fmt.Fprintf(w, "\nSubcommands: Documents\n")
 	fmt.Fprintf(w, helpCmdFmt, "ls", "List documents in the corpus staging database.")
 	fmt.Fprintf(w, helpCmdFmt, "show", "Show rendered contents of a document's NLP field.")
@@ -55,6 +58,17 @@ func runCorpusCommand(args []string, setup *Setup, ui UI) error {
 	}
 
 	switch sub {
+	case "init":
+		opts, err := parseCorpusInitArgs(subArgs, ui)
+		if err != nil {
+			return err
+		}
+		pool, err := setup.GetPool(opts.DbPath)
+		if err != nil {
+			return err
+		}
+		return corpusInitCommand(pool, opts, ui)
+
 	case "ls":
 		opts, err := parseCorpusLsArgs(subArgs, ui)
 		if err != nil {

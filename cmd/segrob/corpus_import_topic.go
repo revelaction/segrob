@@ -19,10 +19,6 @@ func corpusImportTopicCommand(opts CorpusImportTopicOptions, ui UI) error {
 
 	defer pool.Close()
 
-	if err := zombiezen.CreateSchemas(pool, "topics.sql"); err != nil {
-		return fmt.Errorf("failed to setup topic tables: %w", err)
-	}
-
 	dst := zombiezen.NewCorpusTopicStore(pool)
 
 	topics, err := src.ReadAll()

@@ -13,7 +13,6 @@ import (
 
 	"github.com/revelaction/segrob/epub"
 	"github.com/revelaction/segrob/storage"
-	"github.com/revelaction/segrob/storage/sqlite/zombiezen"
 	"zombiezen.com/go/sqlite/sqlitex"
 )
 
@@ -73,11 +72,6 @@ func corpusIngestMetaCommand(pool *sqlitex.Pool, repo storage.CorpusRepository, 
 			return fmt.Errorf("pandoc is not installed or not in PATH: %w", err)
 		}
 		process = processEpubPandoc
-	}
-
-	// Create schema if not exists
-	if err := zombiezen.CreateSchemas(pool, "corpus.sql"); err != nil {
-		return fmt.Errorf("failed to create corpus schema: %w", err)
 	}
 
 	// Collect epub file paths from the single directory (flat, no recursion)
