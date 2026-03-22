@@ -22,7 +22,6 @@ func printLiveUsage(w io.Writer) {
 	fmt.Fprintf(w, "\nSubcommands: Topics\n")
 	fmt.Fprintf(w, helpCmdFmt, "ls-topic", "List all unique topics in the repository.")
 	fmt.Fprintf(w, helpCmdFmt, "show-topic", "Show expressions for a specific topic.")
-	fmt.Fprintf(w, helpCmdFmt, "export-topic", "Export topics from SQLite to filesystem.")
 
 	fmt.Fprintf(w, "\nSubcommands: Other\n")
 	fmt.Fprintf(w, helpCmdFmt, "init", "Initialize a new SQLite database with the required schema.")
@@ -160,13 +159,6 @@ func runLiveCommand(args []string, setup *Setup, ui UI) error {
 			return err
 		}
 		return liveQueryCommand(dr, tr, opts, ui)
-
-	case "export-topic":
-		opts, err := parseLiveExportTopicArgs(subArgs, ui)
-		if err != nil {
-			return err
-		}
-		return liveExportTopicCommand(opts, ui)
 
 	default:
 		printLiveUsage(ui.Err)

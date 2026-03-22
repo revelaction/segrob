@@ -58,11 +58,6 @@ type LiveShowSentOptions struct {
 	Stats  bool // -s/--stats: show sentence statistics
 }
 
-type LiveExportTopicOptions struct {
-	From string
-	To   string
-}
-
 type LiveInitOptions struct {
 	DbPath string
 }
@@ -525,39 +520,6 @@ func parseLiveShowTopicArgs(args []string, ui UI) (LiveShowTopicOptions, string,
 	}
 
 	return opts, name, !info.IsDir(), nil
-}
-
-func parseLiveExportTopicArgs(args []string, ui UI) (LiveExportTopicOptions, error) {
-	fs := flag.NewFlagSet("live export-topic", flag.ContinueOnError)
-	fs.SetOutput(io.Discard)
-
-	var opts LiveExportTopicOptions
-	fs.StringVar(&opts.From, "from", "", "")
-	fs.StringVar(&opts.To, "to", "", "")
-
-	fs.Usage = func() {
-		w := fs.Output()
-		fmt.Fprintf(w, "Usage: %s live export-topic --from <sqlite_file> --to <dir>\n\n", os.Args[0])
-		fmt.Fprintf(w, "  Export topics from a SQLite database to a JSON directory.\n")
-		fmt.Fprintf(w, "\nOptions:\n")
-		printOpt(w, "--from", "FILE", "Source SQLite database file")
-		printOpt(w, "--to", "DIR", "Target directory for JSON topic files")
-	}
-
-	if err := fs.Parse(args); err != nil {
-		if errors.Is(err, flag.ErrHelp) {
-			fs.SetOutput(ui.Out)
-			fs.Usage()
-			return opts, err
-		}
-		return opts, err
-	}
-
-	if opts.From == "" || opts.To == "" {
-		return opts, errors.New("--from and --to are required")
-	}
-
-	return opts, nil
 }
 
 func parseLiveInitArgs(args []string, ui UI) (LiveInitOptions, error) {

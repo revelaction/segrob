@@ -7,15 +7,15 @@ import (
 	"github.com/revelaction/segrob/storage/sqlite/zombiezen"
 )
 
-func liveExportTopicCommand(opts LiveExportTopicOptions, ui UI) error {
-	pool, err := zombiezen.NewPool(opts.From)
+func corpusExportTopicCommand(opts CorpusExportTopicOptions, ui UI) error {
+	pool, err := zombiezen.NewPool(opts.DbPath)
 	if err != nil {
 		return err
 	}
 	defer pool.Close()
-	src := zombiezen.NewLiveTopicStore(pool)
+	src := zombiezen.NewCorpusTopicStore(pool)
 
-	dst := filesystem.NewTopicStore(opts.To)
+	dst := filesystem.NewTopicStore(opts.Directory)
 
 	topics, err := src.ReadAll()
 	if err != nil {
@@ -28,6 +28,6 @@ func liveExportTopicCommand(opts LiveExportTopicOptions, ui UI) error {
 		}
 	}
 
-	fmt.Fprintf(ui.Err, "Successfully exported %d topics from %s to %s\n", len(topics), opts.From, opts.To)
+	fmt.Fprintf(ui.Err, "Successfully exported %d topics from %s to %s\n", len(topics), opts.DbPath, opts.Directory)
 	return nil
 }

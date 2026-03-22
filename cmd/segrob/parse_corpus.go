@@ -886,3 +886,45 @@ func parseCorpusImportTopicArgs(args []string, ui UI) (CorpusImportTopicOptions,
 
 	return opts, nil
 }
+
+type CorpusExportTopicOptions struct {
+	DbPath    string
+	Directory string
+}
+
+func parseCorpusExportTopicArgs(args []string, ui UI) (CorpusExportTopicOptions, error) {
+	fs := flag.NewFlagSet("corpus export-topic", flag.ContinueOnError)
+	fs.SetOutput(io.Discard)
+
+	var opts CorpusExportTopicOptions
+	fs.StringVar(&opts.DbPath, "db", os.Getenv("SEGROB_CORPUS_DB"), "")
+	fs.StringVar(&opts.Directory, "directory", "", "")
+	fs.StringVar(&opts.Directory, "d", "", "")
+
+	fs.Usage = func() {
+		w := fs.Output()
+		fmt.Fprintf(w, "Usage: %s corpus export-topic -d <dir> [options]\n\n", os.Args[0])
+		fmt.Fprintf(w, "  Export topics from the corpus database to a JSON directory.\n")
+		fmt.Fprintf(w, "\nOptions:\n")
+		printOpt(w, "-d, --directory", "DIR", "Target directory for JSON topic files")
+		printOpt(w, "--db", "FILE", "Source corpus SQLite database file (or SEGROB_CORPUS_DB)")
+	}
+
+	if err := fs.Parse(args); err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			fs.SetOutput(ui.Out)
+			fs.Usage()
+			return opts, err
+		}
+		return opts, err
+	}
+
+	if opts.Directory == "" {
+		return opts, errors.New("-d/--directory is required")
+	}
+	if opts.DbPath == "" {
+		return opts, errors.New("corpus database must be specified via --db or SEGROB_CORPUS_DB")
+	}
+
+	return opts, nil
+}

@@ -40,6 +40,7 @@ func printCorpusUsage(w io.Writer) {
 	fmt.Fprintf(w, helpCmdFmt, "ls-topic", "List all unique topics in the repository.")
 	fmt.Fprintf(w, helpCmdFmt, "show-topic", "Show expressions for a specific topic.")
 	fmt.Fprintf(w, helpCmdFmt, "import-topic", "Import topics from filesystem to SQLite.")
+	fmt.Fprintf(w, helpCmdFmt, "export-topic", "Export topics from SQLite to filesystem.")
 	fmt.Fprintf(w, helpCmdFmt, "edit", "Enter interactive edit mode.")
 }
 
@@ -252,6 +253,13 @@ func runCorpusCommand(args []string, setup *Setup, ui UI) error {
 			return err
 		}
 		return corpusImportTopicCommand(opts, ui)
+
+	case "export-topic":
+		opts, err := parseCorpusExportTopicArgs(subArgs, ui)
+		if err != nil {
+			return err
+		}
+		return corpusExportTopicCommand(opts, ui)
 
 	case "edit":
 		opts, err := parseCorpusEditArgs(subArgs, ui)

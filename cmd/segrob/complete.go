@@ -32,6 +32,7 @@ var corpusSubcommands = []string{
 	"show-topic",
 	"edit",
 	"import-topic",
+	"export-topic",
 }
 
 var liveSubcommands = []string{
@@ -45,7 +46,6 @@ var liveSubcommands = []string{
 	"show-sent",
 	"show-topic",
 	"query",
-	"export-topic",
 }
 
 // completeCommand handles the autocompletion requests triggered by the bash completion script.
