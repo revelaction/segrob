@@ -3,14 +3,12 @@ package main
 import (
 	"fmt"
 
-	"zombiezen.com/go/sqlite/sqlitex"
-
-	"github.com/revelaction/segrob/storage/sqlite/zombiezen"
+	"github.com/revelaction/segrob/storage"
 )
 
-func corpusInitCommand(pool *sqlitex.Pool, opts CorpusInitOptions, ui UI) error {
+func corpusInitCommand(mgr storage.SchemaManager, opts CorpusInitOptions, ui UI) error {
 
-	if err := zombiezen.CreateSchemas(pool, "corpus.sql"); err != nil {
+	if err := mgr.Create(); err != nil {
 		return err
 	}
 

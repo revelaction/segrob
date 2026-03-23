@@ -14,7 +14,6 @@ import (
 
 	"github.com/revelaction/segrob/epub"
 	"github.com/revelaction/segrob/storage"
-	"zombiezen.com/go/sqlite/sqlitex"
 )
 
 // sha256Hex returns the hex-encoded SHA-256 of data, truncated to n bytes.
@@ -65,7 +64,7 @@ func finalizeText(record *storage.CorpusRecord, rawTxt string) {
 	record.TxtHash = sha256Hex([]byte(record.Txt), 32)
 }
 
-func corpusIngestMetaCommand(pool *sqlitex.Pool, repo storage.CorpusRepository, opts CorpusIngestMetaOptions, ui UI) error {
+func corpusIngestMetaCommand(repo storage.CorpusRepository, opts CorpusIngestMetaOptions, ui UI) error {
 	// Select processor once here. Nothing below this point knows about the flag.
 	process := processEpubGo
 	if opts.Pandoc {

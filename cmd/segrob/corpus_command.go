@@ -64,11 +64,11 @@ func runCorpusCommand(args []string, setup *Setup, ui UI) error {
 		if err != nil {
 			return err
 		}
-		pool, err := setup.GetPool(opts.DbPath)
+		mgr, err := setup.NewSchemaManager(opts.DbPath)
 		if err != nil {
 			return err
 		}
-		return corpusInitCommand(pool, opts, ui)
+		return corpusInitCommand(mgr, opts, ui)
 
 	case "ls":
 		opts, err := parseCorpusLsArgs(subArgs, ui)
@@ -182,15 +182,11 @@ func runCorpusCommand(args []string, setup *Setup, ui UI) error {
 		if err != nil {
 			return err
 		}
-		pool, err := setup.GetPool(opts.DbPath)
-		if err != nil {
-			return err
-		}
 		repo, err := setup.NewCorpusRepository(opts.DbPath)
 		if err != nil {
 			return err
 		}
-		return corpusIngestMetaCommand(pool, repo, opts, ui)
+		return corpusIngestMetaCommand(repo, opts, ui)
 
 	case "push-txt":
 		opts, err := parseCorpusPushTxtArgs(subArgs, ui)

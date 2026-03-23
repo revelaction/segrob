@@ -41,3 +41,17 @@ func CreateSchemas(pool *sqlitex.Pool, schemaName string) error {
 
 	return nil
 }
+
+type SchemaManager struct {
+	pool *sqlitex.Pool
+}
+
+func NewSchemaManager(pool *sqlitex.Pool) *SchemaManager {
+	return &SchemaManager{pool: pool}
+}
+
+// Create initializes the database with the standard corpus schema.
+// It assumes "corpus.sql" is available to the underlying CreateSchemas utility.
+func (m *SchemaManager) Create() error {
+	return CreateSchemas(m.pool, "corpus.sql")
+}

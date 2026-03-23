@@ -29,6 +29,13 @@ type TopicRepository interface {
 	TopicWriter
 }
 
+// SchemaManager defines operations for managing the database schema/lifecycle.
+type SchemaManager interface {
+	// Create applies the necessary schema definitions to the database.
+	// The implementation knows which schema to apply (e.g. corpus.sql).
+	Create() error
+}
+
 // Cursor for paginated lemma-based queries
 type Cursor int64
 

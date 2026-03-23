@@ -18,9 +18,18 @@ func NewSetup() *Setup {
 	}
 }
 
-// GetPool returns an existing pool for the given path if available, or opens a new one.
+// NewSchemaManager returns a manager for the database at the given path.
+func (s *Setup) NewSchemaManager(path string) (storage.SchemaManager, error) {
+	pool, err := s.getPool(path)
+	if err != nil {
+		return nil, err
+	}
+	return zombiezen.NewSchemaManager(pool), nil
+}
+
+// getPool returns an existing pool for the given path if available, or opens a new one.
 // It uses absolute paths to identify unique databases.
-func (s *Setup) GetPool(path string) (*sqlitex.Pool, error) {
+func (s *Setup) getPool(path string) (*sqlitex.Pool, error) {
 	absPath, err := filepath.Abs(path)
 	if err != nil {
 		return nil, err
@@ -40,7 +49,7 @@ func (s *Setup) GetPool(path string) (*sqlitex.Pool, error) {
 }
 
 func (s *Setup) NewDocRepository(path string) (storage.DocRepository, error) {
-	pool, err := s.GetPool(path)
+	pool, err := s.getPool(path)
 	if err != nil {
 		return nil, err
 	}
@@ -48,7 +57,7 @@ func (s *Setup) NewDocRepository(path string) (storage.DocRepository, error) {
 }
 
 func (s *Setup) NewCorpusRepository(path string) (storage.CorpusRepository, error) {
-	pool, err := s.GetPool(path)
+	pool, err := s.getPool(path)
 	if err != nil {
 		return nil, err
 	}
@@ -56,7 +65,7 @@ func (s *Setup) NewCorpusRepository(path string) (storage.CorpusRepository, erro
 }
 
 func (s *Setup) NewLiveTopicRepository(path string) (storage.TopicRepository, error) {
-	pool, err := s.GetPool(path)
+	pool, err := s.getPool(path)
 	if err != nil {
 		return nil, err
 	}
@@ -65,7 +74,7 @@ func (s *Setup) NewLiveTopicRepository(path string) (storage.TopicRepository, er
 
 func (s *Setup) NewCorpusTopicRepository(path string) (storage.TopicRepository, error) {
 	// Corpus uses sqlite exclusively
-	pool, err := s.GetPool(path)
+	pool, err := s.getPool(path)
 	if err != nil {
 		return nil, err
 	}
