@@ -106,11 +106,11 @@ func runLiveCommand(args []string, setup *Setup, ui UI) error {
 		if err != nil {
 			return err
 		}
-		pool, err := setup.GetPool(opts.DbPath)
+		mgr, err := setup.NewSchemaManager(opts.DbPath)
 		if err != nil {
 			return err
 		}
-		return liveInitCommand(pool, opts, ui)
+		return liveInitCommand(mgr, opts, ui)
 
 	case "show":
 		opts, id, err := parseLiveShowArgs(subArgs, ui)

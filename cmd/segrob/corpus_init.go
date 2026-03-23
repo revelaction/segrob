@@ -8,7 +8,7 @@ import (
 
 func corpusInitCommand(mgr storage.SchemaManager, opts CorpusInitOptions, ui UI) error {
 
-	if err := mgr.Create(); err != nil {
+	if err := mgr.Create("corpus.sql"); err != nil {
 		return err
 	}
 

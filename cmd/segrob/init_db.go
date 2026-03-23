@@ -3,18 +3,16 @@ package main
 import (
 	"fmt"
 
-	"zombiezen.com/go/sqlite/sqlitex"
-
-	"github.com/revelaction/segrob/storage/sqlite/zombiezen"
+	"github.com/revelaction/segrob/storage"
 )
 
-func liveInitCommand(pool *sqlitex.Pool, opts LiveInitOptions, ui UI) error {
+func liveInitCommand(mgr storage.SchemaManager, opts LiveInitOptions, ui UI) error {
 
-	if err := zombiezen.CreateSchemas(pool, "doc_canonical.sql"); err != nil {
+	if err := mgr.Create("doc_canonical.sql"); err != nil {
 		return err
 	}
 
-	if err := zombiezen.CreateSchemas(pool, "doc_optimization.sql"); err != nil {
+	if err := mgr.Create("doc_optimization.sql"); err != nil {
 		return err
 	}
 

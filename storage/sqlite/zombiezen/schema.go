@@ -14,10 +14,16 @@ import (
 //go:embed sql/*.sql
 var sqlFiles embed.FS
 
-// CreateSchemas reads a SQL script from the embedded filesystem (e.g., "docs.sql" or "topics.sql")
-// and executes it using the provided connection pool.
-// It uses context.TODO() for connection acquisition, following local package conventions.
-func CreateSchemas(pool *sqlitex.Pool, schemaName string) error {
+type SchemaManager struct {
+	pool *sqlitex.Pool
+}
+
+func NewSchemaManager(pool *sqlitex.Pool) *SchemaManager {
+	return &SchemaManager{pool: pool}
+}
+
+// Create initializes the database with the given schema.
+func (m *SchemaManager) Create(schemaName string) error {
 	// Construct the path within the embedded FS.
 	scriptPath := path.Join("sql", schemaName)
 
@@ -28,11 +34,11 @@ func CreateSchemas(pool *sqlitex.Pool, schemaName string) error {
 	}
 
 	// Acquire a connection from the pool using context.TODO().
-	conn, err := pool.Take(context.TODO())
+	conn, err := m.pool.Take(context.TODO())
 	if err != nil {
 		return err
 	}
-	defer pool.Put(conn)
+	defer m.pool.Put(conn)
 
 	// Execute the entire script. ExecuteScript handles multi-statement strings.
 	if err := sqlitex.ExecuteScript(conn, string(script), nil); err != nil {
@@ -40,18 +46,4 @@ func CreateSchemas(pool *sqlitex.Pool, schemaName string) error {
 	}
 
 	return nil
-}
-
-type SchemaManager struct {
-	pool *sqlitex.Pool
-}
-
-func NewSchemaManager(pool *sqlitex.Pool) *SchemaManager {
-	return &SchemaManager{pool: pool}
-}
-
-// Create initializes the database with the standard corpus schema.
-// It assumes "corpus.sql" is available to the underlying CreateSchemas utility.
-func (m *SchemaManager) Create() error {
-	return CreateSchemas(m.pool, "corpus.sql")
 }
