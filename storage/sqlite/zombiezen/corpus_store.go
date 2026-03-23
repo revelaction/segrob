@@ -75,9 +75,6 @@ func (s *CorpusStore) List() ([]storage.CorpusMeta, error) {
 	return records, nil
 }
 
-// WriteStream inserts corpus records yielded by the iterator into
-// a single transaction. If the iterator yields an error or a DB insert
-// fails, the transaction is rolled back.
 func (s *CorpusStore) WriteStream(seq func(yield func(storage.CorpusRecord, error) bool)) (err error) {
 	conn, err := s.pool.Take(context.TODO())
 	if err != nil {
@@ -94,10 +91,35 @@ func (s *CorpusStore) WriteStream(seq func(yield func(storage.CorpusRecord, erro
 		}
 
 		err = sqlitex.Execute(conn,
-			`INSERT INTO corpus (id, labels, epub, txt, txt_hash)
-			 VALUES (?, ?, ?, ?, ?)`,
+			`INSERT INTO corpus (id, labels, epub, txt, txt_hash, txt_created_at,
+				txt_edit, txt_edit_at, txt_edit_by, txt_edit_notes,
+				txt_ack, txt_ack_at, txt_ack_by,
+				nlp_created_at, nlp_ack, nlp_ack_at, nlp_ack_by,
+				deleted_at, created_at, updated_at)
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 			&sqlitex.ExecOptions{
-				Args: []interface{}{record.ID, record.Labels, record.Epub, record.Txt, record.TxtHash},
+				Args: []interface{}{
+					record.ID,
+					record.Labels,
+					record.Epub,
+					record.Txt,
+					record.TxtHash,
+					storage.TimeFormat(record.TxtCreatedAt),
+					record.TxtEdit,
+					storage.TimeFormat(record.TxtEditAt),
+					record.TxtEditBy,
+					record.TxtEditNotes,
+					record.TxtAck,
+					storage.TimeFormat(record.TxtAckAt),
+					record.TxtAckBy,
+					storage.TimeFormat(record.NlpCreatedAt),
+					record.NlpAck,
+					storage.TimeFormat(record.NlpAckAt),
+					record.NlpAckBy,
+					storage.TimeFormat(record.DeletedAt),
+					storage.TimeFormat(record.CreatedAt),
+					storage.TimeFormat(record.UpdatedAt),
+				},
 			})
 		if err != nil {
 			return fmt.Errorf("failed to insert corpus record %s: %w", record.ID, err)

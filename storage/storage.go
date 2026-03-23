@@ -176,6 +176,14 @@ func TimeParse(s string) (time.Time, error) {
 	return time.Parse(time.RFC3339, s)
 }
 
+// TimeFormat converts a time.Time to RFC3339 string in UTC.
+// This should be used when sending time values to SQLite since it doesn't have
+// a native datetime type. All timestamps in the database should use this format.
+// Example: "2024-03-11T15:04:05Z"
+func TimeFormat(tt time.Time) string {
+	return tt.UTC().Format(time.RFC3339)
+}
+
 // HasTxt reports whether plain-text content has been generated and stored.
 // The Txt field is not populated by most queries due to its size — TxtHash
 // is the authoritative signal for text presence.

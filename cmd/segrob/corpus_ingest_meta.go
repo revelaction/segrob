@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"time"
 	"unicode/utf8"
 
 	"github.com/revelaction/segrob/epub"
@@ -169,6 +170,12 @@ func corpusIterator(repo storage.CorpusRepository, epubPaths []string, process f
 				yield(storage.CorpusRecord{}, err)
 				return
 			}
+
+			// Set timestamps that were previously filled by DB defaults.
+			now := time.Now().UTC()
+			record.TxtCreatedAt = now
+			record.CreatedAt = now
+			record.UpdatedAt = now
 
 			// Print summary line: labels and text length in UTF-8 characters
 			charCount := utf8.RuneCountInString(record.Txt)
