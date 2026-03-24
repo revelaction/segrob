@@ -928,3 +928,50 @@ func parseCorpusExportTopicArgs(args []string, ui UI) (CorpusExportTopicOptions,
 
 	return opts, nil
 }
+
+type CorpusBackupOptions struct {
+	DbPath  string // --db / SEGROB_CORPUS_DB
+	Output  string // -o, --output
+	WithNlp bool   // -n, --with-nlp
+}
+
+func parseCorpusBackupArgs(args []string, ui UI) (CorpusBackupOptions, error) {
+	fs := flag.NewFlagSet("corpus backup", flag.ContinueOnError)
+	fs.SetOutput(io.Discard)
+
+	var opts CorpusBackupOptions
+	fs.StringVar(&opts.DbPath, "db", os.Getenv("SEGROB_CORPUS_DB"), "")
+	fs.StringVar(&opts.Output, "output", "", "")
+	fs.StringVar(&opts.Output, "o", "", "")
+	fs.BoolVar(&opts.WithNlp, "with-nlp", false, "")
+	fs.BoolVar(&opts.WithNlp, "n", false, "")
+
+	fs.Usage = func() {
+		w := fs.Output()
+		fmt.Fprintf(w, "Usage: %s corpus backup [options]\n\n", os.Args[0])
+		fmt.Fprintf(w, "  Create a gzipped backup of the corpus database.\n")
+		fmt.Fprintf(w, "\nOptions:\n")
+		printOpt(w, "--db", "FILE", "Corpus SQLite file (or SEGROB_CORPUS_DB)")
+		printOpt(w, "-o, --output", "FILE", "Output file path (timestamp auto-appended)")
+		printOpt(w, "-n, --with-nlp", "", "Include NLP data in backup (default: exclude)")
+	}
+
+	err := fs.Parse(args)
+	if err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			fs.SetOutput(ui.Out)
+			fs.Usage()
+			return opts, err
+		}
+		return opts, err
+	}
+
+	if opts.DbPath == "" {
+		return opts, errors.New("corpus database must be specified via --db or SEGROB_CORPUS_DB")
+	}
+	if opts.Output == "" {
+		return opts, errors.New("output path must be specified via -o or --output")
+	}
+
+	return opts, nil
+}

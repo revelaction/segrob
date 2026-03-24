@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
+	"time"
 )
 
 func printCorpusUsage(w io.Writer) {
@@ -31,6 +33,9 @@ func printCorpusUsage(w io.Writer) {
 	fmt.Fprintf(w, "\nSubcommands: Publish\n")
 	fmt.Fprintf(w, helpCmdFmt, "publish", "Move document(s) from corpus to live (all ACKed when no id).")
 	fmt.Fprintf(w, helpCmdFmt, "publish-label", "Push corpus labels into live tables for a document.")
+
+	fmt.Fprintf(w, "\nSubcommands: Backup\n")
+	fmt.Fprintf(w, helpCmdFmt, "backup", "Create a gzipped backup of the corpus database.")
 
 	fmt.Fprintf(w, "\nSubcommands: Labels\n")
 	fmt.Fprintf(w, helpCmdFmt, "ls-label", "List all unique labels in the corpus.")
@@ -143,6 +148,44 @@ func runCorpusCommand(args []string, setup *Setup, ui UI) error {
 			return err
 		}
 		return corpusPublishLabelCommand(corpusRepo, docRepo, opts, ui)
+
+	case "backup":
+		opts, err := parseCorpusBackupArgs(subArgs, ui)
+		if err != nil {
+			return err
+		}
+		srcRepo, err := setup.NewCorpusRepository(opts.DbPath)
+		if err != nil {
+			return err
+		}
+		srcTopicsRepo, err := setup.NewCorpusTopicRepository(opts.DbPath)
+		if err != nil {
+			return err
+		}
+
+		// Temp SQLite file for backup creation
+		tempPath := filepath.Join(os.TempDir(), fmt.Sprintf("corpus-backup-%d.db", time.Now().UnixNano()))
+		defer os.Remove(tempPath)
+
+		dstMgr, err := setup.NewSchemaManager(tempPath, "_journal_mode=DELETE")
+		if err != nil {
+			return err
+		}
+		dstRepo, err := setup.NewCorpusRepository(tempPath)
+		if err != nil {
+			return err
+		}
+		dstTopicsRepo, err := setup.NewCorpusTopicRepository(tempPath)
+		if err != nil {
+			return err
+		}
+
+		err = corpusBackupCommand(srcRepo, srcTopicsRepo, dstMgr, dstRepo, dstTopicsRepo, tempPath, opts, ui)
+		if err != nil {
+			return err
+		}
+
+		return nil
 
 	case "dump-txt":
 		opts, err := parseCorpusDumpTxtArgs(subArgs, ui)
