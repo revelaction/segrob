@@ -94,9 +94,9 @@ func (s *CorpusStore) WriteStream(seq func(yield func(storage.CorpusRecord, erro
 			`INSERT INTO corpus (id, labels, epub, txt, txt_hash, txt_created_at,
 				txt_edit, txt_edit_at, txt_edit_by, txt_edit_notes,
 				txt_ack, txt_ack_at, txt_ack_by,
-				nlp_created_at, nlp_ack, nlp_ack_at, nlp_ack_by,
+				nlp, nlp_created_at, nlp_ack, nlp_ack_at, nlp_ack_by,
 				deleted_at, created_at, updated_at)
-			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 			&sqlitex.ExecOptions{
 				Args: []interface{}{
 					record.ID,
@@ -112,6 +112,7 @@ func (s *CorpusStore) WriteStream(seq func(yield func(storage.CorpusRecord, erro
 					record.TxtAck,
 					storage.TimeFormat(record.TxtAckAt),
 					record.TxtAckBy,
+					record.Nlp,
 					storage.TimeFormat(record.NlpCreatedAt),
 					record.NlpAck,
 					storage.TimeFormat(record.NlpAckAt),

@@ -167,6 +167,7 @@ type CorpusReader interface {
 type CorpusRecord struct {
 	CorpusMeta
 	Txt string // full plain text from pandoc
+	Nlp string // raw NLP JSON payload
 }
 
 // TimeParse parses a RFC3339 string into a time.Time.
