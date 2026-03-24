@@ -19,8 +19,8 @@ func NewSetup() *Setup {
 }
 
 // NewSchemaManager returns a manager for the database at the given path.
-func (s *Setup) NewSchemaManager(path string) (storage.SchemaManager, error) {
-	pool, err := s.getPool(path)
+func (s *Setup) NewSchemaManager(path string, params ...string) (storage.SchemaManager, error) {
+	pool, err := s.getPool(path, params...)
 	if err != nil {
 		return nil, err
 	}
@@ -29,7 +29,7 @@ func (s *Setup) NewSchemaManager(path string) (storage.SchemaManager, error) {
 
 // getPool returns an existing pool for the given path if available, or opens a new one.
 // It uses absolute paths to identify unique databases.
-func (s *Setup) getPool(path string) (*sqlitex.Pool, error) {
+func (s *Setup) getPool(path string, params ...string) (*sqlitex.Pool, error) {
 	absPath, err := filepath.Abs(path)
 	if err != nil {
 		return nil, err
@@ -39,7 +39,7 @@ func (s *Setup) getPool(path string) (*sqlitex.Pool, error) {
 		return pool, nil
 	}
 
-	pool, err := zombiezen.NewPool(absPath)
+	pool, err := zombiezen.NewPool(absPath, params...)
 	if err != nil {
 		return nil, err
 	}
@@ -48,33 +48,33 @@ func (s *Setup) getPool(path string) (*sqlitex.Pool, error) {
 	return pool, nil
 }
 
-func (s *Setup) NewDocRepository(path string) (storage.DocRepository, error) {
-	pool, err := s.getPool(path)
+func (s *Setup) NewDocRepository(path string, params ...string) (storage.DocRepository, error) {
+	pool, err := s.getPool(path, params...)
 	if err != nil {
 		return nil, err
 	}
 	return zombiezen.NewDocStore(pool), nil
 }
 
-func (s *Setup) NewCorpusRepository(path string) (storage.CorpusRepository, error) {
-	pool, err := s.getPool(path)
+func (s *Setup) NewCorpusRepository(path string, params ...string) (storage.CorpusRepository, error) {
+	pool, err := s.getPool(path, params...)
 	if err != nil {
 		return nil, err
 	}
 	return zombiezen.NewCorpusStore(pool), nil
 }
 
-func (s *Setup) NewLiveTopicRepository(path string) (storage.TopicRepository, error) {
-	pool, err := s.getPool(path)
+func (s *Setup) NewLiveTopicRepository(path string, params ...string) (storage.TopicRepository, error) {
+	pool, err := s.getPool(path, params...)
 	if err != nil {
 		return nil, err
 	}
 	return zombiezen.NewLiveTopicStore(pool), nil
 }
 
-func (s *Setup) NewCorpusTopicRepository(path string) (storage.TopicRepository, error) {
+func (s *Setup) NewCorpusTopicRepository(path string, params ...string) (storage.TopicRepository, error) {
 	// Corpus uses sqlite exclusively
-	pool, err := s.getPool(path)
+	pool, err := s.getPool(path, params...)
 	if err != nil {
 		return nil, err
 	}
