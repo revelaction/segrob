@@ -12,7 +12,10 @@ func corpusLsTopicCommand(tr storage.TopicRepository, opts CorpusLsTopicOptions,
 	}
 
 	for topicId, name := range topicLib.Names() {
-		fmt.Fprintf(ui.Out, "📖 %d %s \n", topicId, name)
+		_, err = fmt.Fprintf(ui.Out, "📖 %d %s \n", topicId, name)
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }

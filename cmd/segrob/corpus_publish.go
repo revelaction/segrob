@@ -28,11 +28,14 @@ func corpusPublishCommand(corpusRepo storage.CorpusRepository, docRepo storage.D
 	}
 
 	if len(candidates) == 0 {
-		fmt.Fprintf(ui.Err, "No ACKed documents to publish.\n")
-		return nil
+		_, err = fmt.Fprintf(ui.Err, "No ACKed documents to publish.\n")
+		return err
 	}
 
-	fmt.Fprintf(ui.Err, "Publishing %d ACKed document(s)...\n\n", len(candidates))
+	_, err = fmt.Fprintf(ui.Err, "Publishing %d ACKed document(s)...\n\n", len(candidates))
+	if err != nil {
+		return err
+	}
 
 	for i, m := range candidates {
 		fmt.Fprintf(ui.Err, "[%d/%d] %s\n", i+1, len(candidates), m.ID)
