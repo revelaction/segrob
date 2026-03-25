@@ -81,7 +81,7 @@ func corpusIngestMetaCommand(repo storage.CorpusRepository, opts CorpusIngestMet
 	}
 
 	if len(paths) == 0 {
-		fmt.Fprintf(ui.Err, "No epub files found in %s.\n", opts.Dir)
+		_, _ = fmt.Fprintf(ui.Err, "No epub files found in %s.\n", opts.Dir)
 		return nil
 	}
 
@@ -147,7 +147,7 @@ func corpusIterator(repo storage.CorpusRepository, epubPaths []string, process f
 			id := sha256Hex(epubBytes, 8)
 
 			if seen[id] {
-				fmt.Fprintf(ui.Err, "[skip] %s (duplicate in batch)\n", name)
+				_, _ = fmt.Fprintf(ui.Err, "[skip] %s (duplicate in batch)\n", name)
 				continue
 			}
 
@@ -157,7 +157,7 @@ func corpusIterator(repo storage.CorpusRepository, epubPaths []string, process f
 				return
 			}
 			if exists {
-				fmt.Fprintf(ui.Err, "[skip] %s (already in corpus)\n", name)
+				_, _ = fmt.Fprintf(ui.Err, "[skip] %s (already in corpus)\n", name)
 				continue
 			}
 
@@ -178,7 +178,7 @@ func corpusIterator(repo storage.CorpusRepository, epubPaths []string, process f
 
 			// Print summary line: labels and text length in UTF-8 characters
 			charCount := utf8.RuneCountInString(record.Txt)
-			fmt.Fprintf(ui.Err, "%s | labels: %s | chars: %d\n", record.Epub, record.Labels, charCount)
+			_, _ = fmt.Fprintf(ui.Err, "%s | labels: %s | chars: %d\n", record.Epub, record.Labels, charCount)
 
 			if !yield(record, nil) {
 				return

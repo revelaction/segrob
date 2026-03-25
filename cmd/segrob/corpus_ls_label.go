@@ -36,7 +36,8 @@ func corpusLsLabelCommand(repo storage.CorpusReader, opts CorpusLsLabelOptions, 
 	}
 
 	if len(labels) > 0 {
-		if _, err := fmt.Fprintln(ui.Out, strings.Join(labels, ", ")); err != nil {
+		_, err = fmt.Fprintln(ui.Out, strings.Join(labels, ", "))
+		if err != nil {
 			return err
 		}
 	}

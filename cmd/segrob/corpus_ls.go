@@ -40,12 +40,15 @@ func corpusLsCommand(repo storage.CorpusReader, opts CorpusLsOptions, ui UI) err
 	}
 
 	// Print header
-	fmt.Fprintf(ui.Out, corpusLsFmt, "FLAGS", "ID", "TITLE", "CREATOR", "TRANSLATOR", "DATE", "LANG")
+	_, err = fmt.Fprintf(ui.Out, corpusLsFmt, "FLAGS", "ID", "TITLE", "CREATOR", "TRANSLATOR", "DATE", "LANG")
+	if err != nil {
+		return err
+	}
 
 	for _, m := range matches {
 		labelParts := strings.Split(m.Labels, ",")
 
-		fmt.Fprintf(ui.Out, corpusLsFmt,
+		_, err = fmt.Fprintf(ui.Out, corpusLsFmt,
 			corpusChars(m),
 			m.ID,
 			truncate(extractLabelValue(labelParts, "title:"), 25),
@@ -54,6 +57,9 @@ func corpusLsCommand(repo storage.CorpusReader, opts CorpusLsOptions, ui UI) err
 			extractLabelValue(labelParts, "date:"),
 			extractLabelValue(labelParts, "language:"),
 		)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil

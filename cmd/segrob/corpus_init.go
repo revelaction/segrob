@@ -12,6 +12,6 @@ func corpusInitCommand(mgr storage.SchemaManager, opts CorpusInitOptions, ui UI)
 		return err
 	}
 
-	fmt.Fprintf(ui.Err, "Corpus database initialized at: %s\n", opts.DbPath)
-	return nil
+	_, err := fmt.Fprintf(ui.Err, "Corpus database initialized at: %s\n", opts.DbPath)
+	return err
 }

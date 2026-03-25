@@ -56,6 +56,6 @@ func corpusIngestNlpCommand(corpusRepo storage.CorpusRepository, opts CorpusInge
 		return fmt.Errorf("failed to write NLP data to corpus: %w", err)
 	}
 
-	fmt.Fprintf(ui.Err, "NLP data stored for doc ID %s (%d bytes)\n", opts.ID, out.Len())
-	return nil
+	_, err = fmt.Fprintf(ui.Err, "NLP data stored for doc ID %s (%d bytes)\n", opts.ID, out.Len())
+	return err
 }
