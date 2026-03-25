@@ -2,6 +2,7 @@ package main
 
 import (
 	"compress/gzip"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -71,7 +72,7 @@ func corpusBackupCommand(
 		return fmt.Errorf("failed to compress backup: %w", err)
 	}
 
-	fmt.Fprintf(ui.Err, "Backup written to %s\n", outputPath)
+	_, _ = fmt.Fprintf(ui.Err, "Backup written to %s\n", outputPath)
 	return nil
 }
 
@@ -106,25 +107,31 @@ func backupIterator(srcRepo storage.CorpusReader, metas []storage.CorpusMeta, wi
 }
 
 // compressFile reads source and writes gzipped content to dest.
-func compressFile(sourcePath, destPath string) error {
-	sourceFile, err := os.Open(sourcePath)
-	if err != nil {
-		return fmt.Errorf("failed to open source file: %w", err)
+func compressFile(sourcePath, destPath string) (err error) {
+	sourceFile, oerr := os.Open(sourcePath)
+	if oerr != nil {
+		return fmt.Errorf("failed to open source file: %w", oerr)
 	}
-	defer sourceFile.Close()
+	defer func() {
+		err = errors.Join(err, sourceFile.Close())
+	}()
 
-	destFile, err := os.Create(destPath)
-	if err != nil {
-		return fmt.Errorf("failed to create destination file: %w", err)
+	destFile, cerr := os.Create(destPath)
+	if cerr != nil {
+		return fmt.Errorf("failed to create destination file: %w", cerr)
 	}
-	defer destFile.Close()
+	defer func() {
+		err = errors.Join(err, destFile.Close())
+	}()
 
 	gzipWriter := gzip.NewWriter(destFile)
-	defer gzipWriter.Close()
+	defer func() {
+		err = errors.Join(err, gzipWriter.Close())
+	}()
 
-	_, err = io.Copy(gzipWriter, sourceFile)
-	if err != nil {
-		return fmt.Errorf("failed to compress data: %w", err)
+	_, cpErr := io.Copy(gzipWriter, sourceFile)
+	if cpErr != nil {
+		return fmt.Errorf("failed to compress data: %w", cpErr)
 	}
 
 	return nil

@@ -1,13 +1,14 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/revelaction/segrob/storage/filesystem"
 	"github.com/revelaction/segrob/storage/sqlite/zombiezen"
 )
 
-func corpusImportTopicCommand(opts CorpusImportTopicOptions, ui UI) error {
+func corpusImportTopicCommand(opts CorpusImportTopicOptions, ui UI) (err error) {
 
 	src := filesystem.NewTopicStore(opts.Directory)
 
@@ -17,7 +18,9 @@ func corpusImportTopicCommand(opts CorpusImportTopicOptions, ui UI) error {
 		return err
 	}
 
-	defer pool.Close()
+	defer func() {
+		err = errors.Join(err, pool.Close())
+	}()
 
 	dst := zombiezen.NewCorpusTopicStore(pool)
 
