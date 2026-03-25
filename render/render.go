@@ -98,7 +98,7 @@ func (r *CLIRenderer) Render(resultsSorted []*match.SentenceMatch) {
 			continue
 		}
 
-		fmt.Fprintf(os.Stdout, "%s%s%s\n", prefixDoc, prefixTopic, strings.ReplaceAll(text, "\n", " "))
+		_, _ = fmt.Fprintf(os.Stdout, "%s%s%s\n", prefixDoc, prefixTopic, strings.ReplaceAll(text, "\n", " "))
 	}
 
 	if r.Format == "aggr" {
@@ -116,7 +116,7 @@ func NewCLIRenderer() *CLIRenderer {
 
 func (r *CLIRenderer) Sentence(s []sent.Token, prefix string) {
 	text := r.sentence(s, []sent.Token{})
-	fmt.Fprintf(os.Stdout, "%s%s\n", prefix, strings.ReplaceAll(text, "\n", " "))
+	_, _ = fmt.Fprintf(os.Stdout, "%s%s\n", prefix, strings.ReplaceAll(text, "\n", " "))
 }
 
 func (r *CLIRenderer) SentenceString(s []sent.Token, matches []sent.Token) string {
@@ -279,7 +279,7 @@ func (r *CLIRenderer) Topic(exprs []topic.TopicExpr) {
 			}
 		}
 
-		fmt.Fprintf(os.Stdout, "%s%s\n", prefix, strings.Join(exprSlice, " "))
+		_, _ = fmt.Fprintf(os.Stdout, "%s%s\n", prefix, strings.Join(exprSlice, " "))
 	}
 }
 
@@ -460,6 +460,6 @@ func (r *CLIRenderer) aggrLemmas(agls map[string]int) {
 			prefix = fmt.Sprintf("[%5d] ✍  ", s.NumSent)
 		}
 
-		fmt.Fprintf(os.Stdout, "%s%s\n", prefix, s.LemmaStr)
+		_, _ = fmt.Fprintf(os.Stdout, "%s%s\n", prefix, s.LemmaStr)
 	}
 }

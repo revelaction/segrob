@@ -46,10 +46,12 @@ func fprintErr(w io.Writer, err error) {
 	_, _ = fmt.Fprintf(w, "segrob: %v\n", err)
 }
 
-func runCommand(cmd string, args []string, ui UI) error {
+func runCommand(cmd string, args []string, ui UI) (err error) {
 
 	setup := NewSetup()
-	defer setup.Close()
+	defer func() {
+		err = errors.Join(err, setup.Close())
+	}()
 
 	switch cmd {
 	case "version":

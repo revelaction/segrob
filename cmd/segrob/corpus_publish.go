@@ -40,7 +40,9 @@ func corpusPublishCommand(corpusRepo storage.CorpusRepository, docRepo storage.D
 		if err := publishOne(corpusRepo, docRepo, m.ID, opts.Move, false, ui); err != nil {
 			return fmt.Errorf("failed to publish %s: %w\n\nFix the issue and re-run the command to continue", m.ID, err)
 		}
-		fmt.Fprintln(ui.Err)
+		if _, err := fmt.Fprintln(ui.Err); err != nil {
+			return err
+		}
 	}
 
 	fmt.Fprintf(ui.Err, "Published %d document(s).\n", len(candidates))

@@ -33,7 +33,9 @@ func corpusBackupCommand(
 		return fmt.Errorf("failed to list corpus: %w", err)
 	}
 
-	fmt.Fprintf(ui.Err, "Backing up %d document(s)...\n", len(metas))
+	if _, err := fmt.Fprintf(ui.Err, "Backing up %d document(s)...\n", len(metas)); err != nil {
+		return err
+	}
 
 	seq := backupIterator(srcRepo, metas, opts.WithNlp)
 	err = dstRepo.WriteStream(seq)
@@ -55,7 +57,9 @@ func corpusBackupCommand(
 	}
 
 	if len(topics) > 0 {
-		fmt.Fprintf(ui.Err, "  ✅ %d topic(s)\n", len(topics))
+		if _, err := fmt.Fprintf(ui.Err, "  ✅ %d topic(s)\n", len(topics)); err != nil {
+			return err
+		}
 	}
 
 	timestamp := time.Now().UTC().Format("20060102T150405Z")

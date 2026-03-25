@@ -22,6 +22,6 @@ func corpusAckCommand(repo storage.CorpusRepository, opts CorpusAckOptions, ui U
 	if opts.Nlp {
 		target = "nlp"
 	}
-	fmt.Fprintf(ui.Err, "Successfully acknowledged %s for %s\n", target, opts.ID)
-	return nil
+	_, err = fmt.Fprintf(ui.Err, "Successfully acknowledged %s for %s\n", target, opts.ID)
+	return err
 }
