@@ -33,14 +33,14 @@ func NewHandler(l topic.Library, r storage.TopicReader, w storage.TopicWriter) *
 
 func (h *Handler) Run() error {
 
-	fmt.Println("🔑 Ctrl+L: clear, 🔧 quit")
+	_, _ = fmt.Println("🔑 Ctrl+L: clear, 🔧 quit")
 
 	// initialize prompt history
 	history := []string{}
 
 	for {
 
-		// PromtForEdit
+		// PromptForEdit
 		in := prompt.Input("      🔖 ", h.completer(),
 			prompt.OptionTitle("segrob edit"),
 			prompt.OptionPrefixTextColor(prompt.Yellow),
@@ -58,13 +58,13 @@ func (h *Handler) Run() error {
 		history = append(history, in)
 		tp, expr, action, err := h.parse(in)
 		if err != nil {
-			fmt.Printf("❌ %s\n", err)
+			_, _ = fmt.Printf("❌ %s\n", err)
 			continue
 		}
 
 		if action == actionAdd {
 			if exprExistInTopic(tp, expr) {
-				fmt.Printf("❌ %s\n", "Expression already exist.")
+				_, _ = fmt.Printf("❌ %s\n", "Expression already exist.")
 				continue
 			}
 
@@ -73,7 +73,7 @@ func (h *Handler) Run() error {
 		} else {
 
 			if !exprExistInTopic(tp, expr) {
-				fmt.Printf("❌ %s\n", "Expression des not exist.")
+				_, _ = fmt.Printf("❌ %s\n", "Expression does not exist.")
 				continue
 			}
 
@@ -90,7 +90,7 @@ func (h *Handler) Run() error {
 			if t.Name == tp.Name {
 				newTp, err := h.TopicReader.Read(t.Name)
 				if err != nil {
-					return nil
+					return err
 				}
 
 				h.Library[i] = newTp
@@ -99,11 +99,9 @@ func (h *Handler) Run() error {
 		}
 
 	}
-
-	return nil
 }
 
-func (t *Handler) completer() func(in prompt.Document) []prompt.Suggest {
+func (h *Handler) completer() func(in prompt.Document) []prompt.Suggest {
 	return func(in prompt.Document) []prompt.Suggest {
 
 		s := []prompt.Suggest{}
@@ -117,7 +115,7 @@ func (t *Handler) completer() func(in prompt.Document) []prompt.Suggest {
 		tokens := strings.Split(befCursor, " ")
 
 		if len(tokens) == 1 {
-			for _, tp := range t.Library {
+			for _, tp := range h.Library {
 				if strings.HasPrefix(tp.Name, befCursor) {
 					s = append(s, prompt.Suggest{Text: tp.Name, Description: ""})
 				}
@@ -129,7 +127,7 @@ func (t *Handler) completer() func(in prompt.Document) []prompt.Suggest {
 		topicName := tokens[0]
 
 		tp := topic.Topic{}
-		for _, t := range t.Library {
+		for _, t := range h.Library {
 			if t.Name == topicName {
 				tp = t
 				break

@@ -19,12 +19,16 @@ func corpusShowCommand(repo storage.CorpusRepository, opts ShowOptions, id strin
 	}
 
 	if len(nlpData) == 0 {
-		fmt.Fprintf(ui.Err, "no nlp payload for %s\n", id)
+		_, err := fmt.Fprintf(ui.Err, "no nlp payload for %s\n", id)
+		if err != nil {
+			return err
+		}
 		return nil
 	}
 
 	var payload nlpResponse
-	if err := json.Unmarshal(nlpData, &payload); err != nil {
+	err = json.Unmarshal(nlpData, &payload)
+	if err != nil {
 		return fmt.Errorf("failed to parse nlp json: %w", err)
 	}
 

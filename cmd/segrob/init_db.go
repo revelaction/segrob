@@ -8,14 +8,19 @@ import (
 
 func liveInitCommand(mgr storage.SchemaManager, opts LiveInitOptions, ui UI) error {
 
-	if err := mgr.Create("doc_canonical.sql"); err != nil {
+	err := mgr.Create("doc_canonical.sql")
+	if err != nil {
 		return err
 	}
 
-	if err := mgr.Create("doc_optimization.sql"); err != nil {
+	err = mgr.Create("doc_optimization.sql")
+	if err != nil {
 		return err
 	}
 
-	fmt.Fprintf(ui.Err, "Database initialized at: %s\n", opts.DbPath)
+	_, err = fmt.Fprintf(ui.Err, "Database initialized at: %s\n", opts.DbPath)
+	if err != nil {
+		return err
+	}
 	return nil
 }

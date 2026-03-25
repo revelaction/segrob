@@ -21,6 +21,10 @@ func corpusPushTxtCommand(repo storage.CorpusRepository, opts CorpusPushTxtOptio
 		return fmt.Errorf("failed to update corpus txt for %s: %w", opts.ID, err)
 	}
 
-	fmt.Fprintf(ui.Err, "Successfully updated txt for %s from %s\n", opts.ID, opts.File)
+	_, err = fmt.Fprintf(ui.Err, "Successfully updated txt for %s from %s\n", opts.ID, opts.File)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
