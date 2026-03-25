@@ -4,6 +4,7 @@ import (
 	"archive/zip"
 	"bytes"
 	"encoding/xml"
+	"errors"
 	"fmt"
 	"html"
 	"io"
@@ -64,11 +65,15 @@ func (b *Book) getContent(name string) ([]byte, error) {
 			if err != nil {
 				return nil, err
 			}
-			data, err := io.ReadAll(rc)
-			// Explicitly close the file without using defer inside a loop
-			// to avoid potential resource leaks if the loop logic changes.
-			rc.Close()
-			return data, err
+			data, readErr := io.ReadAll(rc)
+			closeErr := rc.Close()
+			if readErr != nil {
+				return nil, readErr
+			}
+			if closeErr != nil {
+				return nil, closeErr
+			}
+			return data, nil
 		}
 	}
 	return nil, fmt.Errorf("file not found: %s", name)
@@ -329,18 +334,20 @@ func extractTextFromXHTML(content []byte) (string, error) {
 }
 
 // FindOPFPath locates the OPF file in the EPUB archive by reading META-INF/container.xml.
-func FindOPFPath(r *zip.Reader) (string, error) {
+func FindOPFPath(r *zip.Reader) (path string, err error) {
 	for _, f := range r.File {
 		if f.Name == "META-INF/container.xml" {
-			rc, err := f.Open()
-			if err != nil {
-				return "", err
+			rc, openErr := f.Open()
+			if openErr != nil {
+				return "", openErr
 			}
-			defer rc.Close()
+			defer func() {
+				err = errors.Join(err, rc.Close())
+			}()
 
 			var container ContainerXML
-			if err := xml.NewDecoder(rc).Decode(&container); err != nil {
-				return "", err
+			if decodeErr := xml.NewDecoder(rc).Decode(&container); decodeErr != nil {
+				return "", decodeErr
 			}
 
 			if len(container.Rootfiles) > 0 {
@@ -352,18 +359,19 @@ func FindOPFPath(r *zip.Reader) (string, error) {
 	return "", fmt.Errorf("could not find OPF path in container.xml")
 }
 
-func parseOPF(r *zip.Reader, opfPath string) (PackageXML, error) {
-	var pkg PackageXML
+func parseOPF(r *zip.Reader, opfPath string) (pkg PackageXML, err error) {
 	for _, f := range r.File {
 		if f.Name == opfPath {
-			rc, err := f.Open()
-			if err != nil {
-				return pkg, err
+			rc, openErr := f.Open()
+			if openErr != nil {
+				return pkg, openErr
 			}
-			defer rc.Close()
+			defer func() {
+				err = errors.Join(err, rc.Close())
+			}()
 
-			if err := xml.NewDecoder(rc).Decode(&pkg); err != nil {
-				return pkg, err
+			if decodeErr := xml.NewDecoder(rc).Decode(&pkg); decodeErr != nil {
+				return pkg, decodeErr
 			}
 			return pkg, nil
 		}

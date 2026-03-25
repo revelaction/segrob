@@ -27,7 +27,11 @@ func main() {
 		fmt.Println(strings.Repeat("-", 40))
 		os.Exit(1)
 	}
-	defer z.Close()
+	defer func() {
+		if err := z.Close(); err != nil {
+			fmt.Printf("Warning: error closing zip reader: %v\n", err)
+		}
+	}()
 
 	opfPath, err := epub.FindOPFPath(&z.Reader)
 	if err != nil {
@@ -56,11 +60,13 @@ func main() {
 				os.Exit(1)
 			}
 			opfContent, err = io.ReadAll(rc)
-			rc.Close()
 			if err != nil {
 				fmt.Printf("  Error reading OPF file content: %v\n", err)
 				fmt.Println(strings.Repeat("-", 40))
 				os.Exit(1)
+			}
+			if err := rc.Close(); err != nil {
+				fmt.Printf("  Warning: error closing OPF file: %v\n", err)
 			}
 			break
 		}
