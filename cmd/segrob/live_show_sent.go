@@ -27,10 +27,16 @@ func liveShowSentCommand(repo storage.DocRepository, opts LiveShowSentOptions, d
 	r.HasColor = false
 	prefix := fmt.Sprintf("✍  %d ", sentId)
 	r.Sentence(s.Tokens, prefix)
-	fmt.Fprintln(ui.Out)
+	_, err = fmt.Fprintln(ui.Out)
+	if err != nil {
+		return err
+	}
 
 	for _, token := range s.Tokens {
-		fmt.Fprintf(ui.Out, "%20q %15q %8s %6d %6d %8s %s\n", token.Text, token.Lemma, token.Pos, token.Id, token.Head, token.Dep, token.Tag)
+		_, err = fmt.Fprintf(ui.Out, "%20q %15q %8s %6d %6d %8s %s\n", token.Text, token.Lemma, token.Pos, token.Id, token.Head, token.Dep, token.Tag)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil

@@ -30,7 +30,10 @@ func renderTopics(sentences []sent.Sentence, sentId int, topicRepo storage.Topic
 
 	prefix := fmt.Sprintf("%54s", render.Yellow256+render.Off) + "✍  "
 	r.Sentence(s.Tokens, prefix)
-	fmt.Fprintln(ui.Out)
+	_, err := fmt.Fprintln(ui.Out)
+	if err != nil {
+		return err
+	}
 
 	allTopics, err := topicRepo.ReadAll()
 	if err != nil {

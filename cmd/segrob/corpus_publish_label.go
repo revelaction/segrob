@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -25,8 +26,8 @@ func corpusPublishLabelCommand(corpusRepo storage.CorpusRepository, docRepo stor
 		return fmt.Errorf("failed to check existence: %w", err)
 	}
 	if !exists {
-		fmt.Fprintf(ui.Err, "Document %s not found in live tables (publish it first).\n", id)
-		return nil
+		_, err = fmt.Fprintf(ui.Err, "Document %s not found in live tables (publish it first).\n", id)
+		return err
 	}
 
 	// Read the current labels from the corpus.
@@ -43,29 +44,38 @@ func corpusPublishLabelCommand(corpusRepo storage.CorpusRepository, docRepo stor
 	// Transaction 1 — cut the label index (live switch for label filtering).
 	start := time.Now()
 	if err := docRepo.DeleteLabelsOptimization(id); err != nil {
-		fmt.Fprintf(ui.Err, "DeleteLabelsOpt ❌ %v\n", err)
-		return fmt.Errorf("DeleteLabelsOptimization failed: %w", err)
+		_, perr := fmt.Fprintf(ui.Err, "DeleteLabelsOpt ❌ %v\n", err)
+		return errors.Join(fmt.Errorf("DeleteLabelsOptimization failed: %w", err), perr)
 	}
-	fmt.Fprintf(ui.Err, "DeleteLabelsOpt ✅ %s\n", time.Since(start))
+	_, err = fmt.Fprintf(ui.Err, "DeleteLabelsOpt ✅ %s\n", time.Since(start))
+	if err != nil {
+		return err
+	}
 
 	// Transaction 2 — upsert labels table and update docs row.
 	// Note: We do not clean up potentially orphaned labels in the labels table.
 	start = time.Now()
 	labelIDs, err := docRepo.UpdateLabels(id, labels)
 	if err != nil {
-		fmt.Fprintf(ui.Err, "UpdateLabels    ❌ %v\n", err)
-		return fmt.Errorf("UpdateLabels failed: %w", err)
+		_, perr := fmt.Fprintf(ui.Err, "UpdateLabels    ❌ %v\n", err)
+		return errors.Join(fmt.Errorf("UpdateLabels failed: %w", err), perr)
 	}
-	fmt.Fprintf(ui.Err, "UpdateLabels    ✅ %s\n", time.Since(start))
+	_, err = fmt.Fprintf(ui.Err, "UpdateLabels    ✅ %s\n", time.Since(start))
+	if err != nil {
+		return err
+	}
 
 	// Transaction 3 — rebuild the label index.
 	start = time.Now()
 	if err := docRepo.WriteLabelsOptimization(id, labelIDs); err != nil {
-		fmt.Fprintf(ui.Err, "WriteLabelsOpt  ❌ %v\n", err)
-		return fmt.Errorf("WriteLabelsOptimization failed: %w", err)
+		_, perr := fmt.Fprintf(ui.Err, "WriteLabelsOpt  ❌ %v\n", err)
+		return errors.Join(fmt.Errorf("WriteLabelsOptimization failed: %w", err), perr)
 	}
-	fmt.Fprintf(ui.Err, "WriteLabelsOpt  ✅ %s\n", time.Since(start))
+	_, err = fmt.Fprintf(ui.Err, "WriteLabelsOpt  ✅ %s\n", time.Since(start))
+	if err != nil {
+		return err
+	}
 
-	fmt.Fprintf(ui.Err, "\nLabels published for %s.\n", id)
-	return nil
+	_, err = fmt.Fprintf(ui.Err, "\nLabels published for %s.\n", id)
+	return err
 }
