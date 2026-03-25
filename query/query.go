@@ -165,8 +165,6 @@ func (h *Handler) Run() error {
 
 		h.Renderer.Render(results)
 	}
-
-	return nil
 }
 
 func (h *Handler) completer(topicNames []string) func(in prompt.Document) []prompt.Suggest {

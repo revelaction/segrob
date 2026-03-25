@@ -21,7 +21,7 @@ func liveUnpublishCommand(docRepo storage.DocRepository, opts LiveUnpublishOptio
 		return fmt.Errorf("failed to check existence: %w", err)
 	}
 	if !exists {
-		fmt.Fprintf(ui.Err, "Document %s not found in live tables.\n", id)
+		_, _ = fmt.Fprintf(ui.Err, "Document %s not found in live tables.\n", id)
 		return nil
 	}
 
@@ -32,13 +32,14 @@ func liveUnpublishCommand(docRepo storage.DocRepository, opts LiveUnpublishOptio
 	}
 	if hasLemmas {
 		start := time.Now()
-		if err := docRepo.DeleteLemmaOptimization(id); err != nil {
-			fmt.Fprintf(ui.Err, "DeleteLemmaOpt  ❌ %v\n", err)
-			return fmt.Errorf("DeleteLemmaOptimization failed: %w", err)
+		dErr := docRepo.DeleteLemmaOptimization(id)
+		if dErr != nil {
+			_, _ = fmt.Fprintf(ui.Err, "DeleteLemmaOpt  ❌ %v\n", dErr)
+			return fmt.Errorf("DeleteLemmaOptimization failed: %w", dErr)
 		}
-		fmt.Fprintf(ui.Err, "DeleteLemmaOpt  ✅ %s\n", time.Since(start))
+		_, _ = fmt.Fprintf(ui.Err, "DeleteLemmaOpt  ✅ %s\n", time.Since(start))
 	} else {
-		fmt.Fprintf(ui.Err, "DeleteLemmaOpt  ✅ (already removed)\n")
+		_, _ = fmt.Fprintf(ui.Err, "DeleteLemmaOpt  ✅ (already removed)\n")
 	}
 
 	// Phase 2 — remove label index.
@@ -48,13 +49,14 @@ func liveUnpublishCommand(docRepo storage.DocRepository, opts LiveUnpublishOptio
 	}
 	if hasLabels {
 		start := time.Now()
-		if err := docRepo.DeleteLabelsOptimization(id); err != nil {
-			fmt.Fprintf(ui.Err, "DeleteLabelsOpt ❌ %v\n", err)
-			return fmt.Errorf("DeleteLabelsOptimization failed: %w", err)
+		dErr := docRepo.DeleteLabelsOptimization(id)
+		if dErr != nil {
+			_, _ = fmt.Fprintf(ui.Err, "DeleteLabelsOpt ❌ %v\n", dErr)
+			return fmt.Errorf("DeleteLabelsOptimization failed: %w", dErr)
 		}
-		fmt.Fprintf(ui.Err, "DeleteLabelsOpt ✅ %s\n", time.Since(start))
+		_, _ = fmt.Fprintf(ui.Err, "DeleteLabelsOpt ✅ %s\n", time.Since(start))
 	} else {
-		fmt.Fprintf(ui.Err, "DeleteLabelsOpt ✅ (already removed)\n")
+		_, _ = fmt.Fprintf(ui.Err, "DeleteLabelsOpt ✅ (already removed)\n")
 	}
 
 	// Phase 3 — remove sentences.
@@ -64,13 +66,14 @@ func liveUnpublishCommand(docRepo storage.DocRepository, opts LiveUnpublishOptio
 	}
 	if hasSentences {
 		start := time.Now()
-		if err := docRepo.DeleteNlpData(id); err != nil {
-			fmt.Fprintf(ui.Err, "DeleteNlpData   ❌ %v\n", err)
-			return fmt.Errorf("DeleteNlpData failed: %w", err)
+		dErr := docRepo.DeleteNlpData(id)
+		if dErr != nil {
+			_, _ = fmt.Fprintf(ui.Err, "DeleteNlpData   ❌ %v\n", dErr)
+			return fmt.Errorf("DeleteNlpData failed: %w", dErr)
 		}
-		fmt.Fprintf(ui.Err, "DeleteNlpData   ✅ %s\n", time.Since(start))
+		_, _ = fmt.Fprintf(ui.Err, "DeleteNlpData   ✅ %s\n", time.Since(start))
 	} else {
-		fmt.Fprintf(ui.Err, "DeleteNlpData   ✅ (already removed)\n")
+		_, _ = fmt.Fprintf(ui.Err, "DeleteNlpData   ✅ (already removed)\n")
 	}
 
 	// Phase 4 — remove doc row.
@@ -80,15 +83,16 @@ func liveUnpublishCommand(docRepo storage.DocRepository, opts LiveUnpublishOptio
 	}
 	if exists {
 		start := time.Now()
-		if err := docRepo.DeleteMeta(id); err != nil {
-			fmt.Fprintf(ui.Err, "DeleteMeta      ❌ %v\n", err)
-			return fmt.Errorf("DeleteMeta failed: %w", err)
+		dErr := docRepo.DeleteMeta(id)
+		if dErr != nil {
+			_, _ = fmt.Fprintf(ui.Err, "DeleteMeta      ❌ %v\n", dErr)
+			return fmt.Errorf("DeleteMeta failed: %w", dErr)
 		}
-		fmt.Fprintf(ui.Err, "DeleteMeta      ✅ %s\n", time.Since(start))
+		_, _ = fmt.Fprintf(ui.Err, "DeleteMeta      ✅ %s\n", time.Since(start))
 	} else {
-		fmt.Fprintf(ui.Err, "DeleteMeta      ✅ (already removed)\n")
+		_, _ = fmt.Fprintf(ui.Err, "DeleteMeta      ✅ (already removed)\n")
 	}
 
-	fmt.Fprintf(ui.Err, "\nUnpublished %s.\n", id)
+	_, _ = fmt.Fprintf(ui.Err, "\nUnpublished %s.\n", id)
 	return nil
 }

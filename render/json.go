@@ -19,7 +19,7 @@ func NewJSONRenderer(w io.Writer) *JSONRenderer {
 
 // Render serializes sentence match results as a JSON array.
 func (r *JSONRenderer) Render(results []*match.SentenceMatch) {
-	json.NewEncoder(r.W).Encode(results)
+	_ = json.NewEncoder(r.W).Encode(results)
 }
 
 // compile-time interface check

@@ -22,16 +22,19 @@ func liveLsCommand(repo storage.DocReader, opts LiveLsOptions, ui UI) error {
 	labelMap := allLabels.Reverse()
 
 	// Print header
-	fmt.Fprintf(ui.Out, liveLsFmt, "ID", "TITLE", "CREATOR", "TRANSLATOR", "DATE", "LANG")
+	_, _ = fmt.Fprintf(ui.Out, liveLsFmt, "ID", "TITLE", "CREATOR", "TRANSLATOR", "DATE", "LANG")
+
 
 	for _, doc := range docs {
 		// Collect labels for the document
 		var labelParts []string
 		for _, id := range doc.LabelIDs {
-			if name, ok := labelMap[id]; ok {
+			name, ok := labelMap[id]
+			if ok {
 				labelParts = append(labelParts, name)
 			}
 		}
+
 
 		// Filter
 		if opts.Match != "" {
@@ -48,7 +51,7 @@ func liveLsCommand(repo storage.DocReader, opts LiveLsOptions, ui UI) error {
 		}
 
 		// Print tabular row
-		fmt.Fprintf(ui.Out, liveLsFmt,
+		_, _ = fmt.Fprintf(ui.Out, liveLsFmt,
 			doc.Id,
 			truncate(extractLabelValue(labelParts, "title:"), 25),
 			truncate(extractLabelValue(labelParts, "creator:"), 14),

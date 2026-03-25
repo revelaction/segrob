@@ -84,11 +84,11 @@ func parseLiveShowArgs(args []string, ui UI) (ShowOptions, string, error) {
 
 	fs.Usage = func() {
 		w := fs.Output()
-		fmt.Fprintf(w, "Usage: %s live show [options] <doc_id>\n\n", os.Args[0])
-		fmt.Fprintf(w, "  Show contents of a document from the configured repository.\n")
-		fmt.Fprintf(w, "\nArguments:\n")
-		fmt.Fprintf(w, helpArgFmt, "doc_id", "ID of the document to show")
-		fmt.Fprintf(w, "\nOptions:\n")
+		_, _ = fmt.Fprintf(w, "Usage: %s live show [options] <doc_id>\n\n", os.Args[0])
+		_, _ = fmt.Fprintf(w, "  Show contents of a document from the configured repository.\n")
+		_, _ = fmt.Fprintf(w, "\nArguments:\n")
+		_, _ = fmt.Fprintf(w, helpArgFmt, "doc_id", "ID of the document to show")
+		_, _ = fmt.Fprintf(w, "\nOptions:\n")
 		printOpt(w, "--start", "INDEX", "Index of the first sentence to show (default: 0)")
 		printOpt(w, "-n, --number", "N", "Number of sentences to show")
 		printOpt(w, "-s, --stats", "", "Show document statistics")
@@ -130,9 +130,9 @@ func parseLiveLsArgs(args []string, ui UI) (LiveLsOptions, bool, error) {
 
 	fs.Usage = func() {
 		w := fs.Output()
-		fmt.Fprintf(w, "Usage: %s live ls [options]\n\n", os.Args[0])
-		fmt.Fprintf(w, "  List all documents in the repository.\n")
-		fmt.Fprintf(w, "\nOptions:\n")
+		_, _ = fmt.Fprintf(w, "Usage: %s live ls [options]\n\n", os.Args[0])
+		_, _ = fmt.Fprintf(w, "  List all documents in the repository.\n")
+		_, _ = fmt.Fprintf(w, "\nOptions:\n")
 		printOpt(w, "-d, --doc-path", "PATH", "Path to docs directory or SQLite file (or SEGROB_LIVE_DB)")
 		printOpt(w, "-m, --match", "STRING", "Only list documents with at least one label containing STRING")
 	}
@@ -172,12 +172,12 @@ func parseLiveShowSentArgs(args []string, ui UI) (LiveShowSentOptions, string, i
 
 	fs.Usage = func() {
 		w := fs.Output()
-		fmt.Fprintf(w, "Usage: %s live show-sent [options] <doc_id> <sentence_id>\n\n", os.Args[0])
-		fmt.Fprintf(w, "  Show details of a specific sentence from the configured repository.\n")
-		fmt.Fprintf(w, "\nArguments:\n")
-		fmt.Fprintf(w, helpArgFmt, "doc_id", "ID of the document")
-		fmt.Fprintf(w, helpArgFmt, "sentence_id", "Index of the sentence")
-		fmt.Fprintf(w, "\nOptions:\n")
+		_, _ = fmt.Fprintf(w, "Usage: %s live show-sent [options] <doc_id> <sentence_id>\n\n", os.Args[0])
+		_, _ = fmt.Fprintf(w, "  Show details of a specific sentence from the configured repository.\n")
+		_, _ = fmt.Fprintf(w, "\nArguments:\n")
+		_, _ = fmt.Fprintf(w, helpArgFmt, "doc_id", "ID of the document")
+		_, _ = fmt.Fprintf(w, helpArgFmt, "sentence_id", "Index of the sentence")
+		_, _ = fmt.Fprintf(w, "\nOptions:\n")
 		printOpt(w, "-s, --stats", "", "Show sentence statistics")
 		printOpt(w, "--db", "PATH", "Path to SQLite file (or SEGROB_LIVE_DB)")
 	}
@@ -227,12 +227,12 @@ func parseLiveFindTopicsArgs(args []string, ui UI) (LiveFindTopicsOptions, strin
 
 	fs.Usage = func() {
 		w := fs.Output()
-		fmt.Fprintf(w, "Usage: %s live find-topics [options] <doc_id> <sentence_id>\n\n", os.Args[0])
-		fmt.Fprintf(w, "  Show topics for a specific sentence from the configured repository.\n")
-		fmt.Fprintf(w, "\nArguments:\n")
-		fmt.Fprintf(w, helpArgFmt, "doc_id", "ID of the document")
-		fmt.Fprintf(w, helpArgFmt, "sentence_id", "Index of the sentence")
-		fmt.Fprintf(w, "\nOptions:\n")
+		_, _ = fmt.Fprintf(w, "Usage: %s live find-topics [options] <doc_id> <sentence_id>\n\n", os.Args[0])
+		_, _ = fmt.Fprintf(w, "  Show topics for a specific sentence from the configured repository.\n")
+		_, _ = fmt.Fprintf(w, "\nArguments:\n")
+		_, _ = fmt.Fprintf(w, helpArgFmt, "doc_id", "ID of the document")
+		_, _ = fmt.Fprintf(w, helpArgFmt, "sentence_id", "Index of the sentence")
+		_, _ = fmt.Fprintf(w, "\nOptions:\n")
 		printOpt(w, "-d, --doc-path", "PATH", "Path to docs directory or SQLite file (or SEGROB_LIVE_DB)")
 		printOpt(w, "-t, --topic-path", "PATH", "Path to topics directory or SQLite file (or SEGROB_TOPIC_PATH)")
 		printOpt(w, "-f, --format", "FORMAT", "Output format: all, part, or lemma (default: "+render.Defaultformat+")")
@@ -309,11 +309,11 @@ func parseLiveFindArgs(args []string, ui UI) (LiveFindOptions, []string, bool, e
 
 	fs.Usage = func() {
 		w := fs.Output()
-		fmt.Fprintf(w, "Usage: %s live find [options] <expr>...\n\n", os.Args[0])
-		fmt.Fprintf(w, "  Find sentences matching a topic expression.\n")
-		fmt.Fprintf(w, "\nArguments:\n")
-		fmt.Fprintf(w, helpArgFmt, "expr", "One or more topic expression items")
-		fmt.Fprintf(w, "\nOptions:\n")
+		_, _ = fmt.Fprintf(w, "Usage: %s live find [options] <expr>...\n\n", os.Args[0])
+		_, _ = fmt.Fprintf(w, "  Find sentences matching a topic expression.\n")
+		_, _ = fmt.Fprintf(w, "\nArguments:\n")
+		_, _ = fmt.Fprintf(w, helpArgFmt, "expr", "One or more topic expression items")
+		_, _ = fmt.Fprintf(w, "\nOptions:\n")
 		printOpt(w, "-d, --doc-path", "PATH", "Path to docs directory or SQLite file (or SEGROB_LIVE_DB)")
 		printOpt(w, "-t, --topic-path", "PATH", "Path to topics directory or SQLite file (or SEGROB_TOPIC_PATH)")
 		printOpt(w, "-l, --label", "LABEL", "Only scan documents matching this label (repeatable, all required)")
@@ -386,9 +386,9 @@ func parseLiveQueryArgs(args []string, ui UI) (LiveQueryOptions, bool, bool, err
 
 	fs.Usage = func() {
 		w := fs.Output()
-		fmt.Fprintf(w, "Usage: %s live query [options]\n\n", os.Args[0])
-		fmt.Fprintf(w, "  Enter interactive query mode.\n")
-		fmt.Fprintf(w, "\nOptions:\n")
+		_, _ = fmt.Fprintf(w, "Usage: %s live query [options]\n\n", os.Args[0])
+		_, _ = fmt.Fprintf(w, "  Enter interactive query mode.\n")
+		_, _ = fmt.Fprintf(w, "\nOptions:\n")
 		printOpt(w, "-d, --doc-path", "PATH", "Path to docs directory or SQLite file (or SEGROB_LIVE_DB)")
 		printOpt(w, "-t, --topic-path", "PATH", "Path to topics directory or SQLite file (or SEGROB_TOPIC_PATH)")
 		printOpt(w, "-l, --label", "LABEL", "Only scan documents matching this label (repeatable, all required)")
@@ -445,9 +445,9 @@ func parseLiveLsTopicArgs(args []string, ui UI) (LiveLsTopicOptions, bool, error
 
 	fs.Usage = func() {
 		w := fs.Output()
-		fmt.Fprintf(w, "Usage: %s live ls-topic [options]\n\n", os.Args[0])
-		fmt.Fprintf(w, "  List all topic names in the repository.\n")
-		fmt.Fprintf(w, "\nOptions:\n")
+		_, _ = fmt.Fprintf(w, "Usage: %s live ls-topic [options]\n\n", os.Args[0])
+		_, _ = fmt.Fprintf(w, "  List all topic names in the repository.\n")
+		_, _ = fmt.Fprintf(w, "\nOptions:\n")
 		printOpt(w, "-t, --topic-path", "PATH", "Path to topics directory or SQLite file (or SEGROB_TOPIC_PATH)")
 	}
 
@@ -485,11 +485,11 @@ func parseLiveShowTopicArgs(args []string, ui UI) (LiveShowTopicOptions, string,
 
 	fs.Usage = func() {
 		w := fs.Output()
-		fmt.Fprintf(w, "Usage: %s live show-topic [options] <name>\n\n", os.Args[0])
-		fmt.Fprintf(w, "  Show expressions of a named topic.\n")
-		fmt.Fprintf(w, "\nArguments:\n")
-		fmt.Fprintf(w, helpArgFmt, "name", "Topic name to inspect")
-		fmt.Fprintf(w, "\nOptions:\n")
+		_, _ = fmt.Fprintf(w, "Usage: %s live show-topic [options] <name>\n\n", os.Args[0])
+		_, _ = fmt.Fprintf(w, "  Show expressions of a named topic.\n")
+		_, _ = fmt.Fprintf(w, "\nArguments:\n")
+		_, _ = fmt.Fprintf(w, helpArgFmt, "name", "Topic name to inspect")
+		_, _ = fmt.Fprintf(w, "\nOptions:\n")
 		printOpt(w, "-t, --topic-path", "PATH", "Path to topics directory or SQLite file (or SEGROB_TOPIC_PATH)")
 	}
 
@@ -530,10 +530,10 @@ func parseLiveInitArgs(args []string, ui UI) (LiveInitOptions, error) {
 
 	fs.Usage = func() {
 		w := fs.Output()
-		fmt.Fprintf(w, "Usage: %s live init <db>\n\n", os.Args[0])
-		fmt.Fprintf(w, "  Initialize a new SQLite database with the required schema.\n")
-		fmt.Fprintf(w, "\nArguments:\n")
-		fmt.Fprintf(w, helpArgFmt, "db", "Path to the SQLite file to create")
+		_, _ = fmt.Fprintf(w, "Usage: %s live init <db>\n\n", os.Args[0])
+		_, _ = fmt.Fprintf(w, "  Initialize a new SQLite database with the required schema.\n")
+		_, _ = fmt.Fprintf(w, "\nArguments:\n")
+		_, _ = fmt.Fprintf(w, helpArgFmt, "db", "Path to the SQLite file to create")
 	}
 
 	if err := fs.Parse(args); err != nil {
@@ -562,13 +562,13 @@ func parseLiveUnpublishArgs(args []string, ui UI) (LiveUnpublishOptions, error) 
 
 	fs.Usage = func() {
 		w := fs.Output()
-		fmt.Fprintf(w, "Usage: %s live unpublish [options] <id>\n\n", os.Args[0])
-		fmt.Fprintf(w, "  Remove a document from all live tables.\n")
-		fmt.Fprintf(w, "  The removal is the reverse of publish: the live switch (lemma index) is\n")
-		fmt.Fprintf(w, "  cut first, then labels, sentences, and finally the doc row.\n")
-		fmt.Fprintf(w, "\nArguments:\n")
-		fmt.Fprintf(w, helpArgFmt, "id", "Document ID to unpublish")
-		fmt.Fprintf(w, "\nOptions:\n")
+		_, _ = fmt.Fprintf(w, "Usage: %s live unpublish [options] <id>\n\n", os.Args[0])
+		_, _ = fmt.Fprintf(w, "  Remove a document from all live tables.\n")
+		_, _ = fmt.Fprintf(w, "  The removal is the reverse of publish: the live switch (lemma index) is\n")
+		_, _ = fmt.Fprintf(w, "  cut first, then labels, sentences, and finally the doc row.\n")
+		_, _ = fmt.Fprintf(w, "\nArguments:\n")
+		_, _ = fmt.Fprintf(w, helpArgFmt, "id", "Document ID to unpublish")
+		_, _ = fmt.Fprintf(w, "\nOptions:\n")
 		printOpt(w, "--db", "PATH", "Target segrob SQLite file (or SEGROB_LIVE_DB)")
 	}
 

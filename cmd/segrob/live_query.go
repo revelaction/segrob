@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"os"
 
 	"github.com/revelaction/segrob/query"
@@ -10,7 +11,7 @@ import (
 )
 
 // Query command
-func liveQueryCommand(dr storage.DocRepository, tr storage.TopicRepository, opts LiveQueryOptions, ui UI) error {
+func liveQueryCommand(dr storage.DocRepository, tr storage.TopicRepository, opts LiveQueryOptions, ui UI) (err error) {
 
 	// Terminal Reset
 	//
@@ -22,13 +23,17 @@ func liveQueryCommand(dr storage.DocRepository, tr storage.TopicRepository, opts
 	// For interactive commands, we save the terminal state (Cooked Mode)
 	// and strictly restore it when the function returns.
 	fd := int(os.Stdin.Fd())
-	if state, err := term.GetState(fd); err == nil {
-		defer term.Restore(fd, state)
+	state, gErr := term.GetState(fd)
+	if gErr == nil {
+		defer func() {
+			err = errors.Join(err, term.Restore(fd, state))
+		}()
 	}
 
-	topicLib, err := tr.ReadAll()
-	if err != nil {
-		return err
+
+	topicLib, rErr := tr.ReadAll()
+	if rErr != nil {
+		return rErr
 	}
 
 	r := render.NewCLIRenderer()
@@ -40,5 +45,11 @@ func liveQueryCommand(dr storage.DocRepository, tr storage.TopicRepository, opts
 
 	// now present the REPL and prepare for topic in the REPL
 	t := query.NewHandler(dr, topicLib, r, opts.Labels)
-	return t.Run()
+	tErr := t.Run()
+	if tErr != nil {
+		return tErr
+	}
+
+	return nil
 }
+

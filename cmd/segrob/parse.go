@@ -26,7 +26,7 @@ func printOpt(w io.Writer, flags, meta, desc string) {
 	if meta != "" {
 		left = flags + " " + meta
 	}
-	fmt.Fprintf(w, helpOptFmt, left, desc)
+	_, _ = fmt.Fprintf(w, helpOptFmt, left, desc)
 }
 
 // ShowOptions defines shared pagination and source settings for "show" commands (live and corpus).
@@ -98,16 +98,17 @@ func parseMainArgs(args []string, ui UI) (string, []string, error) {
 	fs.SetOutput(io.Discard)
 	setupUsage(fs)
 
-	if err := fs.Parse(args); err != nil {
-		if errors.Is(err, flag.ErrHelp) {
+	pErr := fs.Parse(args)
+	if pErr != nil {
+		if errors.Is(pErr, flag.ErrHelp) {
 			fs.SetOutput(ui.Out)
 			fs.Usage()
-			return "", nil, err
+			return "", nil, pErr
 		}
 		fs.SetOutput(ui.Err)
-		fprintErr(ui.Err, err)
+		fprintErr(ui.Err, pErr)
 		fs.Usage()
-		return "", nil, err
+		return "", nil, pErr
 	}
 
 	if fs.NArg() == 0 {
@@ -127,20 +128,21 @@ func parseBashArgs(args []string, ui UI) error {
 
 	fs.Usage = func() {
 		w := fs.Output()
-		fmt.Fprintf(w, "Usage: %s bash\n\n", os.Args[0])
-		fmt.Fprintf(w, "  Output bash completion script.\n")
+		_, _ = fmt.Fprintf(w, "Usage: %s bash\n\n", os.Args[0])
+		_, _ = fmt.Fprintf(w, "  Output bash completion script.\n")
 	}
 
-	if err := fs.Parse(args); err != nil {
-		if errors.Is(err, flag.ErrHelp) {
+	pErr := fs.Parse(args)
+	if pErr != nil {
+		if errors.Is(pErr, flag.ErrHelp) {
 			fs.SetOutput(ui.Out)
 			fs.Usage()
-			return err
+			return pErr
 		}
 		fs.SetOutput(ui.Err)
-		fprintErr(ui.Err, err)
+		fprintErr(ui.Err, pErr)
 		fs.Usage()
-		return err
+		return pErr
 	}
 	return nil
 }
@@ -149,8 +151,9 @@ func parseCompleteArgs(args []string, ui UI) ([]string, error) {
 	fs := flag.NewFlagSet("complete", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
 
-	if err := fs.Parse(args); err != nil {
-		return nil, err
+	pErr := fs.Parse(args)
+	if pErr != nil {
+		return nil, pErr
 	}
 
 	return fs.Args(), nil
@@ -159,17 +162,17 @@ func parseCompleteArgs(args []string, ui UI) ([]string, error) {
 func setupUsage(fs *flag.FlagSet) {
 	fs.Usage = func() {
 		w := fs.Output()
-		fmt.Fprintf(w, "Usage: %s command [command options] [arguments...]\n\n", os.Args[0])
-		fmt.Fprintf(w, "  Sentence dictionary based on NLP topics\n")
+		_, _ = fmt.Fprintf(w, "Usage: %s command [command options] [arguments...]\n\n", os.Args[0])
+		_, _ = fmt.Fprintf(w, "  Sentence dictionary based on NLP topics\n")
 
-		fmt.Fprintf(w, "\nCommands:\n")
-		fmt.Fprintf(w, helpCmdFmt, "corpus", "Manage the corpus staging database.")
-		fmt.Fprintf(w, helpCmdFmt, "live", "Manage the live production database.")
-		fmt.Fprintf(w, helpCmdFmt, "bash", "Output bash completion script.")
-		fmt.Fprintf(w, helpCmdFmt, "version", "Show version information.")
-		fmt.Fprintf(w, helpCmdFmt, "help", "Show help for a command.")
+		_, _ = fmt.Fprintf(w, "\nCommands:\n")
+		_, _ = fmt.Fprintf(w, helpCmdFmt, "corpus", "Manage the corpus staging database.")
+		_, _ = fmt.Fprintf(w, helpCmdFmt, "live", "Manage the live production database.")
+		_, _ = fmt.Fprintf(w, helpCmdFmt, "bash", "Output bash completion script.")
+		_, _ = fmt.Fprintf(w, helpCmdFmt, "version", "Show version information.")
+		_, _ = fmt.Fprintf(w, helpCmdFmt, "help", "Show help for a command.")
 
-		fmt.Fprintf(w, "\nVersion: %s, commit %s\n", BuildTag, BuildCommit)
+		_, _ = fmt.Fprintf(w, "\nVersion: %s, commit %s\n", BuildTag, BuildCommit)
 	}
 }
 

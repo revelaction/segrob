@@ -15,7 +15,7 @@ func liveLsTopicCommand(tr storage.TopicRepository, opts LiveLsTopicOptions, ui 
 	}
 
 	for topicId, name := range topicLib.Names() {
-		fmt.Fprintf(ui.Out, "📖 %d %s \n", topicId, name)
+		_, _ = fmt.Fprintf(ui.Out, "📖 %d %s \n", topicId, name)
 	}
 
 	return nil

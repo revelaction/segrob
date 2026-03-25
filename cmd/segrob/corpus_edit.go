@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"os"
 
 	"github.com/revelaction/segrob/edit"
@@ -8,17 +9,25 @@ import (
 	"golang.org/x/term"
 )
 
-func corpusEditCommand(tr storage.TopicRepository, opts CorpusEditOptions, ui UI) error {
+func corpusEditCommand(tr storage.TopicRepository, opts CorpusEditOptions, ui UI) (err error) {
 	fd := int(os.Stdin.Fd())
-	if state, err := term.GetState(fd); err == nil {
-		defer term.Restore(fd, state)
+	state, gErr := term.GetState(fd)
+	if gErr == nil {
+		defer func() {
+			err = errors.Join(err, term.Restore(fd, state))
+		}()
 	}
 
-	topicLib, err := tr.ReadAll()
-	if err != nil {
-		return err
+	topicLib, rErr := tr.ReadAll()
+	if rErr != nil {
+		return rErr
 	}
 
 	hdl := edit.NewHandler(topicLib, tr, tr)
-	return hdl.Run()
+	hdlErr := hdl.Run()
+	if hdlErr != nil {
+		return hdlErr
+	}
+
+	return nil
 }

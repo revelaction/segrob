@@ -7,24 +7,24 @@ import (
 )
 
 func printLiveUsage(w io.Writer) {
-	fmt.Fprintf(w, "Usage: %s live <subcommand> [options]\n\n", os.Args[0])
-	fmt.Fprintf(w, "  Manage the live production database.\n")
+	_, _ = fmt.Fprintf(w, "Usage: %s live <subcommand> [options]\n\n", os.Args[0])
+	_, _ = fmt.Fprintf(w, "  Manage the live production database.\n")
 
-	fmt.Fprintf(w, "\nSubcommands: Doc - Sentences\n")
-	fmt.Fprintf(w, helpCmdFmt, "ls", "List all documents in the repository.")
-	fmt.Fprintf(w, helpCmdFmt, "show", "Show document contents or statistics.")
-	fmt.Fprintf(w, helpCmdFmt, "show-sent", "Show sentence details or statistics.")
-	fmt.Fprintf(w, helpCmdFmt, "unpublish", "Remove a document from all live tables by id.")
-	fmt.Fprintf(w, helpCmdFmt, "find", "Find sentences matching a topic expression.")
-	fmt.Fprintf(w, helpCmdFmt, "find-topics", "Show topics for a specific sentence.")
-	fmt.Fprintf(w, helpCmdFmt, "query", "Enter interactive query mode.")
+	_, _ = fmt.Fprintf(w, "\nSubcommands: Doc - Sentences\n")
+	_, _ = fmt.Fprintf(w, helpCmdFmt, "ls", "List all documents in the repository.")
+	_, _ = fmt.Fprintf(w, helpCmdFmt, "show", "Show document contents or statistics.")
+	_, _ = fmt.Fprintf(w, helpCmdFmt, "show-sent", "Show sentence details or statistics.")
+	_, _ = fmt.Fprintf(w, helpCmdFmt, "unpublish", "Remove a document from all live tables by id.")
+	_, _ = fmt.Fprintf(w, helpCmdFmt, "find", "Find sentences matching a topic expression.")
+	_, _ = fmt.Fprintf(w, helpCmdFmt, "find-topics", "Show topics for a specific sentence.")
+	_, _ = fmt.Fprintf(w, helpCmdFmt, "query", "Enter interactive query mode.")
 
-	fmt.Fprintf(w, "\nSubcommands: Topics\n")
-	fmt.Fprintf(w, helpCmdFmt, "ls-topic", "List all unique topics in the repository.")
-	fmt.Fprintf(w, helpCmdFmt, "show-topic", "Show expressions for a specific topic.")
+	_, _ = fmt.Fprintf(w, "\nSubcommands: Topics\n")
+	_, _ = fmt.Fprintf(w, helpCmdFmt, "ls-topic", "List all unique topics in the repository.")
+	_, _ = fmt.Fprintf(w, helpCmdFmt, "show-topic", "Show expressions for a specific topic.")
 
-	fmt.Fprintf(w, "\nSubcommands: Other\n")
-	fmt.Fprintf(w, helpCmdFmt, "init", "Initialize a new SQLite database with the required schema.")
+	_, _ = fmt.Fprintf(w, "\nSubcommands: Other\n")
+	_, _ = fmt.Fprintf(w, helpCmdFmt, "init", "Initialize a new SQLite database with the required schema.")
 }
 
 func runLiveCommand(args []string, setup *Setup, ui UI) error {
