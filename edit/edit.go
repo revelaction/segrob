@@ -110,7 +110,7 @@ func (t *Handler) completer() func(in prompt.Document) []prompt.Suggest {
 		befCursor := in.TextBeforeCursor()
 
 		// Only one character in line
-		if "" == befCursor {
+		if befCursor == "" {
 			return s
 		}
 
@@ -186,12 +186,12 @@ func (h *Handler) parse(in string) (topic.Topic, topic.TopicExpr, int, error) {
 	}
 
 	if tp.Name == "" {
-		return tp, nil, action, errors.New("There is no such topic: " + tokens[0] + ".")
+		return tp, nil, action, errors.New("there is no such topic: " + tokens[0] + ".")
 	}
 
 	expr := tokens[1:]
 	if len(expr) == 0 {
-		return tp, nil, action, errors.New("No expression given.")
+		return tp, nil, action, errors.New("no expression given")
 	}
 
 	exp, parseErr := topic.Parse(expr)
@@ -229,3 +229,4 @@ func removeExprFromTopic(tp topic.Topic, expr topic.TopicExpr) topic.Topic {
 
 	return topic.Topic{Name: tp.Name, Exprs: exprs}
 }
+

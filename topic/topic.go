@@ -111,11 +111,11 @@ func Parse(args []string) (TopicExpr, error) {
 		near, err := strconv.ParseInt(arg, 10, 64)
 		if err == nil {
 			if idx == 0 {
-				return nil, errors.New("First expression argument can not be number")
+				return nil, errors.New("first expression argument can not be number")
 			}
 
 			if isLastInt {
-				return nil, errors.New("Can not parse two consecutive numbers in the expression")
+				return nil, errors.New("can not parse two consecutive numbers in the expression")
 			}
 
 			lastNear = near

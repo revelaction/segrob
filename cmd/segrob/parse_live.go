@@ -411,21 +411,21 @@ func parseLiveQueryArgs(args []string, ui UI) (LiveQueryOptions, bool, bool, err
 	}
 
 	if opts.TopicPath == "" {
-		return opts, false, false, errors.New("Topic path must be specified via -t or SEGROB_TOPIC_PATH")
+		return opts, false, false, errors.New("topic path must be specified via -t or SEGROB_TOPIC_PATH")
 	}
 
 	if opts.DocPath == "" {
-		return opts, false, false, errors.New("Doc path must be specified via -d or SEGROB_LIVE_DB")
+		return opts, false, false, errors.New("doc path must be specified via -d or SEGROB_LIVE_DB")
 	}
 
 	tinfo, err := os.Stat(opts.TopicPath)
 	if err != nil {
-		return opts, false, false, fmt.Errorf("Topic path not found: %s", opts.TopicPath)
+		return opts, false, false, fmt.Errorf("topic path not found: %s", opts.TopicPath)
 	}
 
 	dinfo, err := os.Stat(opts.DocPath)
 	if err != nil {
-		return opts, false, false, fmt.Errorf("Doc path not found: %s", opts.DocPath)
+		return opts, false, false, fmt.Errorf("doc path not found: %s", opts.DocPath)
 	}
 
 	if err := validatePaths(opts.DocPath, opts.TopicPath); err != nil {

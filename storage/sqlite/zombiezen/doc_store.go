@@ -58,12 +58,6 @@ func (h *DocStore) insertLemmaOptimize(conn *sqlite.Conn, sentenceRowID int64, l
 	})
 }
 
-func (h *DocStore) insertLabelOptimize(conn *sqlite.Conn, sentenceRowID int64, labelID int) error {
-	return sqlitex.Execute(conn, "INSERT INTO sentence_labels (label_id, sentence_rowid) VALUES (?, ?)", &sqlitex.ExecOptions{
-		Args: []interface{}{labelID, sentenceRowID},
-	})
-}
-
 func (h *DocStore) List() ([]sent.Meta, error) {
 	conn, err := h.pool.Take(context.TODO())
 	if err != nil {

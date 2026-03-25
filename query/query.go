@@ -183,7 +183,7 @@ func (h *Handler) completer(topicNames []string) func(in prompt.Document) []prom
 		befCursor := in.TextBeforeCursor()
 
 		// Only one character in line
-		if "" == befCursor {
+		if befCursor == "" {
 			return s
 		}
 
@@ -281,7 +281,7 @@ func (h *Handler) parse(in string) (topic.Topic, topic.TopicExpr, error) {
 	tokens := strings.Fields(in)
 
 	if len(tokens) == 0 {
-		return tp, nil, errors.New("No topic given to refine")
+		return tp, nil, errors.New("no topic given to refine")
 	}
 
 	isFirstTopic := false
@@ -302,7 +302,7 @@ func (h *Handler) parse(in string) (topic.Topic, topic.TopicExpr, error) {
 
 	if len(expr) == 0 {
 		if !isFirstTopic {
-			return tp, nil, errors.New("There are no topic and no expr")
+			return tp, nil, errors.New("there are no topic and no expr")
 		}
 	}
 
