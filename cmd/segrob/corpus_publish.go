@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -38,7 +39,10 @@ func corpusPublishCommand(corpusRepo storage.CorpusRepository, docRepo storage.D
 	}
 
 	for i, m := range candidates {
-		fmt.Fprintf(ui.Err, "[%d/%d] %s\n", i+1, len(candidates), m.ID)
+		_, err = fmt.Fprintf(ui.Err, "[%d/%d] %s\n", i+1, len(candidates), m.ID)
+		if err != nil {
+			return err
+		}
 		// force is always false: the HasAck() filter above already guarantees ACK
 		if err := publishOne(corpusRepo, docRepo, m.ID, opts.Move, false, ui); err != nil {
 			return fmt.Errorf("failed to publish %s: %w\n\nFix the issue and re-run the command to continue", m.ID, err)
@@ -49,8 +53,8 @@ func corpusPublishCommand(corpusRepo storage.CorpusRepository, docRepo storage.D
 		}
 	}
 
-	fmt.Fprintf(ui.Err, "Published %d document(s).\n", len(candidates))
-	return nil
+	_, err = fmt.Fprintf(ui.Err, "Published %d document(s).\n", len(candidates))
+	return err
 }
 
 // publishOne publishes a single document through the 4 idempotent transactional phases.
@@ -101,12 +105,18 @@ func publishOne(corpusRepo storage.CorpusRepository, docRepo storage.DocReposito
 		// WriteMeta: upserts labels, INSERT docs with label_ids, returns IDs
 		labelIDs, err = docRepo.WriteMeta(meta.ID, meta.Epub, labels) // [3, 7, 12, 15]
 		if err != nil {
-			fmt.Fprintf(ui.Err, "WriteMeta       ❌ %v\n", err)
-			return fmt.Errorf("WriteMeta failed: %w", err)
+			_, perr := fmt.Fprintf(ui.Err, "WriteMeta       ❌ %v\n", err)
+			return errors.Join(fmt.Errorf("WriteMeta failed: %w", err), perr)
 		}
-		fmt.Fprintf(ui.Err, "WriteMeta       ✅ %s\n", time.Since(start))
+		_, err = fmt.Fprintf(ui.Err, "WriteMeta       ✅ %s\n", time.Since(start))
+		if err != nil {
+			return err
+		}
 	} else {
-		fmt.Fprintf(ui.Err, "WriteMeta       ✅ (already exists)\n")
+		_, err = fmt.Fprintf(ui.Err, "WriteMeta       ✅ (already exists)\n")
+		if err != nil {
+			return err
+		}
 	}
 
 	// Transaction 2: WriteNlpData (idempotent — skip if sentences exist)
@@ -117,12 +127,18 @@ func publishOne(corpusRepo storage.CorpusRepository, docRepo storage.DocReposito
 	if !hasSentences {
 		start := time.Now()
 		if err := docRepo.WriteNlpData(id, doc.Sentences); err != nil {
-			fmt.Fprintf(ui.Err, "WriteNlpData    ❌ %v\n", err)
-			return fmt.Errorf("WriteNlpData failed: %w", err)
+			_, perr := fmt.Fprintf(ui.Err, "WriteNlpData    ❌ %v\n", err)
+			return errors.Join(fmt.Errorf("WriteNlpData failed: %w", err), perr)
 		}
-		fmt.Fprintf(ui.Err, "WriteNlpData    ✅ %s\n", time.Since(start))
+		_, err = fmt.Fprintf(ui.Err, "WriteNlpData    ✅ %s\n", time.Since(start))
+		if err != nil {
+			return err
+		}
 	} else {
-		fmt.Fprintf(ui.Err, "WriteNlpData    ✅ (already exists)\n")
+		_, err = fmt.Fprintf(ui.Err, "WriteNlpData    ✅ (already exists)\n")
+		if err != nil {
+			return err
+		}
 	}
 
 	// Transaction 3: WriteLabelsOptimization (idempotent — skip if labels optimization exists)
@@ -133,12 +149,18 @@ func publishOne(corpusRepo storage.CorpusRepository, docRepo storage.DocReposito
 	if !hasLabels {
 		start := time.Now()
 		if err := docRepo.WriteLabelsOptimization(id, labelIDs); err != nil {
-			fmt.Fprintf(ui.Err, "WriteLabelsOpt  ❌ %v\n", err)
-			return fmt.Errorf("WriteLabelsOptimization failed: %w", err)
+			_, perr := fmt.Fprintf(ui.Err, "WriteLabelsOpt  ❌ %v\n", err)
+			return errors.Join(fmt.Errorf("WriteLabelsOptimization failed: %w", err), perr)
 		}
-		fmt.Fprintf(ui.Err, "WriteLabelsOpt  ✅ %s\n", time.Since(start))
+		_, err = fmt.Fprintf(ui.Err, "WriteLabelsOpt  ✅ %s\n", time.Since(start))
+		if err != nil {
+			return err
+		}
 	} else {
-		fmt.Fprintf(ui.Err, "WriteLabelsOpt  ✅ (already exists)\n")
+		_, err = fmt.Fprintf(ui.Err, "WriteLabelsOpt  ✅ (already exists)\n")
+		if err != nil {
+			return err
+		}
 	}
 
 	// Transaction 4: WriteLemmaOptimization — THE LIVE SWITCH (idempotent)
@@ -149,18 +171,27 @@ func publishOne(corpusRepo storage.CorpusRepository, docRepo storage.DocReposito
 	if !hasLemmas {
 		start := time.Now()
 		if err := docRepo.WriteLemmaOptimization(id, doc.Sentences); err != nil {
-			fmt.Fprintf(ui.Err, "WriteLemmaOpt   ❌ %v\n", err)
-			return fmt.Errorf("WriteLemmaOptimization failed: %w", err)
+			_, perr := fmt.Fprintf(ui.Err, "WriteLemmaOpt   ❌ %v\n", err)
+			return errors.Join(fmt.Errorf("WriteLemmaOptimization failed: %w", err), perr)
 		}
-		fmt.Fprintf(ui.Err, "WriteLemmaOpt   ✅ %s\n", time.Since(start))
+		_, err = fmt.Fprintf(ui.Err, "WriteLemmaOpt   ✅ %s\n", time.Since(start))
+		if err != nil {
+			return err
+		}
 	} else {
-		fmt.Fprintf(ui.Err, "WriteLemmaOpt   ✅ (already exists)\n")
+		_, err = fmt.Fprintf(ui.Err, "WriteLemmaOpt   ✅ (already exists)\n")
+		if err != nil {
+			return err
+		}
 	}
 
 	// Optional: delete nlp field from corpus
 	if move {
 		if err := corpusRepo.ClearNlp(id); err != nil {
-			fmt.Fprintf(ui.Err, "Warning: failed to clear NLP from corpus: %v\n", err)
+			_, perr := fmt.Fprintf(ui.Err, "Warning: failed to clear NLP from corpus: %v\n", err)
+			if perr != nil {
+				return perr
+			}
 		}
 	}
 
