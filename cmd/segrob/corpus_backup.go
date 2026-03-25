@@ -22,21 +22,28 @@ func corpusBackupCommand(
 	tempPath string,
 	opts CorpusBackupOptions,
 	ui UI,
-) error {
-	err := dstMgr.Create("corpus.sql")
+) (err error) {
+	defer func() {
+		err = errors.Join(err, os.Remove(tempPath))
+	}()
+
+	err = dstMgr.Create("corpus.sql")
 	if err != nil {
 		return fmt.Errorf("failed to create backup schemas: %w", err)
 	}
 
 	// List source corpus and copy rows via WriteStream + backupIterator
-	metas, err := srcRepo.List()
-	if err != nil {
-		return fmt.Errorf("failed to list corpus: %w", err)
+	metas, lErr := srcRepo.List()
+	if lErr != nil {
+		return fmt.Errorf("failed to list corpus: %w", lErr)
 	}
 
-	if _, err := fmt.Fprintf(ui.Err, "Backing up %d document(s)...\n", len(metas)); err != nil {
-		return err
+
+	_, pErr := fmt.Fprintf(ui.Err, "Backing up %d document(s)...\n", len(metas))
+	if pErr != nil {
+		return pErr
 	}
+
 
 	seq := backupIterator(srcRepo, metas, opts.WithNlp)
 	err = dstRepo.WriteStream(seq)
@@ -45,21 +52,23 @@ func corpusBackupCommand(
 	}
 
 	// Copy topics
-	topics, err := srcTopics.ReadAll()
-	if err != nil {
-		return fmt.Errorf("failed to read topics: %w", err)
+	topics, rErr := srcTopics.ReadAll()
+	if rErr != nil {
+		return fmt.Errorf("failed to read topics: %w", rErr)
 	}
 
+
 	for _, tp := range topics {
-		err := dstTopics.Write(tp)
-		if err != nil {
-			return fmt.Errorf("failed to write topic %s: %w", tp.Name, err)
+		wErr := dstTopics.Write(tp)
+		if wErr != nil {
+			return fmt.Errorf("failed to write topic %s: %w", tp.Name, wErr)
 		}
 	}
 
 	if len(topics) > 0 {
-		if _, err := fmt.Fprintf(ui.Err, "  ✅ %d topic(s)\n", len(topics)); err != nil {
-			return err
+		_, pErr := fmt.Fprintf(ui.Err, "  ✅ %d topic(s)\n", len(topics))
+		if pErr != nil {
+			return pErr
 		}
 	}
 
@@ -68,11 +77,14 @@ func corpusBackupCommand(
 
 	err = compressFile(tempPath, outputPath)
 	if err != nil {
-		os.Remove(outputPath)
-		return fmt.Errorf("failed to compress backup: %w", err)
+		removeErr := os.Remove(outputPath)
+		return errors.Join(fmt.Errorf("failed to compress backup: %w", err), removeErr)
 	}
 
-	_, _ = fmt.Fprintf(ui.Err, "Backup written to %s\n", outputPath)
+	_, pErr = fmt.Fprintf(ui.Err, "Backup written to %s\n", outputPath)
+	if pErr != nil {
+		return pErr
+	}
 	return nil
 }
 

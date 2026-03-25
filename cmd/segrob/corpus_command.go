@@ -165,7 +165,7 @@ func runCorpusCommand(args []string, setup *Setup, ui UI) error {
 
 		// Temp SQLite file for backup creation
 		tempPath := filepath.Join(os.TempDir(), fmt.Sprintf("corpus-backup-%d.db", time.Now().UnixNano()))
-		defer os.Remove(tempPath)
+
 
 		dstMgr, err := setup.NewSchemaManager(tempPath, "_journal_mode=DELETE")
 		if err != nil {
