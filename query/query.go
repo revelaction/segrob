@@ -15,13 +15,6 @@ import (
 	"github.com/revelaction/segrob/storage"
 )
 
-const (
-	completionThreshold = 2
-
-	// topicPrefix is the Character in the prompt that prefixes the topic
-	topicPrefix = "/"
-)
-
 type Handler struct {
 	DocRepo      storage.DocReader
 	TopicLibrary topic.Library

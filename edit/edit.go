@@ -168,7 +168,7 @@ func (h *Handler) parse(in string) (topic.Topic, topic.TopicExpr, int, error) {
 
 	action := actionAdd
 	if len(tokens) == 0 {
-		return tp, nil, action, errors.New("No topic given to refine")
+		return tp, nil, action, errors.New("no topic given to refine")
 	}
 
 	lastToken := tokens[len(tokens)-1]

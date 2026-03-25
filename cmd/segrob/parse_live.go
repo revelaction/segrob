@@ -344,12 +344,12 @@ func parseLiveFindArgs(args []string, ui UI) (LiveFindOptions, []string, bool, e
 	}
 
 	if opts.DocPath == "" {
-		return opts, nil, false, errors.New("Doc path must be specified via -d or SEGROB_LIVE_DB")
+		return opts, nil, false, errors.New("doc path must be specified via -d or SEGROB_LIVE_DB")
 	}
 
 	info, err := os.Stat(opts.DocPath)
 	if err != nil {
-		return opts, nil, false, fmt.Errorf("Doc path not found: %s", opts.DocPath)
+		return opts, nil, false, fmt.Errorf("doc path not found: %s", opts.DocPath)
 	}
 
 	return opts, fs.Args(), !info.IsDir(), nil
@@ -464,12 +464,12 @@ func parseLiveLsTopicArgs(args []string, ui UI) (LiveLsTopicOptions, bool, error
 	}
 
 	if opts.TopicPath == "" {
-		return opts, false, errors.New("Topic path must be specified via -t or SEGROB_TOPIC_PATH")
+		return opts, false, errors.New("topic path must be specified via -t or SEGROB_TOPIC_PATH")
 	}
 
 	info, err := os.Stat(opts.TopicPath)
 	if err != nil {
-		return opts, false, fmt.Errorf("Topic path not found: %s", opts.TopicPath)
+		return opts, false, fmt.Errorf("topic path not found: %s", opts.TopicPath)
 	}
 
 	return opts, !info.IsDir(), nil
@@ -506,7 +506,7 @@ func parseLiveShowTopicArgs(args []string, ui UI) (LiveShowTopicOptions, string,
 	}
 
 	if opts.TopicPath == "" {
-		return opts, "", false, errors.New("Topic path must be specified via -t or SEGROB_TOPIC_PATH")
+		return opts, "", false, errors.New("topic path must be specified via -t or SEGROB_TOPIC_PATH")
 	}
 
 	if fs.NArg() != 1 {
@@ -516,7 +516,7 @@ func parseLiveShowTopicArgs(args []string, ui UI) (LiveShowTopicOptions, string,
 
 	info, err := os.Stat(opts.TopicPath)
 	if err != nil {
-		return opts, "", false, fmt.Errorf("Topic path not found: %s", opts.TopicPath)
+		return opts, "", false, fmt.Errorf("topic path not found: %s", opts.TopicPath)
 	}
 
 	return opts, name, !info.IsDir(), nil
