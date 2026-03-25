@@ -38,12 +38,10 @@ func corpusBackupCommand(
 		return fmt.Errorf("failed to list corpus: %w", lErr)
 	}
 
-
 	_, pErr := fmt.Fprintf(ui.Err, "Backing up %d document(s)...\n", len(metas))
 	if pErr != nil {
 		return pErr
 	}
-
 
 	seq := backupIterator(srcRepo, metas, opts.WithNlp)
 	err = dstRepo.WriteStream(seq)
@@ -56,7 +54,6 @@ func corpusBackupCommand(
 	if rErr != nil {
 		return fmt.Errorf("failed to read topics: %w", rErr)
 	}
-
 
 	for _, tp := range topics {
 		wErr := dstTopics.Write(tp)

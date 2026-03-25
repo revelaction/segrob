@@ -24,7 +24,6 @@ func liveLsCommand(repo storage.DocReader, opts LiveLsOptions, ui UI) error {
 	// Print header
 	_, _ = fmt.Fprintf(ui.Out, liveLsFmt, "ID", "TITLE", "CREATOR", "TRANSLATOR", "DATE", "LANG")
 
-
 	for _, doc := range docs {
 		// Collect labels for the document
 		var labelParts []string
@@ -34,7 +33,6 @@ func liveLsCommand(repo storage.DocReader, opts LiveLsOptions, ui UI) error {
 				labelParts = append(labelParts, name)
 			}
 		}
-
 
 		// Filter
 		if opts.Match != "" {

@@ -163,7 +163,6 @@ type CorpusIngestNlpOptions struct {
 	Force     bool // -f/--force
 }
 
-
 func parseCorpusIngestNlpArgs(args []string, ui UI) (CorpusIngestNlpOptions, error) {
 	fs := flag.NewFlagSet("corpus ingest-nlp", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
@@ -482,7 +481,6 @@ type CorpusPushTxtOptions struct {
 	DbPath string
 }
 
-
 func parseCorpusPushTxtArgs(args []string, ui UI) (CorpusPushTxtOptions, error) {
 	fs := flag.NewFlagSet("corpus push-txt", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
@@ -583,7 +581,6 @@ type CorpusRmOptions struct {
 	ID     string
 	DbPath string
 }
-
 
 func parseCorpusRmArgs(args []string, ui UI) (CorpusRmOptions, error) {
 	fs := flag.NewFlagSet("corpus rm", flag.ContinueOnError)

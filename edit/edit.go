@@ -227,4 +227,3 @@ func removeExprFromTopic(tp topic.Topic, expr topic.TopicExpr) topic.Topic {
 
 	return topic.Topic{Name: tp.Name, Exprs: exprs}
 }
-
