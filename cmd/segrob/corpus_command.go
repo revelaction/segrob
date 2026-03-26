@@ -33,6 +33,7 @@ func printCorpusUsage(w io.Writer) {
 	_, _ = fmt.Fprintf(w, "\nSubcommands: Publish\n")
 	_, _ = fmt.Fprintf(w, helpCmdFmt, "publish", "Move document(s) from corpus to live (all ACKed when no id).")
 	_, _ = fmt.Fprintf(w, helpCmdFmt, "publish-label", "Push corpus labels into live tables for a document.")
+	_, _ = fmt.Fprintf(w, helpCmdFmt, "publish-topic", "Copy all topics from the corpus database to the live database.")
 
 	_, _ = fmt.Fprintf(w, "\nSubcommands: Backup\n")
 	_, _ = fmt.Fprintf(w, helpCmdFmt, "backup", "Create a gzipped backup of the corpus database.")
@@ -148,6 +149,21 @@ func runCorpusCommand(args []string, setup *Setup, ui UI) error {
 			return err
 		}
 		return corpusPublishLabelCommand(corpusRepo, docRepo, opts, ui)
+
+	case "publish-topic":
+		opts, err := parseCorpusPublishTopicArgs(subArgs, ui)
+		if err != nil {
+			return err
+		}
+		corpusTopics, err := setup.NewCorpusTopicRepository(opts.From)
+		if err != nil {
+			return err
+		}
+		liveTopics, err := setup.NewLiveTopicRepository(opts.To)
+		if err != nil {
+			return err
+		}
+		return corpusPublishTopicCommand(corpusTopics, liveTopics, opts, ui)
 
 	case "backup":
 		opts, err := parseCorpusBackupArgs(subArgs, ui)

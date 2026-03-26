@@ -35,7 +35,7 @@ func (h *TopicStore) ReadAll() (topic.Library, error) {
 	defer h.pool.Put(conn)
 
 	var topics topic.Library
-	query := fmt.Sprintf("SELECT name, exprs FROM %s WHERE user_id IS NULL", h.tableName)
+	query := fmt.Sprintf("SELECT name, exprs FROM %s WHERE user_id = ''", h.tableName)
 	err = sqlitex.Execute(conn, query, &sqlitex.ExecOptions{
 		ResultFunc: func(stmt *sqlite.Stmt) error {
 			name := stmt.ColumnText(0)
@@ -67,7 +67,7 @@ func (h *TopicStore) Read(name string) (topic.Topic, error) {
 
 	var t topic.Topic
 	found := false
-	query := fmt.Sprintf("SELECT name, exprs FROM %s WHERE user_id IS NULL AND name = ? LIMIT 1", h.tableName)
+	query := fmt.Sprintf("SELECT name, exprs FROM %s WHERE user_id = '' AND name = ? LIMIT 1", h.tableName)
 	err = sqlitex.Execute(conn, query, &sqlitex.ExecOptions{
 		Args: []interface{}{name},
 		ResultFunc: func(stmt *sqlite.Stmt) error {
@@ -110,7 +110,7 @@ func (h *TopicStore) Write(tp topic.Topic) error {
 
 	query := fmt.Sprintf(`
 		INSERT INTO %s (user_id, name, exprs, updated)
-		VALUES (NULL, ?, ?, strftime('%s', 'now'))
+		VALUES ('', ?, ?, strftime('%s', 'now'))
 		ON CONFLICT(user_id, name) DO UPDATE SET
 			exprs = excluded.exprs,
 			updated = excluded.updated

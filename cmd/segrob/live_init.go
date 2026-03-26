@@ -8,12 +8,12 @@ import (
 
 func liveInitCommand(mgr storage.SchemaManager, opts LiveInitOptions, ui UI) error {
 
-	err := mgr.Create("doc_canonical.sql")
+	err := mgr.Create("live_canonical.sql")
 	if err != nil {
 		return err
 	}
 
-	err = mgr.Create("doc_optimization.sql")
+	err = mgr.Create("live_optimization.sql")
 	if err != nil {
 		return err
 	}

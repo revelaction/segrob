@@ -972,3 +972,48 @@ func parseCorpusBackupArgs(args []string, ui UI) (CorpusBackupOptions, error) {
 
 	return opts, nil
 }
+
+type CorpusPublishTopicOptions struct {
+	From string // --from / SEGROB_CORPUS_DB
+	To   string // --to   / SEGROB_LIVE_DB
+}
+
+func parseCorpusPublishTopicArgs(args []string, ui UI) (CorpusPublishTopicOptions, error) {
+	fs := flag.NewFlagSet("corpus publish-topic", flag.ContinueOnError)
+	fs.SetOutput(io.Discard)
+
+	var opts CorpusPublishTopicOptions
+	fs.StringVar(&opts.From, "from", os.Getenv("SEGROB_CORPUS_DB"), "")
+	fs.StringVar(&opts.To, "to", os.Getenv("SEGROB_LIVE_DB"), "")
+
+	fs.Usage = func() {
+		w := fs.Output()
+		_, _ = fmt.Fprintf(w, "Usage: %s corpus publish-topic [options]\n\n", os.Args[0])
+		_, _ = fmt.Fprintf(w, "  Copy all topics from the corpus database to the live database.\n")
+		_, _ = fmt.Fprintf(w, "\nOptions:\n")
+		printOpt(w, "--from", "PATH", "Source corpus SQLite file (or SEGROB_CORPUS_DB)")
+		printOpt(w, "--to", "PATH", "Target segrob SQLite file (or SEGROB_LIVE_DB)")
+	}
+
+	if err := fs.Parse(args); err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			fs.SetOutput(ui.Out)
+			fs.Usage()
+			return opts, err
+		}
+		return opts, err
+	}
+
+	if fs.NArg() > 0 {
+		return opts, errors.New("corpus publish-topic does not take any positional arguments")
+	}
+
+	if opts.From == "" {
+		return opts, errors.New("corpus source must be specified via --from or SEGROB_CORPUS_DB")
+	}
+	if opts.To == "" {
+		return opts, errors.New("target db must be specified via --to or SEGROB_LIVE_DB")
+	}
+
+	return opts, nil
+}

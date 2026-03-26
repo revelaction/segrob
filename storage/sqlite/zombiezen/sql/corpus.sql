@@ -26,7 +26,7 @@ CREATE TABLE IF NOT EXISTS corpus (
 
 CREATE TABLE IF NOT EXISTS corpus_topics (
     id        INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id   TEXT,
+    user_id   TEXT NOT NULL DEFAULT '',
     name      TEXT NOT NULL,
     exprs     TEXT NOT NULL,
     created   TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
