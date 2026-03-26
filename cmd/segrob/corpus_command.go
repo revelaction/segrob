@@ -306,14 +306,22 @@ func runCorpusCommand(args []string, setup *Setup, ui UI) error {
 		if err != nil {
 			return err
 		}
-		return corpusImportTopicCommand(opts, ui)
+		dst, err := setup.NewCorpusTopicRepository(opts.DbPath)
+		if err != nil {
+			return err
+		}
+		return corpusImportTopicCommand(dst, opts, ui)
 
 	case "export-topic":
 		opts, err := parseCorpusExportTopicArgs(subArgs, ui)
 		if err != nil {
 			return err
 		}
-		return corpusExportTopicCommand(opts, ui)
+		src, err := setup.NewCorpusTopicRepository(opts.DbPath)
+		if err != nil {
+			return err
+		}
+		return corpusExportTopicCommand(src, opts, ui)
 
 	case "edit":
 		opts, err := parseCorpusEditArgs(subArgs, ui)

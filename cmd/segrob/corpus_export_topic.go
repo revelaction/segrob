@@ -1,23 +1,13 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 
+	"github.com/revelaction/segrob/storage"
 	"github.com/revelaction/segrob/storage/filesystem"
-	"github.com/revelaction/segrob/storage/sqlite/zombiezen"
 )
 
-func corpusExportTopicCommand(opts CorpusExportTopicOptions, ui UI) (err error) {
-	pool, err := zombiezen.NewPool(opts.DbPath)
-	if err != nil {
-		return err
-	}
-	defer func() {
-		err = errors.Join(err, pool.Close())
-	}()
-	src := zombiezen.NewCorpusTopicStore(pool)
-
+func corpusExportTopicCommand(src storage.TopicReader, opts CorpusExportTopicOptions, ui UI) error {
 	dst := filesystem.NewTopicStore(opts.Directory)
 
 	topics, err := src.ReadAll()
