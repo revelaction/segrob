@@ -22,6 +22,7 @@ func printLiveUsage(w io.Writer) {
 	_, _ = fmt.Fprintf(w, "\nSubcommands: Topics\n")
 	_, _ = fmt.Fprintf(w, helpCmdFmt, "ls-topic", "List all unique topics in the repository.")
 	_, _ = fmt.Fprintf(w, helpCmdFmt, "show-topic", "Show expressions for a specific topic.")
+	_, _ = fmt.Fprintf(w, helpCmdFmt, "unpublish-topic", "Remove a topic from the live topics repository.")
 
 	_, _ = fmt.Fprintf(w, "\nSubcommands: Other\n")
 	_, _ = fmt.Fprintf(w, helpCmdFmt, "init", "Initialize a new SQLite database with the required schema.")
@@ -144,6 +145,17 @@ func runLiveCommand(args []string, setup *Setup, ui UI) error {
 			return err
 		}
 		return liveUnpublishCommand(repo, opts, ui)
+
+	case "unpublish-topic":
+		opts, name, err := parseLiveUnpublishTopicArgs(subArgs, ui)
+		if err != nil {
+			return err
+		}
+		deleter, err := setup.NewLiveTopicDeleter(opts.TopicPath)
+		if err != nil {
+			return err
+		}
+		return liveUnpublishTopicCommand(deleter, opts, name, ui)
 
 	case "query":
 		opts, _, _, err := parseLiveQueryArgs(subArgs, ui)

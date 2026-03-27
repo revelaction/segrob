@@ -81,6 +81,15 @@ func (s *Setup) NewCorpusTopicRepository(path string, params ...string) (storage
 	return zombiezen.NewCorpusTopicStore(pool), nil
 }
 
+func (s *Setup) NewLiveTopicDeleter(path string, params ...string) (storage.TopicDeleter, error) {
+	// Live commands only use SQLite backend
+	pool, err := s.getPool(path, params...)
+	if err != nil {
+		return nil, err
+	}
+	return zombiezen.NewLiveTopicStore(pool), nil
+}
+
 // Close closes all managed pools.
 func (s *Setup) Close() error {
 	var firstErr error

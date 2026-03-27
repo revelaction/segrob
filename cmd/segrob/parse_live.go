@@ -67,6 +67,10 @@ type LiveUnpublishOptions struct {
 	ID     string // positional arg: document id
 }
 
+type LiveUnpublishTopicOptions struct {
+	TopicPath string // --topic-path / -t
+}
+
 func parseLiveShowArgs(args []string, ui UI) (ShowOptions, string, error) {
 	fs := flag.NewFlagSet("live show", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
@@ -592,4 +596,43 @@ func parseLiveUnpublishArgs(args []string, ui UI) (LiveUnpublishOptions, error) 
 	}
 
 	return opts, nil
+}
+
+func parseLiveUnpublishTopicArgs(args []string, ui UI) (LiveUnpublishTopicOptions, string, error) {
+	fs := flag.NewFlagSet("live unpublish-topic", flag.ContinueOnError)
+	fs.SetOutput(io.Discard)
+
+	var opts LiveUnpublishTopicOptions
+	fs.StringVar(&opts.TopicPath, "topic-path", os.Getenv("SEGROB_TOPIC_PATH"), "")
+	fs.StringVar(&opts.TopicPath, "t", os.Getenv("SEGROB_TOPIC_PATH"), "")
+
+	fs.Usage = func() {
+		w := fs.Output()
+		_, _ = fmt.Fprintf(w, "Usage: %s live unpublish-topic [options] <name>\n\n", os.Args[0])
+		_, _ = fmt.Fprintf(w, "  Remove a topic from the live topics repository.\n")
+		_, _ = fmt.Fprintf(w, "\nArguments:\n")
+		_, _ = fmt.Fprintf(w, helpArgFmt, "name", "Topic name to remove")
+		_, _ = fmt.Fprintf(w, "\nOptions:\n")
+		printOpt(w, "-t, --topic-path", "PATH", "Path to topics directory or SQLite file (or SEGROB_TOPIC_PATH)")
+	}
+
+	if err := fs.Parse(args); err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			fs.SetOutput(ui.Out)
+			fs.Usage()
+			return opts, "", err
+		}
+		return opts, "", err
+	}
+
+	if opts.TopicPath == "" {
+		return opts, "", errors.New("topic path must be specified via -t or SEGROB_TOPIC_PATH")
+	}
+
+	if fs.NArg() != 1 {
+		return opts, "", errors.New("live unpublish-topic requires exactly one argument: <name>")
+	}
+	name := fs.Arg(0)
+
+	return opts, name, nil
 }

@@ -41,6 +41,7 @@ var liveSubcommands = []string{
 	"find",
 	"find-topics",
 	"unpublish",
+	"unpublish-topic",
 	"init",
 	"ls-topic",
 	"show",

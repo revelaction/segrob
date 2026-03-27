@@ -23,6 +23,12 @@ type TopicWriter interface {
 	Write(tp topic.Topic) error
 }
 
+// TopicDeleter defines delete operations for topic storage
+type TopicDeleter interface {
+	// Delete removes a topic from storage by name
+	Delete(name string) error
+}
+
 // TopicRepository combines read and write operations
 type TopicRepository interface {
 	TopicReader
