@@ -298,9 +298,8 @@ func parseCorpusIngestMetaArgs(args []string, ui UI) (CorpusIngestMetaOptions, e
 	}
 
     if fs.NArg() != 1 {
-        const msg = "requires exactly one directory argument"  
-        fprintUsageError(ui.Err, fs, ingestMetaSynopsis, msg)
-        return opts, errors.New(msg)
+        fprintUsageError(ui.Err, fs, ingestMetaSynopsis)
+        return opts, errors.New("requires exactly one directory argument")
     }
 
 	dir := fs.Arg(0)

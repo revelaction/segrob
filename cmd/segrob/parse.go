@@ -33,7 +33,7 @@ func fprintUsage(w io.Writer, fs *flag.FlagSet, synopsis string) {
     fmt.Fprintf(w, "Usage: %s %s %s\n\n", os.Args[0], fs.Name(), synopsis)
 }
 
-func fprintUsageError(w io.Writer, fs *flag.FlagSet, synopsis, msg string) {
+func fprintUsageError(w io.Writer, fs *flag.FlagSet, synopsis string) {
     fprintUsage(w, fs, synopsis)
     fmt.Fprintf(w, "Run '%s %s --help' for more information.\n\n", os.Args[0], fs.Name())
 }
