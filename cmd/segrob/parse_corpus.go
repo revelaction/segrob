@@ -16,12 +16,14 @@ func parseCorpusInitArgs(args []string, ui UI) (CorpusInitOptions, error) {
 	fs := flag.NewFlagSet("corpus init", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
 
+	const initSynopsis = "[options]"
+
 	var opts CorpusInitOptions
 	fs.StringVar(&opts.DbPath, "db", os.Getenv("SEGROB_CORPUS_DB"), "")
 
 	fs.Usage = func() {
 		w := fs.Output()
-		_, _ = fmt.Fprintf(w, "Usage: %s corpus init [options]\n\n", os.Args[0])
+		fprintUsage(w, fs, initSynopsis)
 		_, _ = fmt.Fprintf(w, "  Initialize the corpus staging database.\n")
 		_, _ = fmt.Fprintf(w, "\nOptions:\n")
 		printOpt(w, "--db", "FILE", "Output SQLite file for corpus data (or SEGROB_CORPUS_DB)")
@@ -56,6 +58,8 @@ func parseCorpusPublishArgs(args []string, ui UI) (CorpusPublishOptions, error) 
 	fs := flag.NewFlagSet("corpus publish", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
 
+	const publishSynopsis = "[options] [id]"
+
 	var opts CorpusPublishOptions
 	fs.StringVar(&opts.From, "from", os.Getenv("SEGROB_CORPUS_DB"), "Source corpus SQLite file")
 	fs.StringVar(&opts.To, "to", os.Getenv("SEGROB_LIVE_DB"), "Target segrob SQLite file")
@@ -66,7 +70,7 @@ func parseCorpusPublishArgs(args []string, ui UI) (CorpusPublishOptions, error) 
 
 	fs.Usage = func() {
 		w := fs.Output()
-		_, _ = fmt.Fprintf(w, "Usage: %s corpus publish [options] [id]\n\n", os.Args[0])
+		fprintUsage(w, fs, publishSynopsis)
 		_, _ = fmt.Fprintf(w, "  Move documents from corpus staging to live production tables.\n")
 		_, _ = fmt.Fprintf(w, "  When no id is given, publishes all acknowledged documents.\n")
 		_, _ = fmt.Fprintf(w, "\nArguments:\n")
@@ -93,6 +97,7 @@ func parseCorpusPublishArgs(args []string, ui UI) (CorpusPublishOptions, error) 
 	case 1:
 		opts.ID = fs.Arg(0)
 	default:
+		fprintUsageError(ui.Err, fs, publishSynopsis)
 		return opts, errors.New("corpus publish accepts zero or one argument: [id]")
 	}
 
@@ -116,13 +121,15 @@ func parseCorpusPublishLabelArgs(args []string, ui UI) (CorpusPublishLabelOption
 	fs := flag.NewFlagSet("corpus publish-label", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
 
+	const publishLabelSynopsis = "[options] <id>"
+
 	var opts CorpusPublishLabelOptions
 	fs.StringVar(&opts.From, "from", os.Getenv("SEGROB_CORPUS_DB"), "")
 	fs.StringVar(&opts.To, "to", os.Getenv("SEGROB_LIVE_DB"), "")
 
 	fs.Usage = func() {
 		w := fs.Output()
-		_, _ = fmt.Fprintf(w, "Usage: %s corpus publish-label [options] <id>\n\n", os.Args[0])
+		fprintUsage(w, fs, publishLabelSynopsis)
 		_, _ = fmt.Fprintf(w, "  Push the current corpus labels for <id> into the live tables.\n")
 		_, _ = fmt.Fprintf(w, "\nArguments:\n")
 		_, _ = fmt.Fprintf(w, helpArgFmt, "id", "Document ID")
@@ -141,6 +148,7 @@ func parseCorpusPublishLabelArgs(args []string, ui UI) (CorpusPublishLabelOption
 	}
 
 	if fs.NArg() != 1 {
+		fprintUsageError(ui.Err, fs, publishLabelSynopsis)
 		return opts, errors.New("corpus publish-label requires exactly one argument: <id>")
 	}
 
@@ -167,6 +175,8 @@ func parseCorpusIngestNlpArgs(args []string, ui UI) (CorpusIngestNlpOptions, err
 	fs := flag.NewFlagSet("corpus ingest-nlp", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
 
+	const ingestNlpSynopsis = "[options] <id>"
+
 	var opts CorpusIngestNlpOptions
 	fs.StringVar(&opts.NlpScript, "nlp-script", os.Getenv("SEGROB_NLP_SCRIPT"), "")
 	fs.StringVar(&opts.NlpScript, "s", os.Getenv("SEGROB_NLP_SCRIPT"), "")
@@ -176,7 +186,7 @@ func parseCorpusIngestNlpArgs(args []string, ui UI) (CorpusIngestNlpOptions, err
 
 	fs.Usage = func() {
 		w := fs.Output()
-		_, _ = fmt.Fprintf(w, "Usage: %s corpus ingest-nlp [options] <id>\n\n", os.Args[0])
+		fprintUsage(w, fs, ingestNlpSynopsis)
 		_, _ = fmt.Fprintf(w, "  Process document text with NLP and store results in the corpus.\n")
 		_, _ = fmt.Fprintf(w, "\nArguments:\n")
 		_, _ = fmt.Fprintf(w, helpArgFmt, "id", "Document ID to process")
@@ -203,6 +213,7 @@ func parseCorpusIngestNlpArgs(args []string, ui UI) (CorpusIngestNlpOptions, err
 	}
 
 	if fs.NArg() != 1 {
+		fprintUsageError(ui.Err, fs, ingestNlpSynopsis)
 		return opts, fmt.Errorf("requires exactly 1 argument (doc ID)")
 	}
 	opts.ID = fs.Arg(0)
@@ -213,6 +224,8 @@ func parseCorpusIngestNlpArgs(args []string, ui UI) (CorpusIngestNlpOptions, err
 func parseCorpusShowArgs(args []string, ui UI) (ShowOptions, string, error) {
 	fs := flag.NewFlagSet("corpus show", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
+
+	const showSynopsis = "[options] <id>"
 
 	var opts ShowOptions
 	fs.IntVar(&opts.Start, "start", 0, "")
@@ -226,7 +239,7 @@ func parseCorpusShowArgs(args []string, ui UI) (ShowOptions, string, error) {
 
 	fs.Usage = func() {
 		w := fs.Output()
-		_, _ = fmt.Fprintf(w, "Usage: %s corpus show [options] <id>\n\n", os.Args[0])
+		fprintUsage(w, fs, showSynopsis)
 		_, _ = fmt.Fprintf(w, "  Show rendered contents of a document's NLP field from the corpus staging database.\n")
 		_, _ = fmt.Fprintf(w, "\nArguments:\n")
 		_, _ = fmt.Fprintf(w, helpArgFmt, "id", "Document ID")
@@ -252,6 +265,7 @@ func parseCorpusShowArgs(args []string, ui UI) (ShowOptions, string, error) {
 	}
 
 	if fs.NArg() != 1 {
+		fprintUsageError(ui.Err, fs, showSynopsis)
 		return opts, "", errors.New("corpus show requires exactly one argument: <id>")
 	}
 	arg := fs.Arg(0)
@@ -269,17 +283,16 @@ func parseCorpusIngestMetaArgs(args []string, ui UI) (CorpusIngestMetaOptions, e
 	fs := flag.NewFlagSet("corpus ingest-meta", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
 
-    const ingestMetaSynopsis = "[options] <dir>"
+	const ingestMetaSynopsis = "[options] <dir>"
 
 	var opts CorpusIngestMetaOptions
 	fs.StringVar(&opts.DbPath, "db", os.Getenv("SEGROB_CORPUS_DB"), "")
 	fs.BoolVar(&opts.Pandoc, "pandoc", false, "")
 	fs.BoolVar(&opts.Pandoc, "p", false, "")
 
-
 	fs.Usage = func() {
 		w := fs.Output()
-        fprintUsage(w, fs, ingestMetaSynopsis)
+		fprintUsage(w, fs, ingestMetaSynopsis)
 		_, _ = fmt.Fprintf(w, "  Scan a directory for epub files and build a corpus database.\n")
 		_, _ = fmt.Fprintf(w, "\nArguments:\n")
 		_, _ = fmt.Fprintf(w, helpArgFmt, "dir", "Directory to scan for epub files")
@@ -297,10 +310,10 @@ func parseCorpusIngestMetaArgs(args []string, ui UI) (CorpusIngestMetaOptions, e
 		return opts, err
 	}
 
-    if fs.NArg() != 1 {
-        fprintUsageError(ui.Err, fs, ingestMetaSynopsis)
-        return opts, errors.New("requires exactly one directory argument")
-    }
+	if fs.NArg() != 1 {
+		fprintUsageError(ui.Err, fs, ingestMetaSynopsis)
+		return opts, errors.New("requires exactly one directory argument")
+	}
 
 	dir := fs.Arg(0)
 	info, err := os.Stat(dir)
@@ -330,6 +343,8 @@ func parseCorpusDumpTxtArgs(args []string, ui UI) (CorpusDumpTxtOptions, error) 
 	fs := flag.NewFlagSet("corpus dump-txt", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
 
+	const dumpTxtSynopsis = "[options] <id>"
+
 	var opts CorpusDumpTxtOptions
 	fs.StringVar(&opts.DbPath, "db", os.Getenv("SEGROB_CORPUS_DB"), "")
 	fs.StringVar(&opts.Output, "output", "", "")
@@ -337,7 +352,7 @@ func parseCorpusDumpTxtArgs(args []string, ui UI) (CorpusDumpTxtOptions, error) 
 
 	fs.Usage = func() {
 		w := fs.Output()
-		_, _ = fmt.Fprintf(w, "Usage: %s corpus dump-txt [options] <id>\n\n", os.Args[0])
+		fprintUsage(w, fs, dumpTxtSynopsis)
 		_, _ = fmt.Fprintf(w, "  Output the txt field of a corpus document byte-exact.\n")
 		_, _ = fmt.Fprintf(w, "\nArguments:\n")
 		_, _ = fmt.Fprintf(w, helpArgFmt, "id", "Document ID")
@@ -356,6 +371,7 @@ func parseCorpusDumpTxtArgs(args []string, ui UI) (CorpusDumpTxtOptions, error) 
 	}
 
 	if fs.NArg() != 1 {
+		fprintUsageError(ui.Err, fs, dumpTxtSynopsis)
 		return opts, errors.New("corpus dump-txt requires exactly one argument: <id>")
 	}
 
@@ -379,6 +395,8 @@ func parseCorpusDumpNlpArgs(args []string, ui UI) (CorpusDumpNlpOptions, error) 
 	fs := flag.NewFlagSet("corpus dump-nlp", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
 
+	const dumpNlpSynopsis = "[options] <id>"
+
 	var opts CorpusDumpNlpOptions
 	fs.StringVar(&opts.DbPath, "db", os.Getenv("SEGROB_CORPUS_DB"), "")
 	fs.BoolVar(&opts.NoLemmas, "no-lemmas", false, "")
@@ -388,7 +406,7 @@ func parseCorpusDumpNlpArgs(args []string, ui UI) (CorpusDumpNlpOptions, error) 
 
 	fs.Usage = func() {
 		w := fs.Output()
-		_, _ = fmt.Fprintf(w, "Usage: %s corpus dump-nlp [options] <id>\n\n", os.Args[0])
+		fprintUsage(w, fs, dumpNlpSynopsis)
 		_, _ = fmt.Fprintf(w, "  Output the nlp field of a corpus document.\n")
 		_, _ = fmt.Fprintf(w, "\nArguments:\n")
 		_, _ = fmt.Fprintf(w, helpArgFmt, "id", "Document ID")
@@ -408,6 +426,7 @@ func parseCorpusDumpNlpArgs(args []string, ui UI) (CorpusDumpNlpOptions, error) 
 	}
 
 	if fs.NArg() != 1 {
+		fprintUsageError(ui.Err, fs, dumpNlpSynopsis)
 		return opts, errors.New("corpus dump-nlp requires exactly one argument: <id>")
 	}
 	opts.ID = fs.Arg(0)
@@ -432,6 +451,8 @@ func parseCorpusLsArgs(args []string, ui UI) (CorpusLsOptions, error) {
 	fs := flag.NewFlagSet("corpus ls", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
 
+	const lsSynopsis = "[options] [filter]"
+
 	var opts CorpusLsOptions
 	fs.StringVar(&opts.DbPath, "db", os.Getenv("SEGROB_CORPUS_DB"), "")
 	fs.BoolVar(&opts.WithNlp, "with-nlp", false, "")
@@ -445,7 +466,7 @@ func parseCorpusLsArgs(args []string, ui UI) (CorpusLsOptions, error) {
 
 	fs.Usage = func() {
 		w := fs.Output()
-		_, _ = fmt.Fprintf(w, "Usage: %s corpus ls [options] [filter]\n\n", os.Args[0])
+		fprintUsage(w, fs, lsSynopsis)
 		_, _ = fmt.Fprintf(w, "  List all documents in the corpus staging database.\n")
 		_, _ = fmt.Fprintf(w, "\nArguments:\n")
 		_, _ = fmt.Fprintf(w, helpArgFmt, "filter", "Optional substring filter on document labels")
@@ -489,6 +510,8 @@ func parseCorpusPushTxtArgs(args []string, ui UI) (CorpusPushTxtOptions, error) 
 	fs := flag.NewFlagSet("corpus push-txt", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
 
+	const pushTxtSynopsis = "[options] <id> <file>"
+
 	var opts CorpusPushTxtOptions
 	fs.StringVar(&opts.By, "by", "", "Author of the text edit")
 	fs.StringVar(&opts.Note, "note", "", "Optional note for the text edit")
@@ -496,7 +519,7 @@ func parseCorpusPushTxtArgs(args []string, ui UI) (CorpusPushTxtOptions, error) 
 
 	fs.Usage = func() {
 		w := fs.Output()
-		_, _ = fmt.Fprintf(w, "Usage: %s corpus push-txt [options] <id> <file>\n\n", os.Args[0])
+		fprintUsage(w, fs, pushTxtSynopsis)
 		_, _ = fmt.Fprintf(w, "  Update a corpus document text from a file.\n")
 		_, _ = fmt.Fprintf(w, "\nArguments:\n")
 		_, _ = fmt.Fprintf(w, helpArgFmt, "id", "Document ID")
@@ -517,6 +540,7 @@ func parseCorpusPushTxtArgs(args []string, ui UI) (CorpusPushTxtOptions, error) 
 	}
 
 	if fs.NArg() != 2 {
+		fprintUsageError(ui.Err, fs, pushTxtSynopsis)
 		return opts, errors.New("corpus push-txt requires exactly two arguments: <id> <file>")
 	}
 
@@ -541,6 +565,8 @@ func parseCorpusAckArgs(args []string, ui UI) (CorpusAckOptions, error) {
 	fs := flag.NewFlagSet("corpus ack", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
 
+	const ackSynopsis = "[options] <id>"
+
 	var opts CorpusAckOptions
 	fs.BoolVar(&opts.Nlp, "nlp", false, "Acknowledge NLP instead of text")
 	fs.BoolVar(&opts.Nlp, "n", false, "alias for -nlp")
@@ -549,7 +575,7 @@ func parseCorpusAckArgs(args []string, ui UI) (CorpusAckOptions, error) {
 
 	fs.Usage = func() {
 		w := fs.Output()
-		_, _ = fmt.Fprintf(w, "Usage: %s corpus ack [options] <id>\n\n", os.Args[0])
+		fprintUsage(w, fs, ackSynopsis)
 		_, _ = fmt.Fprintf(w, "  Acknowledge a corpus document text or NLP.\n")
 		_, _ = fmt.Fprintf(w, "\nArguments:\n")
 		_, _ = fmt.Fprintf(w, helpArgFmt, "id", "Document ID")
@@ -569,6 +595,7 @@ func parseCorpusAckArgs(args []string, ui UI) (CorpusAckOptions, error) {
 	}
 
 	if fs.NArg() != 1 {
+		fprintUsageError(ui.Err, fs, ackSynopsis)
 		return opts, errors.New("corpus ack requires exactly one argument: <id>")
 	}
 
@@ -590,12 +617,14 @@ func parseCorpusRmArgs(args []string, ui UI) (CorpusRmOptions, error) {
 	fs := flag.NewFlagSet("corpus rm", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
 
+	const rmSynopsis = "[options] <id>"
+
 	var opts CorpusRmOptions
 	fs.StringVar(&opts.DbPath, "db", os.Getenv("SEGROB_CORPUS_DB"), "Corpus SQLite file (or SEGROB_CORPUS_DB)")
 
 	fs.Usage = func() {
 		w := fs.Output()
-		_, _ = fmt.Fprintf(w, "Usage: %s corpus rm [options] <id>\n\n", os.Args[0])
+		fprintUsage(w, fs, rmSynopsis)
 		_, _ = fmt.Fprintf(w, "  Remove a document from the corpus database.\n")
 		_, _ = fmt.Fprintf(w, "\nArguments:\n")
 		_, _ = fmt.Fprintf(w, helpArgFmt, "id", "Document ID")
@@ -613,6 +642,7 @@ func parseCorpusRmArgs(args []string, ui UI) (CorpusRmOptions, error) {
 	}
 
 	if fs.NArg() != 1 {
+		fprintUsageError(ui.Err, fs, rmSynopsis)
 		return opts, errors.New("corpus rm requires exactly one argument: <id>")
 	}
 
@@ -638,6 +668,8 @@ func parseCorpusSetLabelArgs(args []string, ui UI) (CorpusSetLabelOptions, error
 	fs := flag.NewFlagSet("corpus set-label", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
 
+	const setLabelSynopsis = "[options] <doc_id> <label> [<label>...]"
+
 	var opts CorpusSetLabelOptions
 	fs.StringVar(&opts.DbPath, "db", os.Getenv("SEGROB_CORPUS_DB"), "")
 	fs.BoolVar(&opts.Delete, "delete", false, "")
@@ -645,7 +677,7 @@ func parseCorpusSetLabelArgs(args []string, ui UI) (CorpusSetLabelOptions, error
 
 	fs.Usage = func() {
 		w := fs.Output()
-		_, _ = fmt.Fprintf(w, "Usage: %s corpus set-label [options] <doc_id> <label> [<label>...]\n\n", os.Args[0])
+		fprintUsage(w, fs, setLabelSynopsis)
 		_, _ = fmt.Fprintf(w, "  Add or remove one or more labels from a corpus document.\n")
 		_, _ = fmt.Fprintf(w, "  Labels are automatically normalized: lowercased, spaces and hyphens\n")
 		_, _ = fmt.Fprintf(w, "  replaced with underscores, commas removed.\n\n")
@@ -670,6 +702,7 @@ func parseCorpusSetLabelArgs(args []string, ui UI) (CorpusSetLabelOptions, error
 	}
 
 	if fs.NArg() < 2 {
+		fprintUsageError(ui.Err, fs, setLabelSynopsis)
 		return opts, errors.New("corpus set-label requires at least two arguments: <doc_id> and one or more <label>")
 	}
 
@@ -695,6 +728,8 @@ func parseCorpusLsLabelArgs(args []string, ui UI) (CorpusLsLabelOptions, error) 
 	fs := flag.NewFlagSet("corpus ls-label", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
 
+	const lsLabelSynopsis = "[options] [id]"
+
 	var opts CorpusLsLabelOptions
 	fs.StringVar(&opts.DbPath, "db", os.Getenv("SEGROB_CORPUS_DB"), "")
 	fs.StringVar(&opts.Match, "match", "", "")
@@ -702,7 +737,7 @@ func parseCorpusLsLabelArgs(args []string, ui UI) (CorpusLsLabelOptions, error) 
 
 	fs.Usage = func() {
 		w := fs.Output()
-		_, _ = fmt.Fprintf(w, "Usage: %s corpus ls-label [options] [id]\n\n", os.Args[0])
+		fprintUsage(w, fs, lsLabelSynopsis)
 		_, _ = fmt.Fprintf(w, "  List labels in the corpus.\n")
 		_, _ = fmt.Fprintf(w, "  When no id is given, lists all unique labels across the corpus.\n")
 		_, _ = fmt.Fprintf(w, "\nArguments:\n")
@@ -727,6 +762,7 @@ func parseCorpusLsLabelArgs(args []string, ui UI) (CorpusLsLabelOptions, error) 
 	// Capture optional positional argument
 	if fs.NArg() > 0 {
 		if fs.NArg() > 1 {
+			fprintUsageError(ui.Err, fs, lsLabelSynopsis)
 			return opts, errors.New("corpus ls-label accepts at most one argument: [id]")
 		}
 		opts.ID = fs.Arg(0)
@@ -746,12 +782,15 @@ type CorpusEditOptions struct {
 func parseCorpusEditArgs(args []string, ui UI) (CorpusEditOptions, error) {
 	fs := flag.NewFlagSet("corpus edit", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
+
+	const editSynopsis = "[options]"
+
 	var opts CorpusEditOptions
 	fs.StringVar(&opts.DbPath, "db", os.Getenv("SEGROB_CORPUS_DB"), "")
 
 	fs.Usage = func() {
 		w := fs.Output()
-		_, _ = fmt.Fprintf(w, "Usage: %s corpus edit [options]\n\n", os.Args[0])
+		fprintUsage(w, fs, editSynopsis)
 		_, _ = fmt.Fprintf(w, "  Enter interactive edit mode for corpus topics.\n\nOptions:\n")
 		printOpt(w, "--db", "PATH", "Target segrob SQLite file (or SEGROB_CORPUS_DB)")
 	}
@@ -780,12 +819,15 @@ type CorpusLsTopicOptions struct {
 func parseCorpusLsTopicArgs(args []string, ui UI) (CorpusLsTopicOptions, error) {
 	fs := flag.NewFlagSet("corpus ls-topic", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
+
+	const lsTopicSynopsis = "[options]"
+
 	var opts CorpusLsTopicOptions
 	fs.StringVar(&opts.DbPath, "db", os.Getenv("SEGROB_CORPUS_DB"), "")
 
 	fs.Usage = func() {
 		w := fs.Output()
-		_, _ = fmt.Fprintf(w, "Usage: %s corpus ls-topic [options]\n\n", os.Args[0])
+		fprintUsage(w, fs, lsTopicSynopsis)
 		_, _ = fmt.Fprintf(w, "  List all topic names in the corpus repository.\n\nOptions:\n")
 		printOpt(w, "--db", "PATH", "Target segrob SQLite file (or SEGROB_CORPUS_DB)")
 	}
@@ -814,12 +856,15 @@ type CorpusShowTopicOptions struct {
 func parseCorpusShowTopicArgs(args []string, ui UI) (CorpusShowTopicOptions, string, error) {
 	fs := flag.NewFlagSet("corpus show-topic", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
+
+	const showTopicSynopsis = "[options] <name>"
+
 	var opts CorpusShowTopicOptions
 	fs.StringVar(&opts.DbPath, "db", os.Getenv("SEGROB_CORPUS_DB"), "")
 
 	fs.Usage = func() {
 		w := fs.Output()
-		_, _ = fmt.Fprintf(w, "Usage: %s corpus show-topic [options] <name>\n\n", os.Args[0])
+		fprintUsage(w, fs, showTopicSynopsis)
 		_, _ = fmt.Fprintf(w, "  Show expressions of a named corpus topic.\n\nArguments:\n")
 		_, _ = fmt.Fprintf(w, helpArgFmt, "name", "Topic name to inspect")
 		_, _ = fmt.Fprintf(w, "\nOptions:\n")
@@ -841,6 +886,7 @@ func parseCorpusShowTopicArgs(args []string, ui UI) (CorpusShowTopicOptions, str
 		return opts, "", errors.New("corpus database must be specified via --db or SEGROB_CORPUS_DB")
 	}
 	if fs.NArg() != 1 {
+		fprintUsageError(ui.Err, fs, showTopicSynopsis)
 		return opts, "", errors.New("corpus show-topic requires exactly one argument: <name>")
 	}
 	return opts, fs.Arg(0), nil
@@ -855,6 +901,8 @@ func parseCorpusImportTopicArgs(args []string, ui UI) (CorpusImportTopicOptions,
 	fs := flag.NewFlagSet("corpus import-topic", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
 
+	const importTopicSynopsis = "-d <dir> [options]"
+
 	var opts CorpusImportTopicOptions
 	fs.StringVar(&opts.Directory, "directory", "", "")
 	fs.StringVar(&opts.Directory, "d", "", "")
@@ -862,7 +910,7 @@ func parseCorpusImportTopicArgs(args []string, ui UI) (CorpusImportTopicOptions,
 
 	fs.Usage = func() {
 		w := fs.Output()
-		_, _ = fmt.Fprintf(w, "Usage: %s corpus import-topic -d <dir> [options]\n\n", os.Args[0])
+		fprintUsage(w, fs, importTopicSynopsis)
 		_, _ = fmt.Fprintf(w, "  Import topics from a JSON directory into the corpus database.\n")
 		_, _ = fmt.Fprintf(w, "\nOptions:\n")
 		printOpt(w, "-d, --directory", "DIR", "Source directory containing JSON topic files")
@@ -879,6 +927,7 @@ func parseCorpusImportTopicArgs(args []string, ui UI) (CorpusImportTopicOptions,
 	}
 
 	if opts.Directory == "" {
+		fprintUsageError(ui.Err, fs, importTopicSynopsis)
 		return opts, errors.New("-d/--directory is required")
 	}
 	if opts.DbPath == "" {
@@ -897,6 +946,8 @@ func parseCorpusExportTopicArgs(args []string, ui UI) (CorpusExportTopicOptions,
 	fs := flag.NewFlagSet("corpus export-topic", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
 
+	const exportTopicSynopsis = "-d <dir> [options]"
+
 	var opts CorpusExportTopicOptions
 	fs.StringVar(&opts.DbPath, "db", os.Getenv("SEGROB_CORPUS_DB"), "")
 	fs.StringVar(&opts.Directory, "directory", "", "")
@@ -904,7 +955,7 @@ func parseCorpusExportTopicArgs(args []string, ui UI) (CorpusExportTopicOptions,
 
 	fs.Usage = func() {
 		w := fs.Output()
-		_, _ = fmt.Fprintf(w, "Usage: %s corpus export-topic -d <dir> [options]\n\n", os.Args[0])
+		fprintUsage(w, fs, exportTopicSynopsis)
 		_, _ = fmt.Fprintf(w, "  Export topics from the corpus database to a JSON directory.\n")
 		_, _ = fmt.Fprintf(w, "\nOptions:\n")
 		printOpt(w, "-d, --directory", "DIR", "Target directory for JSON topic files")
@@ -921,6 +972,7 @@ func parseCorpusExportTopicArgs(args []string, ui UI) (CorpusExportTopicOptions,
 	}
 
 	if opts.Directory == "" {
+		fprintUsageError(ui.Err, fs, exportTopicSynopsis)
 		return opts, errors.New("-d/--directory is required")
 	}
 	if opts.DbPath == "" {
@@ -940,6 +992,8 @@ func parseCorpusBackupArgs(args []string, ui UI) (CorpusBackupOptions, error) {
 	fs := flag.NewFlagSet("corpus backup", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
 
+	const backupSynopsis = "[options]"
+
 	var opts CorpusBackupOptions
 	fs.StringVar(&opts.DbPath, "db", os.Getenv("SEGROB_CORPUS_DB"), "")
 	fs.StringVar(&opts.Output, "output", "", "")
@@ -949,7 +1003,7 @@ func parseCorpusBackupArgs(args []string, ui UI) (CorpusBackupOptions, error) {
 
 	fs.Usage = func() {
 		w := fs.Output()
-		_, _ = fmt.Fprintf(w, "Usage: %s corpus backup [options]\n\n", os.Args[0])
+		fprintUsage(w, fs, backupSynopsis)
 		_, _ = fmt.Fprintf(w, "  Create a gzipped backup of the corpus database.\n")
 		_, _ = fmt.Fprintf(w, "\nOptions:\n")
 		printOpt(w, "--db", "FILE", "Corpus SQLite file (or SEGROB_CORPUS_DB)")
@@ -971,6 +1025,7 @@ func parseCorpusBackupArgs(args []string, ui UI) (CorpusBackupOptions, error) {
 		return opts, errors.New("corpus database must be specified via --db or SEGROB_CORPUS_DB")
 	}
 	if opts.Output == "" {
+		fprintUsageError(ui.Err, fs, backupSynopsis)
 		return opts, errors.New("output path must be specified via -o or --output")
 	}
 
@@ -986,13 +1041,15 @@ func parseCorpusPublishTopicArgs(args []string, ui UI) (CorpusPublishTopicOption
 	fs := flag.NewFlagSet("corpus publish-topic", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
 
+	const publishTopicSynopsis = "[options]"
+
 	var opts CorpusPublishTopicOptions
 	fs.StringVar(&opts.From, "from", os.Getenv("SEGROB_CORPUS_DB"), "")
 	fs.StringVar(&opts.To, "to", os.Getenv("SEGROB_LIVE_DB"), "")
 
 	fs.Usage = func() {
 		w := fs.Output()
-		_, _ = fmt.Fprintf(w, "Usage: %s corpus publish-topic [options]\n\n", os.Args[0])
+		fprintUsage(w, fs, publishTopicSynopsis)
 		_, _ = fmt.Fprintf(w, "  Copy all topics from the corpus database to the live database.\n")
 		_, _ = fmt.Fprintf(w, "\nOptions:\n")
 		printOpt(w, "--from", "PATH", "Source corpus SQLite file (or SEGROB_CORPUS_DB)")
@@ -1009,6 +1066,7 @@ func parseCorpusPublishTopicArgs(args []string, ui UI) (CorpusPublishTopicOption
 	}
 
 	if fs.NArg() > 0 {
+		fprintUsageError(ui.Err, fs, publishTopicSynopsis)
 		return opts, errors.New("corpus publish-topic does not take any positional arguments")
 	}
 
