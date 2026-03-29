@@ -75,6 +75,8 @@ func parseLiveShowArgs(args []string, ui UI) (ShowOptions, string, error) {
 	fs := flag.NewFlagSet("live show", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
 
+	const showSynopsis = "[options] <doc_id>"
+
 	var opts ShowOptions
 	fs.IntVar(&opts.Start, "start", 0, "")
 	fs.BoolVar(&opts.Stats, "stats", false, "")
@@ -88,7 +90,7 @@ func parseLiveShowArgs(args []string, ui UI) (ShowOptions, string, error) {
 
 	fs.Usage = func() {
 		w := fs.Output()
-		_, _ = fmt.Fprintf(w, "Usage: %s live show [options] <doc_id>\n\n", os.Args[0])
+		fprintUsage(w, fs, showSynopsis)
 		_, _ = fmt.Fprintf(w, "  Show contents of a document from the configured repository.\n")
 		_, _ = fmt.Fprintf(w, "\nArguments:\n")
 		_, _ = fmt.Fprintf(w, helpArgFmt, "doc_id", "ID of the document to show")
@@ -105,16 +107,19 @@ func parseLiveShowArgs(args []string, ui UI) (ShowOptions, string, error) {
 			fs.Usage()
 			return opts, "", err
 		}
+		fprintUsageError(ui.Err, fs, showSynopsis)
 		return opts, "", err
 	}
 
 	opts.Count = countOpt.value
 
 	if opts.DbPath == "" {
+		fprintUsageError(ui.Err, fs, showSynopsis)
 		return opts, "", errors.New("document source must be specified via --db or SEGROB_LIVE_DB")
 	}
 
 	if fs.NArg() != 1 {
+		fprintUsageError(ui.Err, fs, showSynopsis)
 		return opts, "", errors.New("live show requires exactly one argument: <id>")
 	}
 	id := fs.Arg(0)
@@ -126,6 +131,8 @@ func parseLiveLsArgs(args []string, ui UI) (LiveLsOptions, bool, error) {
 	fs := flag.NewFlagSet("live ls", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
 
+	const lsSynopsis = "[options]"
+
 	var opts LiveLsOptions
 	fs.StringVar(&opts.DocPath, "doc-path", os.Getenv("SEGROB_LIVE_DB"), "")
 	fs.StringVar(&opts.DocPath, "d", os.Getenv("SEGROB_LIVE_DB"), "")
@@ -134,7 +141,7 @@ func parseLiveLsArgs(args []string, ui UI) (LiveLsOptions, bool, error) {
 
 	fs.Usage = func() {
 		w := fs.Output()
-		_, _ = fmt.Fprintf(w, "Usage: %s live ls [options]\n\n", os.Args[0])
+		fprintUsage(w, fs, lsSynopsis)
 		_, _ = fmt.Fprintf(w, "  List all documents in the repository.\n")
 		_, _ = fmt.Fprintf(w, "\nOptions:\n")
 		printOpt(w, "-d, --doc-path", "PATH", "Path to docs directory or SQLite file (or SEGROB_LIVE_DB)")
@@ -147,18 +154,18 @@ func parseLiveLsArgs(args []string, ui UI) (LiveLsOptions, bool, error) {
 			fs.Usage()
 			return opts, false, err
 		}
-		fs.SetOutput(ui.Err)
-		fprintErr(ui.Err, err)
-		fs.Usage()
+		fprintUsageError(ui.Err, fs, lsSynopsis)
 		return opts, false, err
 	}
 
 	if opts.DocPath == "" {
+		fprintUsageError(ui.Err, fs, lsSynopsis)
 		return opts, false, errors.New("no document source specified (use -d or SEGROB_LIVE_DB)")
 	}
 
 	info, err := os.Stat(opts.DocPath)
 	if err != nil {
+		fprintUsageError(ui.Err, fs, lsSynopsis)
 		return opts, false, fmt.Errorf("document source not found: %s", opts.DocPath)
 	}
 
@@ -169,6 +176,8 @@ func parseLiveShowSentArgs(args []string, ui UI) (LiveShowSentOptions, string, i
 	fs := flag.NewFlagSet("live show-sent", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
 
+	const showSentSynopsis = "[options] <doc_id> <sentence_id>"
+
 	var opts LiveShowSentOptions
 	fs.StringVar(&opts.DbPath, "db", os.Getenv("SEGROB_LIVE_DB"), "")
 	fs.BoolVar(&opts.Stats, "stats", false, "")
@@ -176,7 +185,7 @@ func parseLiveShowSentArgs(args []string, ui UI) (LiveShowSentOptions, string, i
 
 	fs.Usage = func() {
 		w := fs.Output()
-		_, _ = fmt.Fprintf(w, "Usage: %s live show-sent [options] <doc_id> <sentence_id>\n\n", os.Args[0])
+		fprintUsage(w, fs, showSentSynopsis)
 		_, _ = fmt.Fprintf(w, "  Show details of a specific sentence from the configured repository.\n")
 		_, _ = fmt.Fprintf(w, "\nArguments:\n")
 		_, _ = fmt.Fprintf(w, helpArgFmt, "doc_id", "ID of the document")
@@ -192,14 +201,17 @@ func parseLiveShowSentArgs(args []string, ui UI) (LiveShowSentOptions, string, i
 			fs.Usage()
 			return opts, "", 0, err
 		}
+		fprintUsageError(ui.Err, fs, showSentSynopsis)
 		return opts, "", 0, err
 	}
 
 	if opts.DbPath == "" {
+		fprintUsageError(ui.Err, fs, showSentSynopsis)
 		return opts, "", 0, errors.New("document source must be specified via --db or SEGROB_LIVE_DB")
 	}
 
 	if fs.NArg() != 2 {
+		fprintUsageError(ui.Err, fs, showSentSynopsis)
 		return opts, "", 0, errors.New("live show-sent requires exactly two arguments: <doc_id> <sentence_id>")
 	}
 
@@ -207,6 +219,7 @@ func parseLiveShowSentArgs(args []string, ui UI) (LiveShowSentOptions, string, i
 
 	sentId, err := strconv.Atoi(fs.Arg(1))
 	if err != nil {
+		fprintUsageError(ui.Err, fs, showSentSynopsis)
 		return opts, "", 0, fmt.Errorf("invalid sentenceId '%s': %w", fs.Arg(1), err)
 	}
 
@@ -216,6 +229,8 @@ func parseLiveShowSentArgs(args []string, ui UI) (LiveShowSentOptions, string, i
 func parseLiveFindTopicsArgs(args []string, ui UI) (LiveFindTopicsOptions, string, int, error) {
 	fs := flag.NewFlagSet("live find-topics", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
+
+	const findTopicsSynopsis = "[options] <doc_id> <sentence_id>"
 
 	var opts LiveFindTopicsOptions
 	fs.StringVar(&opts.TopicPath, "topic-path", os.Getenv("SEGROB_TOPIC_PATH"), "")
@@ -231,7 +246,7 @@ func parseLiveFindTopicsArgs(args []string, ui UI) (LiveFindTopicsOptions, strin
 
 	fs.Usage = func() {
 		w := fs.Output()
-		_, _ = fmt.Fprintf(w, "Usage: %s live find-topics [options] <doc_id> <sentence_id>\n\n", os.Args[0])
+		fprintUsage(w, fs, findTopicsSynopsis)
 		_, _ = fmt.Fprintf(w, "  Show topics for a specific sentence from the configured repository.\n")
 		_, _ = fmt.Fprintf(w, "\nArguments:\n")
 		_, _ = fmt.Fprintf(w, helpArgFmt, "doc_id", "ID of the document")
@@ -248,18 +263,22 @@ func parseLiveFindTopicsArgs(args []string, ui UI) (LiveFindTopicsOptions, strin
 			fs.Usage()
 			return opts, "", 0, err
 		}
+		fprintUsageError(ui.Err, fs, findTopicsSynopsis)
 		return opts, "", 0, err
 	}
 
 	if opts.TopicPath == "" {
+		fprintUsageError(ui.Err, fs, findTopicsSynopsis)
 		return opts, "", 0, errors.New("topic source must be specified via -t or SEGROB_TOPIC_PATH")
 	}
 
 	if opts.DocPath == "" {
+		fprintUsageError(ui.Err, fs, findTopicsSynopsis)
 		return opts, "", 0, errors.New("document source must be specified via -d or SEGROB_LIVE_DB")
 	}
 
 	if fs.NArg() != 2 {
+		fprintUsageError(ui.Err, fs, findTopicsSynopsis)
 		return opts, "", 0, errors.New("find-topics command needs exactly two arguments: <doc_id> <sentence_id>")
 	}
 
@@ -267,10 +286,12 @@ func parseLiveFindTopicsArgs(args []string, ui UI) (LiveFindTopicsOptions, strin
 
 	sentId, err := strconv.Atoi(fs.Arg(1))
 	if err != nil {
+		fprintUsageError(ui.Err, fs, findTopicsSynopsis)
 		return opts, "", 0, fmt.Errorf("invalid sentenceId '%s': %w", fs.Arg(1), err)
 	}
 
 	if err := validatePaths(opts.DocPath, opts.TopicPath); err != nil {
+		fprintUsageError(ui.Err, fs, findTopicsSynopsis)
 		return opts, "", 0, err
 	}
 
@@ -280,6 +301,8 @@ func parseLiveFindTopicsArgs(args []string, ui UI) (LiveFindTopicsOptions, strin
 func parseLiveFindArgs(args []string, ui UI) (LiveFindOptions, []string, bool, error) {
 	fs := flag.NewFlagSet("live find", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
+
+	const findSynopsis = "[options] <expr>..."
 
 	var opts LiveFindOptions
 	labels := (*stringSliceFlag)(&opts.Labels)
@@ -313,7 +336,7 @@ func parseLiveFindArgs(args []string, ui UI) (LiveFindOptions, []string, bool, e
 
 	fs.Usage = func() {
 		w := fs.Output()
-		_, _ = fmt.Fprintf(w, "Usage: %s live find [options] <expr>...\n\n", os.Args[0])
+		fprintUsage(w, fs, findSynopsis)
 		_, _ = fmt.Fprintf(w, "  Find sentences matching a topic expression.\n")
 		_, _ = fmt.Fprintf(w, "\nArguments:\n")
 		_, _ = fmt.Fprintf(w, helpArgFmt, "expr", "One or more topic expression items")
@@ -335,24 +358,23 @@ func parseLiveFindArgs(args []string, ui UI) (LiveFindOptions, []string, bool, e
 			fs.Usage()
 			return opts, nil, false, err
 		}
-		fs.SetOutput(ui.Err)
-		fprintErr(ui.Err, err)
-		fs.Usage()
+		fprintUsageError(ui.Err, fs, findSynopsis)
 		return opts, nil, false, err
 	}
 
 	if fs.NArg() < 1 {
-		fs.SetOutput(ui.Err)
-		fs.Usage()
+		fprintUsageError(ui.Err, fs, findSynopsis)
 		return opts, nil, false, errors.New("find command needs at least one argument")
 	}
 
 	if opts.DocPath == "" {
+		fprintUsageError(ui.Err, fs, findSynopsis)
 		return opts, nil, false, errors.New("doc path must be specified via -d or SEGROB_LIVE_DB")
 	}
 
 	info, err := os.Stat(opts.DocPath)
 	if err != nil {
+		fprintUsageError(ui.Err, fs, findSynopsis)
 		return opts, nil, false, fmt.Errorf("doc path not found: %s", opts.DocPath)
 	}
 
@@ -362,6 +384,8 @@ func parseLiveFindArgs(args []string, ui UI) (LiveFindOptions, []string, bool, e
 func parseLiveQueryArgs(args []string, ui UI) (LiveQueryOptions, bool, bool, error) {
 	fs := flag.NewFlagSet("live query", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
+
+	const querySynopsis = "[options]"
 
 	var opts LiveQueryOptions
 	labels := (*stringSliceFlag)(&opts.Labels)
@@ -390,7 +414,7 @@ func parseLiveQueryArgs(args []string, ui UI) (LiveQueryOptions, bool, bool, err
 
 	fs.Usage = func() {
 		w := fs.Output()
-		_, _ = fmt.Fprintf(w, "Usage: %s live query [options]\n\n", os.Args[0])
+		fprintUsage(w, fs, querySynopsis)
 		_, _ = fmt.Fprintf(w, "  Enter interactive query mode.\n")
 		_, _ = fmt.Fprintf(w, "\nOptions:\n")
 		printOpt(w, "-d, --doc-path", "PATH", "Path to docs directory or SQLite file (or SEGROB_LIVE_DB)")
@@ -408,31 +432,34 @@ func parseLiveQueryArgs(args []string, ui UI) (LiveQueryOptions, bool, bool, err
 			fs.Usage()
 			return opts, false, false, err
 		}
-		fs.SetOutput(ui.Err)
-		fprintErr(ui.Err, err)
-		fs.Usage()
+		fprintUsageError(ui.Err, fs, querySynopsis)
 		return opts, false, false, err
 	}
 
 	if opts.TopicPath == "" {
+		fprintUsageError(ui.Err, fs, querySynopsis)
 		return opts, false, false, errors.New("topic path must be specified via -t or SEGROB_TOPIC_PATH")
 	}
 
 	if opts.DocPath == "" {
+		fprintUsageError(ui.Err, fs, querySynopsis)
 		return opts, false, false, errors.New("doc path must be specified via -d or SEGROB_LIVE_DB")
 	}
 
 	tinfo, err := os.Stat(opts.TopicPath)
 	if err != nil {
+		fprintUsageError(ui.Err, fs, querySynopsis)
 		return opts, false, false, fmt.Errorf("topic path not found: %s", opts.TopicPath)
 	}
 
 	dinfo, err := os.Stat(opts.DocPath)
 	if err != nil {
+		fprintUsageError(ui.Err, fs, querySynopsis)
 		return opts, false, false, fmt.Errorf("doc path not found: %s", opts.DocPath)
 	}
 
 	if err := validatePaths(opts.DocPath, opts.TopicPath); err != nil {
+		fprintUsageError(ui.Err, fs, querySynopsis)
 		return opts, false, false, err
 	}
 
@@ -443,13 +470,15 @@ func parseLiveLsTopicArgs(args []string, ui UI) (LiveLsTopicOptions, bool, error
 	fs := flag.NewFlagSet("live ls-topic", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
 
+	const lsTopicSynopsis = "[options]"
+
 	var opts LiveLsTopicOptions
 	fs.StringVar(&opts.TopicPath, "topic-path", os.Getenv("SEGROB_TOPIC_PATH"), "")
 	fs.StringVar(&opts.TopicPath, "t", os.Getenv("SEGROB_TOPIC_PATH"), "")
 
 	fs.Usage = func() {
 		w := fs.Output()
-		_, _ = fmt.Fprintf(w, "Usage: %s live ls-topic [options]\n\n", os.Args[0])
+		fprintUsage(w, fs, lsTopicSynopsis)
 		_, _ = fmt.Fprintf(w, "  List all topic names in the repository.\n")
 		_, _ = fmt.Fprintf(w, "\nOptions:\n")
 		printOpt(w, "-t, --topic-path", "PATH", "Path to topics directory or SQLite file (or SEGROB_TOPIC_PATH)")
@@ -461,18 +490,18 @@ func parseLiveLsTopicArgs(args []string, ui UI) (LiveLsTopicOptions, bool, error
 			fs.Usage()
 			return opts, false, err
 		}
-		fs.SetOutput(ui.Err)
-		fprintErr(ui.Err, err)
-		fs.Usage()
+		fprintUsageError(ui.Err, fs, lsTopicSynopsis)
 		return opts, false, err
 	}
 
 	if opts.TopicPath == "" {
+		fprintUsageError(ui.Err, fs, lsTopicSynopsis)
 		return opts, false, errors.New("topic path must be specified via -t or SEGROB_TOPIC_PATH")
 	}
 
 	info, err := os.Stat(opts.TopicPath)
 	if err != nil {
+		fprintUsageError(ui.Err, fs, lsTopicSynopsis)
 		return opts, false, fmt.Errorf("topic path not found: %s", opts.TopicPath)
 	}
 
@@ -483,13 +512,15 @@ func parseLiveShowTopicArgs(args []string, ui UI) (LiveShowTopicOptions, string,
 	fs := flag.NewFlagSet("live show-topic", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
 
+	const showTopicSynopsis = "[options] <name>"
+
 	var opts LiveShowTopicOptions
 	fs.StringVar(&opts.TopicPath, "topic-path", os.Getenv("SEGROB_TOPIC_PATH"), "")
 	fs.StringVar(&opts.TopicPath, "t", os.Getenv("SEGROB_TOPIC_PATH"), "")
 
 	fs.Usage = func() {
 		w := fs.Output()
-		_, _ = fmt.Fprintf(w, "Usage: %s live show-topic [options] <name>\n\n", os.Args[0])
+		fprintUsage(w, fs, showTopicSynopsis)
 		_, _ = fmt.Fprintf(w, "  Show expressions of a named topic.\n")
 		_, _ = fmt.Fprintf(w, "\nArguments:\n")
 		_, _ = fmt.Fprintf(w, helpArgFmt, "name", "Topic name to inspect")
@@ -503,23 +534,24 @@ func parseLiveShowTopicArgs(args []string, ui UI) (LiveShowTopicOptions, string,
 			fs.Usage()
 			return opts, "", false, err
 		}
-		fs.SetOutput(ui.Err)
-		fprintErr(ui.Err, err)
-		fs.Usage()
+		fprintUsageError(ui.Err, fs, showTopicSynopsis)
 		return opts, "", false, err
 	}
 
 	if opts.TopicPath == "" {
+		fprintUsageError(ui.Err, fs, showTopicSynopsis)
 		return opts, "", false, errors.New("topic path must be specified via -t or SEGROB_TOPIC_PATH")
 	}
 
 	if fs.NArg() != 1 {
+		fprintUsageError(ui.Err, fs, showTopicSynopsis)
 		return opts, "", false, errors.New("live show-topic requires exactly one argument: <name>")
 	}
 	name := fs.Arg(0)
 
 	info, err := os.Stat(opts.TopicPath)
 	if err != nil {
+		fprintUsageError(ui.Err, fs, showTopicSynopsis)
 		return opts, "", false, fmt.Errorf("topic path not found: %s", opts.TopicPath)
 	}
 
@@ -530,11 +562,13 @@ func parseLiveInitArgs(args []string, ui UI) (LiveInitOptions, error) {
 	fs := flag.NewFlagSet("live init", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
 
+	const initSynopsis = "<db>"
+
 	var opts LiveInitOptions
 
 	fs.Usage = func() {
 		w := fs.Output()
-		_, _ = fmt.Fprintf(w, "Usage: %s live init <db>\n\n", os.Args[0])
+		fprintUsage(w, fs, initSynopsis)
 		_, _ = fmt.Fprintf(w, "  Initialize a new SQLite database with the required schema.\n")
 		_, _ = fmt.Fprintf(w, "\nArguments:\n")
 		_, _ = fmt.Fprintf(w, helpArgFmt, "db", "Path to the SQLite file to create")
@@ -546,10 +580,12 @@ func parseLiveInitArgs(args []string, ui UI) (LiveInitOptions, error) {
 			fs.Usage()
 			return opts, err
 		}
+		fprintUsageError(ui.Err, fs, initSynopsis)
 		return opts, err
 	}
 
 	if fs.NArg() != 1 {
+		fprintUsageError(ui.Err, fs, initSynopsis)
 		return opts, errors.New("init command requires exactly one argument: <db>")
 	}
 
@@ -561,12 +597,14 @@ func parseLiveUnpublishArgs(args []string, ui UI) (LiveUnpublishOptions, error) 
 	fs := flag.NewFlagSet("live unpublish", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
 
+	const unpublishSynopsis = "[options] <id>"
+
 	var opts LiveUnpublishOptions
 	fs.StringVar(&opts.DbPath, "db", os.Getenv("SEGROB_LIVE_DB"), "")
 
 	fs.Usage = func() {
 		w := fs.Output()
-		_, _ = fmt.Fprintf(w, "Usage: %s live unpublish [options] <id>\n\n", os.Args[0])
+		fprintUsage(w, fs, unpublishSynopsis)
 		_, _ = fmt.Fprintf(w, "  Remove a document from all live tables.\n")
 		_, _ = fmt.Fprintf(w, "  The removal is the reverse of publish: the live switch (lemma index) is\n")
 		_, _ = fmt.Fprintf(w, "  cut first, then labels, sentences, and finally the doc row.\n")
@@ -582,16 +620,19 @@ func parseLiveUnpublishArgs(args []string, ui UI) (LiveUnpublishOptions, error) 
 			fs.Usage()
 			return opts, err
 		}
+		fprintUsageError(ui.Err, fs, unpublishSynopsis)
 		return opts, err
 	}
 
 	if fs.NArg() != 1 {
+		fprintUsageError(ui.Err, fs, unpublishSynopsis)
 		return opts, errors.New("live unpublish requires exactly one argument: <id>")
 	}
 
 	opts.ID = fs.Arg(0)
 
 	if opts.DbPath == "" {
+		fprintUsageError(ui.Err, fs, unpublishSynopsis)
 		return opts, errors.New("document source must be specified via --db or SEGROB_LIVE_DB")
 	}
 
@@ -602,13 +643,15 @@ func parseLiveUnpublishTopicArgs(args []string, ui UI) (LiveUnpublishTopicOption
 	fs := flag.NewFlagSet("live unpublish-topic", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
 
+	const unpublishTopicSynopsis = "[options] <name>"
+
 	var opts LiveUnpublishTopicOptions
 	fs.StringVar(&opts.TopicPath, "topic-path", os.Getenv("SEGROB_TOPIC_PATH"), "")
 	fs.StringVar(&opts.TopicPath, "t", os.Getenv("SEGROB_TOPIC_PATH"), "")
 
 	fs.Usage = func() {
 		w := fs.Output()
-		_, _ = fmt.Fprintf(w, "Usage: %s live unpublish-topic [options] <name>\n\n", os.Args[0])
+		fprintUsage(w, fs, unpublishTopicSynopsis)
 		_, _ = fmt.Fprintf(w, "  Remove a topic from the live topics repository.\n")
 		_, _ = fmt.Fprintf(w, "\nArguments:\n")
 		_, _ = fmt.Fprintf(w, helpArgFmt, "name", "Topic name to remove")
@@ -622,14 +665,17 @@ func parseLiveUnpublishTopicArgs(args []string, ui UI) (LiveUnpublishTopicOption
 			fs.Usage()
 			return opts, "", err
 		}
+		fprintUsageError(ui.Err, fs, unpublishTopicSynopsis)
 		return opts, "", err
 	}
 
 	if opts.TopicPath == "" {
+		fprintUsageError(ui.Err, fs, unpublishTopicSynopsis)
 		return opts, "", errors.New("topic path must be specified via -t or SEGROB_TOPIC_PATH")
 	}
 
 	if fs.NArg() != 1 {
+		fprintUsageError(ui.Err, fs, unpublishTopicSynopsis)
 		return opts, "", errors.New("live unpublish-topic requires exactly one argument: <name>")
 	}
 	name := fs.Arg(0)

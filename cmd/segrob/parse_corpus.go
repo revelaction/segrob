@@ -35,10 +35,12 @@ func parseCorpusInitArgs(args []string, ui UI) (CorpusInitOptions, error) {
 			fs.Usage()
 			return opts, err
 		}
+		fprintUsageError(ui.Err, fs, initSynopsis)
 		return opts, err
 	}
 
 	if opts.DbPath == "" {
+		fprintUsageError(ui.Err, fs, initSynopsis)
 		return opts, errors.New("corpus database must be specified via --db or SEGROB_CORPUS_DB")
 	}
 
@@ -88,6 +90,7 @@ func parseCorpusPublishArgs(args []string, ui UI) (CorpusPublishOptions, error) 
 			fs.Usage()
 			return opts, err
 		}
+		fprintUsageError(ui.Err, fs, publishSynopsis)
 		return opts, err
 	}
 
@@ -102,9 +105,11 @@ func parseCorpusPublishArgs(args []string, ui UI) (CorpusPublishOptions, error) 
 	}
 
 	if opts.From == "" {
+		fprintUsageError(ui.Err, fs, publishSynopsis)
 		return opts, errors.New("corpus source must be specified via --from or SEGROB_CORPUS_DB")
 	}
 	if opts.To == "" {
+		fprintUsageError(ui.Err, fs, publishSynopsis)
 		return opts, errors.New("target db must be specified via --to or SEGROB_LIVE_DB")
 	}
 
@@ -144,6 +149,7 @@ func parseCorpusPublishLabelArgs(args []string, ui UI) (CorpusPublishLabelOption
 			fs.Usage()
 			return opts, err
 		}
+		fprintUsageError(ui.Err, fs, publishLabelSynopsis)
 		return opts, err
 	}
 
@@ -155,9 +161,11 @@ func parseCorpusPublishLabelArgs(args []string, ui UI) (CorpusPublishLabelOption
 	opts.ID = fs.Arg(0)
 
 	if opts.From == "" {
+		fprintUsageError(ui.Err, fs, publishLabelSynopsis)
 		return opts, errors.New("corpus source must be specified via --from or SEGROB_CORPUS_DB")
 	}
 	if opts.To == "" {
+		fprintUsageError(ui.Err, fs, publishLabelSynopsis)
 		return opts, errors.New("target db must be specified via --to or SEGROB_LIVE_DB")
 	}
 
@@ -202,19 +210,22 @@ func parseCorpusIngestNlpArgs(args []string, ui UI) (CorpusIngestNlpOptions, err
 			fs.Usage()
 			return opts, err
 		}
+		fprintUsageError(ui.Err, fs, ingestNlpSynopsis)
 		return opts, err
 	}
 
 	if opts.NlpScript == "" {
-		return opts, fmt.Errorf("--nlp-script must be supplied if SEGROB_NLP_SCRIPT is not set")
+		fprintUsageError(ui.Err, fs, ingestNlpSynopsis)
+		return opts, errors.New("--nlp-script must be supplied if SEGROB_NLP_SCRIPT is not set")
 	}
 	if opts.DbPath == "" {
-		return opts, fmt.Errorf("--db must be supplied if SEGROB_CORPUS_DB is not set")
+		fprintUsageError(ui.Err, fs, ingestNlpSynopsis)
+		return opts, errors.New("corpus database must be specified via --db or SEGROB_CORPUS_DB")
 	}
 
 	if fs.NArg() != 1 {
 		fprintUsageError(ui.Err, fs, ingestNlpSynopsis)
-		return opts, fmt.Errorf("requires exactly 1 argument (doc ID)")
+		return opts, errors.New("requires exactly 1 argument (doc ID)")
 	}
 	opts.ID = fs.Arg(0)
 
@@ -255,12 +266,14 @@ func parseCorpusShowArgs(args []string, ui UI) (ShowOptions, string, error) {
 			fs.Usage()
 			return opts, "", err
 		}
+		fprintUsageError(ui.Err, fs, showSynopsis)
 		return opts, "", err
 	}
 
 	opts.Count = countOpt.value
 
 	if opts.DbPath == "" {
+		fprintUsageError(ui.Err, fs, showSynopsis)
 		return opts, "", errors.New("corpus database must be specified via --db or SEGROB_CORPUS_DB")
 	}
 
@@ -307,6 +320,7 @@ func parseCorpusIngestMetaArgs(args []string, ui UI) (CorpusIngestMetaOptions, e
 			fs.Usage()
 			return opts, err
 		}
+		fprintUsageError(ui.Err, fs, ingestMetaSynopsis)
 		return opts, err
 	}
 
@@ -318,15 +332,18 @@ func parseCorpusIngestMetaArgs(args []string, ui UI) (CorpusIngestMetaOptions, e
 	dir := fs.Arg(0)
 	info, err := os.Stat(dir)
 	if err != nil {
+		fprintUsageError(ui.Err, fs, ingestMetaSynopsis)
 		return opts, fmt.Errorf("directory not found: %s", dir)
 	}
 	if !info.IsDir() {
+		fprintUsageError(ui.Err, fs, ingestMetaSynopsis)
 		return opts, fmt.Errorf("argument is not a directory: %s", dir)
 	}
 
 	opts.Dir = dir
 
 	if opts.DbPath == "" {
+		fprintUsageError(ui.Err, fs, ingestMetaSynopsis)
 		return opts, errors.New("corpus database must be specified via --db or SEGROB_CORPUS_DB")
 	}
 
@@ -367,6 +384,7 @@ func parseCorpusDumpTxtArgs(args []string, ui UI) (CorpusDumpTxtOptions, error) 
 			fs.Usage()
 			return opts, err
 		}
+		fprintUsageError(ui.Err, fs, dumpTxtSynopsis)
 		return opts, err
 	}
 
@@ -378,6 +396,7 @@ func parseCorpusDumpTxtArgs(args []string, ui UI) (CorpusDumpTxtOptions, error) 
 	opts.ID = fs.Arg(0)
 
 	if opts.DbPath == "" {
+		fprintUsageError(ui.Err, fs, dumpTxtSynopsis)
 		return opts, errors.New("corpus database must be specified via --db or SEGROB_CORPUS_DB")
 	}
 
@@ -422,6 +441,7 @@ func parseCorpusDumpNlpArgs(args []string, ui UI) (CorpusDumpNlpOptions, error) 
 			fs.Usage()
 			return opts, err
 		}
+		fprintUsageError(ui.Err, fs, dumpNlpSynopsis)
 		return opts, err
 	}
 
@@ -432,6 +452,7 @@ func parseCorpusDumpNlpArgs(args []string, ui UI) (CorpusDumpNlpOptions, error) 
 	opts.ID = fs.Arg(0)
 
 	if opts.DbPath == "" {
+		fprintUsageError(ui.Err, fs, dumpNlpSynopsis)
 		return opts, errors.New("corpus database must be specified via --db or SEGROB_CORPUS_DB")
 	}
 
@@ -484,6 +505,7 @@ func parseCorpusLsArgs(args []string, ui UI) (CorpusLsOptions, error) {
 			fs.Usage()
 			return opts, err
 		}
+		fprintUsageError(ui.Err, fs, lsSynopsis)
 		return opts, err
 	}
 
@@ -492,6 +514,7 @@ func parseCorpusLsArgs(args []string, ui UI) (CorpusLsOptions, error) {
 	}
 
 	if opts.DbPath == "" {
+		fprintUsageError(ui.Err, fs, lsSynopsis)
 		return opts, errors.New("corpus database must be specified via --db or SEGROB_CORPUS_DB")
 	}
 
@@ -536,6 +559,7 @@ func parseCorpusPushTxtArgs(args []string, ui UI) (CorpusPushTxtOptions, error) 
 			fs.Usage()
 			return opts, err
 		}
+		fprintUsageError(ui.Err, fs, pushTxtSynopsis)
 		return opts, err
 	}
 
@@ -548,6 +572,7 @@ func parseCorpusPushTxtArgs(args []string, ui UI) (CorpusPushTxtOptions, error) 
 	opts.File = fs.Arg(1)
 
 	if opts.DbPath == "" {
+		fprintUsageError(ui.Err, fs, pushTxtSynopsis)
 		return opts, errors.New("corpus database must be specified via --db or SEGROB_CORPUS_DB")
 	}
 
@@ -591,6 +616,7 @@ func parseCorpusAckArgs(args []string, ui UI) (CorpusAckOptions, error) {
 			fs.Usage()
 			return opts, err
 		}
+		fprintUsageError(ui.Err, fs, ackSynopsis)
 		return opts, err
 	}
 
@@ -602,6 +628,7 @@ func parseCorpusAckArgs(args []string, ui UI) (CorpusAckOptions, error) {
 	opts.ID = fs.Arg(0)
 
 	if opts.DbPath == "" {
+		fprintUsageError(ui.Err, fs, ackSynopsis)
 		return opts, errors.New("corpus database must be specified via --db or SEGROB_CORPUS_DB")
 	}
 
@@ -638,6 +665,7 @@ func parseCorpusRmArgs(args []string, ui UI) (CorpusRmOptions, error) {
 			fs.Usage()
 			return opts, err
 		}
+		fprintUsageError(ui.Err, fs, rmSynopsis)
 		return opts, err
 	}
 
@@ -649,6 +677,7 @@ func parseCorpusRmArgs(args []string, ui UI) (CorpusRmOptions, error) {
 	opts.ID = fs.Arg(0)
 
 	if opts.DbPath == "" {
+		fprintUsageError(ui.Err, fs, rmSynopsis)
 		return opts, errors.New("corpus database must be specified via --db or SEGROB_CORPUS_DB")
 	}
 
@@ -698,6 +727,7 @@ func parseCorpusSetLabelArgs(args []string, ui UI) (CorpusSetLabelOptions, error
 			fs.Usage()
 			return opts, err
 		}
+		fprintUsageError(ui.Err, fs, setLabelSynopsis)
 		return opts, err
 	}
 
@@ -710,6 +740,7 @@ func parseCorpusSetLabelArgs(args []string, ui UI) (CorpusSetLabelOptions, error
 	opts.Labels = fs.Args()[1:]
 
 	if opts.DbPath == "" {
+		fprintUsageError(ui.Err, fs, setLabelSynopsis)
 		return opts, errors.New("no document source specified (use --db or SEGROB_CORPUS_DB)")
 	}
 
@@ -753,9 +784,7 @@ func parseCorpusLsLabelArgs(args []string, ui UI) (CorpusLsLabelOptions, error) 
 			fs.Usage()
 			return opts, err
 		}
-		fs.SetOutput(ui.Err)
-		fprintErr(ui.Err, err)
-		fs.Usage()
+		fprintUsageError(ui.Err, fs, lsLabelSynopsis)
 		return opts, err
 	}
 
@@ -769,6 +798,7 @@ func parseCorpusLsLabelArgs(args []string, ui UI) (CorpusLsLabelOptions, error) 
 	}
 
 	if opts.DbPath == "" {
+		fprintUsageError(ui.Err, fs, lsLabelSynopsis)
 		return opts, errors.New("no document source specified (use --db or SEGROB_CORPUS_DB)")
 	}
 
@@ -801,12 +831,11 @@ func parseCorpusEditArgs(args []string, ui UI) (CorpusEditOptions, error) {
 			fs.Usage()
 			return opts, err
 		}
-		fs.SetOutput(ui.Err)
-		fprintErr(ui.Err, err)
-		fs.Usage()
+		fprintUsageError(ui.Err, fs, editSynopsis)
 		return opts, err
 	}
 	if opts.DbPath == "" {
+		fprintUsageError(ui.Err, fs, editSynopsis)
 		return opts, errors.New("corpus database must be specified via --db or SEGROB_CORPUS_DB")
 	}
 	return opts, nil
@@ -838,12 +867,11 @@ func parseCorpusLsTopicArgs(args []string, ui UI) (CorpusLsTopicOptions, error) 
 			fs.Usage()
 			return opts, err
 		}
-		fs.SetOutput(ui.Err)
-		fprintErr(ui.Err, err)
-		fs.Usage()
+		fprintUsageError(ui.Err, fs, lsTopicSynopsis)
 		return opts, err
 	}
 	if opts.DbPath == "" {
+		fprintUsageError(ui.Err, fs, lsTopicSynopsis)
 		return opts, errors.New("corpus database must be specified via --db or SEGROB_CORPUS_DB")
 	}
 	return opts, nil
@@ -877,12 +905,11 @@ func parseCorpusShowTopicArgs(args []string, ui UI) (CorpusShowTopicOptions, str
 			fs.Usage()
 			return opts, "", err
 		}
-		fs.SetOutput(ui.Err)
-		fprintErr(ui.Err, err)
-		fs.Usage()
+		fprintUsageError(ui.Err, fs, showTopicSynopsis)
 		return opts, "", err
 	}
 	if opts.DbPath == "" {
+		fprintUsageError(ui.Err, fs, showTopicSynopsis)
 		return opts, "", errors.New("corpus database must be specified via --db or SEGROB_CORPUS_DB")
 	}
 	if fs.NArg() != 1 {
@@ -923,6 +950,7 @@ func parseCorpusImportTopicArgs(args []string, ui UI) (CorpusImportTopicOptions,
 			fs.Usage()
 			return opts, err
 		}
+		fprintUsageError(ui.Err, fs, importTopicSynopsis)
 		return opts, err
 	}
 
@@ -931,6 +959,7 @@ func parseCorpusImportTopicArgs(args []string, ui UI) (CorpusImportTopicOptions,
 		return opts, errors.New("-d/--directory is required")
 	}
 	if opts.DbPath == "" {
+		fprintUsageError(ui.Err, fs, importTopicSynopsis)
 		return opts, errors.New("corpus database must be specified via --db or SEGROB_CORPUS_DB")
 	}
 
@@ -968,6 +997,7 @@ func parseCorpusExportTopicArgs(args []string, ui UI) (CorpusExportTopicOptions,
 			fs.Usage()
 			return opts, err
 		}
+		fprintUsageError(ui.Err, fs, exportTopicSynopsis)
 		return opts, err
 	}
 
@@ -976,6 +1006,7 @@ func parseCorpusExportTopicArgs(args []string, ui UI) (CorpusExportTopicOptions,
 		return opts, errors.New("-d/--directory is required")
 	}
 	if opts.DbPath == "" {
+		fprintUsageError(ui.Err, fs, exportTopicSynopsis)
 		return opts, errors.New("corpus database must be specified via --db or SEGROB_CORPUS_DB")
 	}
 
@@ -1011,17 +1042,18 @@ func parseCorpusBackupArgs(args []string, ui UI) (CorpusBackupOptions, error) {
 		printOpt(w, "-n, --with-nlp", "", "Include NLP data in backup (default: exclude)")
 	}
 
-	err := fs.Parse(args)
-	if err != nil {
+	if err := fs.Parse(args); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
 			fs.SetOutput(ui.Out)
 			fs.Usage()
 			return opts, err
 		}
+		fprintUsageError(ui.Err, fs, backupSynopsis)
 		return opts, err
 	}
 
 	if opts.DbPath == "" {
+		fprintUsageError(ui.Err, fs, backupSynopsis)
 		return opts, errors.New("corpus database must be specified via --db or SEGROB_CORPUS_DB")
 	}
 	if opts.Output == "" {
@@ -1062,6 +1094,7 @@ func parseCorpusPublishTopicArgs(args []string, ui UI) (CorpusPublishTopicOption
 			fs.Usage()
 			return opts, err
 		}
+		fprintUsageError(ui.Err, fs, publishTopicSynopsis)
 		return opts, err
 	}
 
@@ -1071,9 +1104,11 @@ func parseCorpusPublishTopicArgs(args []string, ui UI) (CorpusPublishTopicOption
 	}
 
 	if opts.From == "" {
+		fprintUsageError(ui.Err, fs, publishTopicSynopsis)
 		return opts, errors.New("corpus source must be specified via --from or SEGROB_CORPUS_DB")
 	}
 	if opts.To == "" {
+		fprintUsageError(ui.Err, fs, publishTopicSynopsis)
 		return opts, errors.New("target db must be specified via --to or SEGROB_LIVE_DB")
 	}
 
