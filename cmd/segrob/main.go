@@ -43,7 +43,7 @@ func main() {
 }
 
 func fprintErr(w io.Writer, err error) {
-	_, _ = fmt.Fprintf(w, "segrob: %v\n", err)
+	_, _ = fmt.Fprintf(w, "Error: %v\n", err)
 }
 
 func runCommand(cmd string, args []string, ui UI) (err error) {

@@ -269,14 +269,17 @@ func parseCorpusIngestMetaArgs(args []string, ui UI) (CorpusIngestMetaOptions, e
 	fs := flag.NewFlagSet("corpus ingest-meta", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
 
+    const ingestMetaSynopsis = "[options] <dir>"
+
 	var opts CorpusIngestMetaOptions
 	fs.StringVar(&opts.DbPath, "db", os.Getenv("SEGROB_CORPUS_DB"), "")
 	fs.BoolVar(&opts.Pandoc, "pandoc", false, "")
 	fs.BoolVar(&opts.Pandoc, "p", false, "")
 
+
 	fs.Usage = func() {
 		w := fs.Output()
-		_, _ = fmt.Fprintf(w, "Usage: %s corpus ingest-meta [options] <dir>\n\n", os.Args[0])
+        fprintUsage(w, fs, ingestMetaSynopsis)
 		_, _ = fmt.Fprintf(w, "  Scan a directory for epub files and build a corpus database.\n")
 		_, _ = fmt.Fprintf(w, "\nArguments:\n")
 		_, _ = fmt.Fprintf(w, helpArgFmt, "dir", "Directory to scan for epub files")
@@ -294,9 +297,11 @@ func parseCorpusIngestMetaArgs(args []string, ui UI) (CorpusIngestMetaOptions, e
 		return opts, err
 	}
 
-	if fs.NArg() != 1 {
-		return opts, errors.New("corpus ingest-meta requires exactly one directory argument")
-	}
+    if fs.NArg() != 1 {
+        const msg = "requires exactly one directory argument"  
+        fprintUsageError(ui.Err, fs, ingestMetaSynopsis, msg)
+        return opts, errors.New(msg)
+    }
 
 	dir := fs.Arg(0)
 	info, err := os.Stat(dir)
