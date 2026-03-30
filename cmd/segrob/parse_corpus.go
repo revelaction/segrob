@@ -1048,7 +1048,7 @@ func parseCorpusBackupArgs(args []string, ui UI) (CorpusBackupOptions, error) {
 		_, _ = fmt.Fprintf(w, "  Create a gzipped backup of the corpus database.\n")
 		_, _ = fmt.Fprintf(w, "\nOptions:\n")
 		printOpt(w, "--db", "FILE", "Corpus SQLite file (or SEGROB_CORPUS_DB)")
-		printOpt(w, "-o, --output", "FILE", "Output file path (timestamp auto-appended)")
+		printOpt(w, "-o, --output", "FILE", "Exact output file path (optional)")
 		printOpt(w, "-n, --with-nlp", "", "Include NLP data in backup (default: exclude)")
 	}
 
@@ -1065,10 +1065,6 @@ func parseCorpusBackupArgs(args []string, ui UI) (CorpusBackupOptions, error) {
 	if opts.DbPath == "" {
 		fprintUsageError(ui.Err, fs, backupSynopsis)
 		return opts, errors.New("corpus database must be specified via --db or SEGROB_CORPUS_DB")
-	}
-	if opts.Output == "" {
-		fprintUsageError(ui.Err, fs, backupSynopsis)
-		return opts, errors.New("output path must be specified via -o or --output")
 	}
 
 	return opts, nil

@@ -161,12 +161,13 @@ segrob corpus publish-topic
 Create a gzipped backup of the corpus staging database for safety or portability.
 
 ```bash
-# Basic backup (excludes NLP data to keep file size small)
-segrob corpus backup -o backups/corpus_lite.gz
+# Basic backup (auto-generates a timestamped file like corpus.db-20260330T161922Z.gz in the current directory)
+segrob corpus backup
 
 # Full backup (includes NLP data)
-segrob corpus backup -o backups/corpus_full.gz --with-nlp
-```
+segrob corpus backup --with-nlp
 
-The output file will have a timestamp automatically appended to the provided name.
+# Backup to an explicit, exact path (no timestamp is appended)
+segrob corpus backup -o backups/corpus_lite.gz
+```
 

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/revelaction/segrob/storage"
@@ -69,8 +70,14 @@ func corpusBackupCommand(
 		}
 	}
 
-	timestamp := time.Now().UTC().Format("20060102T150405Z")
-	outputPath := fmt.Sprintf("%s-%s.db.gz", opts.Output, timestamp)
+	var outputPath string
+	if opts.Output != "" {
+		outputPath = opts.Output
+	} else {
+		timestamp := time.Now().UTC().Format("20060102T150405Z")
+		base := filepath.Base(opts.DbPath)
+		outputPath = fmt.Sprintf("%s-%s.gz", base, timestamp)
+	}
 
 	err = compressFile(tempPath, outputPath)
 	if err != nil {
