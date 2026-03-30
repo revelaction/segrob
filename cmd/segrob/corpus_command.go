@@ -24,11 +24,13 @@ func printCorpusUsage(w io.Writer) {
 	_, _ = fmt.Fprintf(w, "\nSubcommands: Dump\n")
 	_, _ = fmt.Fprintf(w, helpCmdFmt, "dump-txt", "Output the txt field of a corpus document byte-exact.")
 	_, _ = fmt.Fprintf(w, helpCmdFmt, "dump-nlp", "Output the nlp field of a corpus document.")
+	_, _ = fmt.Fprintf(w, helpCmdFmt, "dump-topic", "Output the JSON expressions of a named corpus topic.")
 
 	_, _ = fmt.Fprintf(w, "\nSubcommands: Ingest\n")
 	_, _ = fmt.Fprintf(w, helpCmdFmt, "ingest-nlp", "Process document text with NLP and store in corpus.")
 	_, _ = fmt.Fprintf(w, helpCmdFmt, "ingest-meta", "Scan a directory for epub files and build a corpus database.")
 	_, _ = fmt.Fprintf(w, helpCmdFmt, "push-txt", "Update a corpus document text from a file.")
+	_, _ = fmt.Fprintf(w, helpCmdFmt, "ingest-topic", "Ingest topics from a JSON directory into the corpus database.")
 
 	_, _ = fmt.Fprintf(w, "\nSubcommands: Publish\n")
 	_, _ = fmt.Fprintf(w, helpCmdFmt, "publish", "Move document(s) from corpus to live (all ACKed when no id).")
@@ -45,8 +47,6 @@ func printCorpusUsage(w io.Writer) {
 	_, _ = fmt.Fprintf(w, "\nSubcommands: Topics\n")
 	_, _ = fmt.Fprintf(w, helpCmdFmt, "ls-topic", "List all unique topics in the repository.")
 	_, _ = fmt.Fprintf(w, helpCmdFmt, "show-topic", "Show expressions for a specific topic.")
-	_, _ = fmt.Fprintf(w, helpCmdFmt, "ingest-topic", "Ingest topics from a JSON directory into the corpus database.")
-	_, _ = fmt.Fprintf(w, helpCmdFmt, "dump-topic", "Output the JSON expressions of a named corpus topic.")
 	_, _ = fmt.Fprintf(w, helpCmdFmt, "edit", "Enter interactive edit mode.")
 }
 
