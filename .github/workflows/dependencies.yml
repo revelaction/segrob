@@ -68,10 +68,10 @@ jobs:
           git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
           
-          if git diff --quiet HEAD -- .github/badges/deps.json; then
+          git add .github/badges/deps.json
+          if git diff --quiet --staged -- .github/badges/deps.json; then
             echo "No changes to dependency endpoint"
           else
-            git add .github/badges/deps.json
             git commit -m "Update dependency endpoint: ${{ env.DIRECT_DEPS }}"
             git pull --rebase
             git push
