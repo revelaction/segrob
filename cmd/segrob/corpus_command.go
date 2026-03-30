@@ -45,8 +45,8 @@ func printCorpusUsage(w io.Writer) {
 	_, _ = fmt.Fprintf(w, "\nSubcommands: Topics\n")
 	_, _ = fmt.Fprintf(w, helpCmdFmt, "ls-topic", "List all unique topics in the repository.")
 	_, _ = fmt.Fprintf(w, helpCmdFmt, "show-topic", "Show expressions for a specific topic.")
-	_, _ = fmt.Fprintf(w, helpCmdFmt, "import-topic", "Import topics from filesystem to SQLite.")
-	_, _ = fmt.Fprintf(w, helpCmdFmt, "export-topic", "Export topics from SQLite to filesystem.")
+	_, _ = fmt.Fprintf(w, helpCmdFmt, "ingest-topic", "Ingest topics from a JSON directory into the corpus database.")
+	_, _ = fmt.Fprintf(w, helpCmdFmt, "dump-topic", "Output the JSON expressions of a named corpus topic.")
 	_, _ = fmt.Fprintf(w, helpCmdFmt, "edit", "Enter interactive edit mode.")
 }
 
@@ -301,8 +301,8 @@ func runCorpusCommand(args []string, setup *Setup, ui UI) error {
 		}
 		return corpusShowTopicCommand(repo, opts, name, ui)
 
-	case "import-topic":
-		opts, err := parseCorpusImportTopicArgs(subArgs, ui)
+	case "ingest-topic":
+		opts, err := parseCorpusIngestTopicArgs(subArgs, ui)
 		if err != nil {
 			return err
 		}
@@ -310,10 +310,10 @@ func runCorpusCommand(args []string, setup *Setup, ui UI) error {
 		if err != nil {
 			return err
 		}
-		return corpusImportTopicCommand(dst, opts, ui)
+		return corpusIngestTopicCommand(dst, opts, ui)
 
-	case "export-topic":
-		opts, err := parseCorpusExportTopicArgs(subArgs, ui)
+	case "dump-topic":
+		opts, name, err := parseCorpusDumpTopicArgs(subArgs, ui)
 		if err != nil {
 			return err
 		}
@@ -321,7 +321,7 @@ func runCorpusCommand(args []string, setup *Setup, ui UI) error {
 		if err != nil {
 			return err
 		}
-		return corpusExportTopicCommand(src, opts, ui)
+		return corpusDumpTopicCommand(src, opts, name, ui)
 
 	case "edit":
 		opts, err := parseCorpusEditArgs(subArgs, ui)

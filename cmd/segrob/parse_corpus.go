@@ -919,28 +919,27 @@ func parseCorpusShowTopicArgs(args []string, ui UI) (CorpusShowTopicOptions, str
 	return opts, fs.Arg(0), nil
 }
 
-type CorpusImportTopicOptions struct {
-	Directory string
-	DbPath    string
+type CorpusIngestTopicOptions struct {
+	Dir    string // positional arg: directory with JSON topic files
+	DbPath string // --db / SEGROB_CORPUS_DB
 }
 
-func parseCorpusImportTopicArgs(args []string, ui UI) (CorpusImportTopicOptions, error) {
-	fs := flag.NewFlagSet("corpus import-topic", flag.ContinueOnError)
+func parseCorpusIngestTopicArgs(args []string, ui UI) (CorpusIngestTopicOptions, error) {
+	fs := flag.NewFlagSet("corpus ingest-topic", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
 
-	const importTopicSynopsis = "-d <dir> [options]"
+	const ingestTopicSynopsis = "[options] <dir>"
 
-	var opts CorpusImportTopicOptions
-	fs.StringVar(&opts.Directory, "directory", "", "")
-	fs.StringVar(&opts.Directory, "d", "", "")
+	var opts CorpusIngestTopicOptions
 	fs.StringVar(&opts.DbPath, "db", os.Getenv("SEGROB_CORPUS_DB"), "")
 
 	fs.Usage = func() {
 		w := fs.Output()
-		fprintUsage(w, fs, importTopicSynopsis)
-		_, _ = fmt.Fprintf(w, "  Import topics from a JSON directory into the corpus database.\n")
+		fprintUsage(w, fs, ingestTopicSynopsis)
+		_, _ = fmt.Fprintf(w, "  Ingest topics from a directory of JSON files into the corpus database.\n")
+		_, _ = fmt.Fprintf(w, "\nArguments:\n")
+		_, _ = fmt.Fprintf(w, helpArgFmt, "dir", "Directory containing JSON topic files")
 		_, _ = fmt.Fprintf(w, "\nOptions:\n")
-		printOpt(w, "-d, --directory", "DIR", "Source directory containing JSON topic files")
 		printOpt(w, "--db", "FILE", "Target corpus SQLite database file (or SEGROB_CORPUS_DB)")
 	}
 
@@ -950,67 +949,78 @@ func parseCorpusImportTopicArgs(args []string, ui UI) (CorpusImportTopicOptions,
 			fs.Usage()
 			return opts, err
 		}
-		fprintUsageError(ui.Err, fs, importTopicSynopsis)
+		fprintUsageError(ui.Err, fs, ingestTopicSynopsis)
 		return opts, err
 	}
 
-	if opts.Directory == "" {
-		fprintUsageError(ui.Err, fs, importTopicSynopsis)
-		return opts, errors.New("-d/--directory is required")
+	if fs.NArg() != 1 {
+		fprintUsageError(ui.Err, fs, ingestTopicSynopsis)
+		return opts, errors.New("requires exactly one directory argument")
 	}
+
+	dir := fs.Arg(0)
+	info, err := os.Stat(dir)
+	if err != nil {
+		fprintUsageError(ui.Err, fs, ingestTopicSynopsis)
+		return opts, fmt.Errorf("directory not found: %s", dir)
+	}
+	if !info.IsDir() {
+		fprintUsageError(ui.Err, fs, ingestTopicSynopsis)
+		return opts, fmt.Errorf("argument is not a directory: %s", dir)
+	}
+
+	opts.Dir = dir
+
 	if opts.DbPath == "" {
-		fprintUsageError(ui.Err, fs, importTopicSynopsis)
+		fprintUsageError(ui.Err, fs, ingestTopicSynopsis)
 		return opts, errors.New("corpus database must be specified via --db or SEGROB_CORPUS_DB")
 	}
 
 	return opts, nil
 }
 
-type CorpusExportTopicOptions struct {
-	DbPath    string
-	Directory string
+type CorpusDumpTopicOptions struct {
+	DbPath string // --db / SEGROB_CORPUS_DB
 }
 
-func parseCorpusExportTopicArgs(args []string, ui UI) (CorpusExportTopicOptions, error) {
-	fs := flag.NewFlagSet("corpus export-topic", flag.ContinueOnError)
+func parseCorpusDumpTopicArgs(args []string, ui UI) (CorpusDumpTopicOptions, string, error) {
+	fs := flag.NewFlagSet("corpus dump-topic", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
 
-	const exportTopicSynopsis = "-d <dir> [options]"
+	const dumpTopicSynopsis = "[options] <name>"
 
-	var opts CorpusExportTopicOptions
+	var opts CorpusDumpTopicOptions
 	fs.StringVar(&opts.DbPath, "db", os.Getenv("SEGROB_CORPUS_DB"), "")
-	fs.StringVar(&opts.Directory, "directory", "", "")
-	fs.StringVar(&opts.Directory, "d", "", "")
 
 	fs.Usage = func() {
 		w := fs.Output()
-		fprintUsage(w, fs, exportTopicSynopsis)
-		_, _ = fmt.Fprintf(w, "  Export topics from the corpus database to a JSON directory.\n")
+		fprintUsage(w, fs, dumpTopicSynopsis)
+		_, _ = fmt.Fprintf(w, "  Output the JSON expressions of a named corpus topic.\n\nArguments:\n")
+		_, _ = fmt.Fprintf(w, helpArgFmt, "name", "Topic name to dump")
 		_, _ = fmt.Fprintf(w, "\nOptions:\n")
-		printOpt(w, "-d, --directory", "DIR", "Target directory for JSON topic files")
-		printOpt(w, "--db", "FILE", "Source corpus SQLite database file (or SEGROB_CORPUS_DB)")
+		printOpt(w, "--db", "PATH", "Corpus SQLite file (or SEGROB_CORPUS_DB)")
 	}
 
 	if err := fs.Parse(args); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
 			fs.SetOutput(ui.Out)
 			fs.Usage()
-			return opts, err
+			return opts, "", err
 		}
-		fprintUsageError(ui.Err, fs, exportTopicSynopsis)
-		return opts, err
+		fprintUsageError(ui.Err, fs, dumpTopicSynopsis)
+		return opts, "", err
 	}
 
-	if opts.Directory == "" {
-		fprintUsageError(ui.Err, fs, exportTopicSynopsis)
-		return opts, errors.New("-d/--directory is required")
-	}
 	if opts.DbPath == "" {
-		fprintUsageError(ui.Err, fs, exportTopicSynopsis)
-		return opts, errors.New("corpus database must be specified via --db or SEGROB_CORPUS_DB")
+		fprintUsageError(ui.Err, fs, dumpTopicSynopsis)
+		return opts, "", errors.New("corpus database must be specified via --db or SEGROB_CORPUS_DB")
+	}
+	if fs.NArg() != 1 {
+		fprintUsageError(ui.Err, fs, dumpTopicSynopsis)
+		return opts, "", errors.New("corpus dump-topic requires exactly one argument: <name>")
 	}
 
-	return opts, nil
+	return opts, fs.Arg(0), nil
 }
 
 type CorpusBackupOptions struct {

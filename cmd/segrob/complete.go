@@ -32,8 +32,9 @@ var corpusSubcommands = []string{
 	"ls-topic",
 	"show-topic",
 	"edit",
-	"import-topic",
-	"export-topic",
+	"ingest-topic",
+	"dump-topic",
+	"publish-topic",
 }
 
 var liveSubcommands = []string{
