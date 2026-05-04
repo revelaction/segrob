@@ -1,7 +1,6 @@
 package main
 
 import (
-	"os"
 	"strings"
 
 	"github.com/revelaction/segrob/match"
@@ -88,12 +87,6 @@ func liveFindCommand(dr storage.DocRepository, opts LiveFindOptions, args []stri
 	}
 
 	// Render results
-	if opts.JSON {
-		jr := render.NewJSONRenderer(os.Stdout)
-		jr.Render(results)
-		return nil
-	}
-
 	r := render.NewCLIRenderer()
 	r.HasColor = !opts.NoColor
 	r.HasPrefix = !opts.NoPrefix

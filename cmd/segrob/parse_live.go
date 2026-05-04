@@ -20,8 +20,7 @@ type LiveFindOptions struct {
 	Format    string
 	DocPath   string
 	TopicPath string
-	JSON      bool // output results as JSON
-	Limit     int  // max matched results (0 = unlimited)
+	Limit     int // max matched results (0 = unlimited)
 }
 
 type LiveQueryOptions struct {
@@ -329,9 +328,6 @@ func parseLiveFindArgs(args []string, ui UI) (LiveFindOptions, []string, bool, e
 	fs.StringVar(&opts.TopicPath, "topic-path", os.Getenv("SEGROB_TOPIC_DB"), "")
 	fs.StringVar(&opts.TopicPath, "t", os.Getenv("SEGROB_TOPIC_DB"), "")
 
-	fs.BoolVar(&opts.JSON, "json", false, "")
-	fs.BoolVar(&opts.JSON, "j", false, "")
-
 	fs.IntVar(&opts.Limit, "limit", 0, "")
 
 	fs.Usage = func() {
@@ -349,7 +345,6 @@ func parseLiveFindArgs(args []string, ui UI) (LiveFindOptions, []string, bool, e
 		printOpt(w, "--limit", "N", "Maximum number of results to return (default: 0 = unlimited)")
 		printOpt(w, "-c, --no-color", "", "Disable color formatting in output")
 		printOpt(w, "-x, --no-prefix", "", "Omit metadata prefixes from output")
-		printOpt(w, "-j, --json", "", "Output results as JSON")
 	}
 
 	if err := fs.Parse(args); err != nil {

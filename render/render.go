@@ -40,11 +40,6 @@ func SupportedFormats() []string {
 	return []string{"all", "part", "lemma", "aggr"}
 }
 
-// Renderer defines the contract for rendering sentence match results.
-type Renderer interface {
-	Render(results []*match.SentenceMatch)
-}
-
 type CLIRenderer struct {
 	HasColor bool
 

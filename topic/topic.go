@@ -13,12 +13,8 @@ const (
 )
 
 type Topic struct {
-
-	// the topic name
-	Name string
-
-	// the expression of the topic
-	Exprs []TopicExpr
+	Name  string      `json:"name"`
+	Exprs []TopicExpr `json:"exprs"`
 }
 
 type TopicExpr []TopicExprItem
