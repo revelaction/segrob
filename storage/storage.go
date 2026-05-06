@@ -3,6 +3,7 @@ package storage
 import (
 	"encoding/json"
 	"time"
+	"errors"
 
 	sent "github.com/revelaction/segrob/sentence"
 	"github.com/revelaction/segrob/topic"
@@ -250,3 +251,13 @@ type CorpusRepository interface {
 	CorpusReader
 	CorpusWriter
 }
+
+
+// sentinel error so callers can safely halt iteration
+// 
+// the standard library pattern for cleanly terminating a callback-driven
+// scanner (like filepath.Walk using filepath.SkipDir) is a Sentinel Error. If
+// the callback returns this specific error, FindCandidates safely halts SQLite
+// and returns the current newCursor instead of throwing it away.
+var StopScan = errors.New("stop scan")
+
