@@ -54,30 +54,8 @@ func (m TopicExpr) Lemmas() []string {
 	return lemmas
 }
 
-// LemmaSets returns a slice of lemma sets, one for each expression in the topic.
-// It only includes positive lemmas suitable for indexed searching.
-func (t Topic) LemmaSets() [][]string {
-	var sets [][]string
-	for _, e := range t.Exprs {
-		lemmas := e.Lemmas()
-		if len(lemmas) > 0 {
-			sets = append(sets, lemmas)
-		}
-	}
-	return sets
-}
 
 type TopicExprItem struct {
-
-	// ExprIndex is the position of the parent expression in the Topic.Exprs slice.
-	ExprIndex int `json:"-"`
-
-	// ItemIndex is the position of this item within its parent TopicExpr.
-	ItemIndex int `json:"-"`
-
-	// TopicName references the Topic of the Item
-	TopicName string `json:"-"`
-
 	Near  int    `json:"near,omitempty"`
 	Lemma string `json:"lemma,omitempty"`
 	Pos   string `json:"pos,omitempty"`

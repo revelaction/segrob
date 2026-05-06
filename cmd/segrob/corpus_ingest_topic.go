@@ -43,15 +43,6 @@ func readTopicFile(dir, name string) (tpc.Topic, error) {
 		return tpc.Topic{}, err
 	}
 
-	// Set the topic name and expression Id in each Item
-	for index := range exprs {
-		for idx := range exprs[index] {
-			exprs[index][idx].TopicName = name
-			exprs[index][idx].ExprIndex = index
-			exprs[index][idx].ItemIndex = idx
-		}
-	}
-
 	return tpc.Topic{Name: name, Exprs: exprs}, nil
 }
 

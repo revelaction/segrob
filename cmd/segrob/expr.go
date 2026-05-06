@@ -47,8 +47,7 @@ func liveFindCommand(dr storage.DocRepository, opts LiveFindOptions, args []stri
 	}
 
 	// Prepare Matcher
-	matcher := match.NewMatcher(topic.Topic{})
-	matcher.AddTopicExpr(expr)
+	matcher := match.NewMatcher(expr)
 
 	// Prepare results accumulator
 	var results []*match.SentenceMatch
@@ -92,7 +91,6 @@ func liveFindCommand(dr storage.DocRepository, opts LiveFindOptions, args []stri
 	r.HasPrefix = !opts.NoPrefix
 	r.PrefixTopicFunc = render.PrefixFuncEmpty
 	r.Format = opts.Format
-	r.NumMatches = opts.NMatches
 
 	// Populate DocNames for indexed search
 	list, err := dr.List()

@@ -55,9 +55,6 @@ type CLIRenderer struct {
 	// matches: print only matched words of the sentence
 	Format string
 
-	// Show only sentences with this amount of matches
-	NumMatches int
-
 	DocNames map[string]string
 }
 
@@ -69,10 +66,6 @@ func (r *CLIRenderer) Render(resultsSorted []*match.SentenceMatch) {
 	aggregatedLemmas := map[string]int{}
 
 	for _, sentenceMatch := range resultsSorted {
-		if r.NumMatches > 0 && sentenceMatch.NumExprs < r.NumMatches {
-			break
-		}
-
 		sentTokens := sentenceMatch.AllTokens()
 
 		prefixDoc := r.buildPrefixDoc(sentenceMatch)
@@ -341,7 +334,7 @@ func (r *CLIRenderer) buildPrefixDoc(sentenceMatch *match.SentenceMatch) string 
 	}
 
 	// Default
-	return fmt.Sprintf("[%37s %.6s %5d:%2d] ✍  ", r.title(sentenceMatch.Sentence.DocId), sentenceMatch.Sentence.DocId, sentenceMatch.Sentence.SentenceId, sentenceMatch.NumExprs)
+	return fmt.Sprintf("[%37s %.6s %5d] ✍  ", r.title(sentenceMatch.Sentence.DocId), sentenceMatch.Sentence.DocId, sentenceMatch.Sentence.SentenceId)
 }
 
 func PrefixFuncEmpty(sentenceMatch *match.SentenceMatch) string {

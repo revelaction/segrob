@@ -40,7 +40,6 @@ func liveQueryCommand(dr storage.DocRepository, tr storage.TopicRepository, opts
 	r.HasPrefix = !opts.NoPrefix
 	r.PrefixTopicFunc = render.PrefixFuncEmpty
 	r.Format = opts.Format
-	r.NumMatches = opts.NMatches
 
 	// now present the REPL and prepare for topic in the REPL
 	t := query.NewHandler(dr, topicLib, r, opts.Labels)

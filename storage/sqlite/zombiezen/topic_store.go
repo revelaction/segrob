@@ -139,15 +139,7 @@ func (h *TopicStore) Delete(name string) error {
 	return err
 }
 
-// assembleTopic sets TopicName, ExprIndex and ItemIndex for each item
 func (h *TopicStore) assembleTopic(name string, exprs []topic.TopicExpr) topic.Topic {
-	for index := range exprs {
-		for idx := range exprs[index] {
-			exprs[index][idx].TopicName = name
-			exprs[index][idx].ExprIndex = index
-			exprs[index][idx].ItemIndex = idx
-		}
-	}
 	return topic.Topic{
 		Name:  name,
 		Exprs: exprs,

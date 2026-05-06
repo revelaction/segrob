@@ -46,15 +46,17 @@ func renderTopics(sentences []sent.Sentence, sentId int, topicRepo storage.Topic
 	r.Format = opts.Format
 
 	for _, tp := range allTopics {
-		matcher := match.NewMatcher(tp)
-		sm := matcher.MatchSentence(s)
-		if sm == nil {
-			continue
+		for _, expr := range tp.Exprs {
+			matcher := match.NewMatcher(expr)
+			sm := matcher.MatchSentence(s)
+			if sm == nil {
+				continue
+			}
+
+			sm.TopicName = tp.Name
+			res := []*match.SentenceMatch{sm}
+			r.Render(res)
 		}
-
-		res := []*match.SentenceMatch{sm}
-
-		r.Render(res)
 	}
 
 	return nil

@@ -75,8 +75,17 @@ func (h *Handler) Run() error {
 			continue
 		}
 
-		matcher := match.NewMatcher(tp)
-		matcher.AddTopicExpr(expr)
+		// Build one matcher per expression
+		var matchers []*match.Matcher
+		for _, e := range tp.Exprs {
+			matchers = append(matchers, match.NewMatcher(e))
+		}
+
+		// If there is an ArgExpr, add its matcher
+		var argMatcher *match.Matcher
+		if len(expr) > 0 {
+			argMatcher = match.NewMatcher(expr)
+		}
 
 		// Fetch doc names for rendering
 		docList, err := h.DocRepo.List()
@@ -109,7 +118,13 @@ func (h *Handler) Run() error {
 		// We only extract positive lemmas to find candidates in the database.
 		// Fine-grained matching (including negative '!' lemmas) is performed
 		// by the Matcher on the retrieved candidates.
-		queries := tp.LemmaSets()
+		var queries [][]string
+		for _, e := range tp.Exprs {
+			lemmas := e.Lemmas()
+			if len(lemmas) > 0 {
+				queries = append(queries, lemmas)
+			}
+		}
 		lemmas := expr.Lemmas()
 		if len(lemmas) > 0 {
 			queries = append(queries, lemmas)
@@ -130,7 +145,7 @@ func (h *Handler) Run() error {
 					h.Renderer.AddDocName(s.DocId, docNames[s.DocId])
 
 					// Use MatchSentence directly to avoid "Tártaro" bug (overwrite due to missing SentenceId)
-					sm := matcher.MatchSentence(s)
+					sm := matchWithMatchers(s, tp.Name, matchers, argMatcher)
 					if sm != nil {
 						results = append(results, sm)
 					}
@@ -151,12 +166,9 @@ func (h *Handler) Run() error {
 			}
 		}
 
-		// Sort results to match previous behavior (Relevance > DocID > SentenceID)
+		// Sort results to match previous behavior (DocID > SentenceID)
 		// We implement the sort here since we bypassed matcher.Sentences()
 		sort.Slice(results, func(i, j int) bool {
-			if results[i].NumExprs != results[j].NumExprs {
-				return results[i].NumExprs > results[j].NumExprs
-			}
 			if results[i].Sentence.DocId != results[j].Sentence.DocId {
 				return results[i].Sentence.DocId < results[j].Sentence.DocId
 			}
@@ -165,6 +177,34 @@ func (h *Handler) Run() error {
 
 		h.Renderer.Render(results)
 	}
+}
+
+// matchWithMatchers applies the ArgExpr AND gate, then tries each topic
+// expression matcher (OR). Returns nil if no match.
+// Sets TopicName on the returned SentenceMatch.
+func matchWithMatchers(s sent.Sentence, topicName string, matchers []*match.Matcher, argMatcher *match.Matcher) *match.SentenceMatch {
+	// ArgExpr AND gate
+	if argMatcher != nil {
+		if argMatcher.MatchSentence(s) == nil {
+			return nil
+		}
+	}
+
+	// Topic expressions OR — return the first match
+	for _, m := range matchers {
+		sm := m.MatchSentence(s)
+		if sm != nil {
+			sm.TopicName = topicName
+			return sm
+		}
+	}
+
+	// No topic, no argMatcher — should not happen, but guard
+	if len(matchers) == 0 && argMatcher != nil {
+		return argMatcher.MatchSentence(s)
+	}
+
+	return nil
 }
 
 func (h *Handler) completer(topicNames []string) func(in prompt.Document) []prompt.Suggest {

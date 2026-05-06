@@ -7,85 +7,55 @@ import (
 	"github.com/revelaction/segrob/topic"
 )
 
-// Matcher matchs a Doc (or a set of Docs) against a Topic (+ ArgExpr)
+// Matcher matches a single expression against sentences.
 type Matcher struct {
-	Topic topic.Topic
-
-	// ArgExpr is an additional topic expresion passed as argument to the
-	// command line
-	// ArgExpr have an AND semantic, they must match the sentence in addition
-	// to one or more TopicExpr of the Topic.
-	ArgExpr topic.TopicExpr
+	Expr topic.TopicExpr
 }
 
-// ExprMatch is the result of matching one TopicExpr against one Sentence.
-// Tokens contains the list of match occurrences. Each []sent.Token is one
-// complete match with tokens ordered by item position in the expression.
-type ExprMatch struct {
-	ExprIndex int            `json:"expr_index"` // position of the expression in Topic.Exprs
-	Tokens    [][]sent.Token `json:"tokens"`     // each element is one full match occurrence
-}
-
-// SentenceMatch represents a sentence matched by one or more TopicExpr.
+// SentenceMatch represents the result of matching one expression against one sentence.
 type SentenceMatch struct {
-	// TopicName is the topic that matched this sentence
-	TopicName string `json:"topic_name,omitempty"`
-
-	// Matches contains one ExprMatch per matched expression
-	Matches []ExprMatch `json:"matches"`
+	// Tokens contains the list of match occurrences. Each []sent.Token is one
+	// complete match with tokens ordered by item position in the expression.
+	Tokens [][]sent.Token `json:"tokens"`
 
 	// Sentence is the matched sentence
 	Sentence sent.Sentence `json:"sentence"`
 
-	// NumExprs is the number of topicExpr that matched. Used to sort results.
-	NumExprs int `json:"num_exprs"`
+	// Expr is the human-readable expression that produced this match
+	// (e.g. "tener 2 proposito"). Set by the matcher via TopicExpr.String().
+	Expr string `json:"expr"`
+
+	// TopicName is the topic this expression belongs to.
+	// Not set by the matcher. Callers set this when topic context is available.
+	TopicName string `json:"topic_name,omitempty"`
 }
 
-// AllTokens returns all matched tokens from all expressions, flattened.
+// AllTokens returns all matched tokens from all match occurrences, flattened.
 func (sm *SentenceMatch) AllTokens() []sent.Token {
 	var all []sent.Token
-	for _, em := range sm.Matches {
-		for _, tks := range em.Tokens {
-			all = append(all, tks...)
-		}
+	for _, tks := range sm.Tokens {
+		all = append(all, tks...)
 	}
 	return all
 }
 
-// MatchSentence matches a posible Topic AND a possible TopicExpr for a given sentence.
+// MatchSentence matches the expression against a single sentence.
+// Returns nil if the expression does not match.
 func (m *Matcher) MatchSentence(sentence sent.Sentence) *SentenceMatch {
-	hasTopic := len(m.Topic.Exprs) > 0
-	hasExpr := len(m.ArgExpr) > 0
-
-	sm := &SentenceMatch{}
-
-	// ArgExpr check (AND gate)
-	// ArgExpr check (AND gate)
-	if hasExpr {
-		tokens := matchExpr(sentence.Tokens, m.ArgExpr)
-		if tokens == nil {
-			return nil
-		}
-		sm.Matches = append(sm.Matches, ExprMatch{ExprIndex: -1, Tokens: tokens})
-	}
-
-	// Topic expressions (OR)
-	for i, expr := range m.Topic.Exprs {
-		tokens := matchExpr(sentence.Tokens, expr)
-		if tokens != nil {
-			sm.NumExprs++
-			sm.Matches = append(sm.Matches, ExprMatch{ExprIndex: i, Tokens: tokens})
-		}
-	}
-
-	if hasTopic && sm.NumExprs == 0 {
+	if len(m.Expr) == 0 {
 		return nil
 	}
 
-	sm.TopicName = m.Topic.Name
-	sm.Sentence = sentence
+	tokens := matchExpr(sentence.Tokens, m.Expr)
+	if tokens == nil {
+		return nil
+	}
 
-	return sm
+	return &SentenceMatch{
+		Tokens:   tokens,
+		Sentence: sentence,
+		Expr:     m.Expr.String(),
+	}
 }
 
 // matchExpr matches a single TopicExpr against a sentence.
@@ -144,13 +114,9 @@ func matchExpr(sentence []sent.Token, expr topic.TopicExpr) [][]sent.Token {
 	return candidates
 }
 
-func (m *Matcher) AddTopicExpr(expr topic.TopicExpr) {
-	m.ArgExpr = expr
-}
-
-func NewMatcher(topic topic.Topic) *Matcher {
+func NewMatcher(expr topic.TopicExpr) *Matcher {
 	return &Matcher{
-		Topic: topic,
+		Expr: expr,
 	}
 }
 
