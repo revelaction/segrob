@@ -125,6 +125,25 @@ func (h *TopicStore) Write(tp topic.Topic) error {
 	return err
 }
 
+// Upsert provides an atomic read-modify-write operation for a topic.
+// It can be used both to create a new topic and to update an existing one.
+//
+// If the topic does not exist for the given userID and name, it initializes a new
+// topic.Topic with that name and empty expressions. The provided mutation function 'fn'
+// is then called with this (possibly empty) topic. If 'fn' returns storage.ErrNoChange,
+// the operation is aborted and the current state is returned.
+//
+// Example usage for adding an expression (Insert or Update):
+//
+//	updated, err := store.Upsert(userID, "my-topic", func(t topic.Topic) (topic.Topic, error) {
+//	    for _, existing := range t.Exprs {
+//	        if topic.EqualExpr(existing, newExpr) {
+//	            return t, storage.ErrNoChange
+//	        }
+//	    }
+//	    t.Exprs = append(t.Exprs, newExpr)
+//	    return t, nil
+//	})
 func (h *TopicStore) Upsert(userID, name string, fn func(topic.Topic) (topic.Topic, error)) (result topic.Topic, err error) {
 	conn, err := h.pool.Take(context.TODO())
 	if err != nil {
