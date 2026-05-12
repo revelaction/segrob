@@ -215,7 +215,7 @@ func (h *DocStore) FindCandidates(lemmas []string, labelIDs []int, after storage
 	
 	if err != nil {
 		// Intercept the graceful stop signal and return the safely updated cursor
-		if errors.Is(err, storage.StopScan) {
+		if errors.Is(err, storage.ErrStopScan) {
 			return newCursor, nil
 		}
 		// Any other error means a real failure; progress is lost

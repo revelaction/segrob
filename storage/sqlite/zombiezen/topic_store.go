@@ -3,6 +3,7 @@ package zombiezen
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"github.com/revelaction/segrob/storage"
@@ -119,6 +120,98 @@ func (h *TopicStore) Write(tp topic.Topic) error {
 
 	err = sqlitex.Execute(conn, query, &sqlitex.ExecOptions{
 		Args: []interface{}{tp.Name, string(exprsJSON)},
+	})
+
+	return err
+}
+
+func (h *TopicStore) Upsert(userID, name string, fn func(topic.Topic) (topic.Topic, error)) (result topic.Topic, err error) {
+	conn, err := h.pool.Take(context.TODO())
+	if err != nil {
+		return topic.Topic{}, err
+	}
+	defer h.pool.Put(conn)
+
+	defer sqlitex.Save(conn)(&err)
+
+	// Read current topic (zero-value if not found).
+	current := topic.Topic{Name: name}
+	readQuery := fmt.Sprintf(`SELECT exprs FROM %s WHERE user_id = ? AND name = ?`, h.tableName)
+	err = sqlitex.Execute(conn, readQuery, &sqlitex.ExecOptions{
+		Args: []interface{}{userID, name},
+		ResultFunc: func(stmt *sqlite.Stmt) error {
+			var exprs []topic.TopicExpr
+			unmarshalErr := json.Unmarshal([]byte(stmt.ColumnText(0)), &exprs)
+			if unmarshalErr != nil {
+				return unmarshalErr
+			}
+			current.Exprs = exprs
+			return nil
+		},
+	})
+	if err != nil {
+		return topic.Topic{}, err
+	}
+
+	updated, err := fn(current)
+	if errors.Is(err, storage.ErrNoChange) {
+		return current, nil
+	}
+	if err != nil {
+		return topic.Topic{}, err
+	}
+
+	exprsJSON, err := json.Marshal(updated.Exprs)
+	if err != nil {
+		return topic.Topic{}, err
+	}
+
+	upsertQuery := fmt.Sprintf(`
+		INSERT INTO %s (user_id, name, exprs, updated)
+		VALUES (?, ?, ?, strftime('%%Y-%%m-%%dT%%H:%%M:%%SZ', 'now'))
+		ON CONFLICT(user_id, name) DO UPDATE SET
+			exprs   = excluded.exprs,
+			updated = excluded.updated
+		RETURNING name, exprs
+	`, h.tableName)
+
+	err = sqlitex.Execute(conn, upsertQuery, &sqlitex.ExecOptions{
+		Args: []interface{}{userID, updated.Name, string(exprsJSON)},
+		ResultFunc: func(stmt *sqlite.Stmt) error {
+			returnedName := stmt.ColumnText(0)
+			returnedExprsJSON := stmt.ColumnText(1)
+
+			var returnedExprs []topic.TopicExpr
+			unmarshalErr := json.Unmarshal([]byte(returnedExprsJSON), &returnedExprs)
+			if unmarshalErr != nil {
+				return unmarshalErr
+			}
+			result = h.assembleTopic(returnedName, returnedExprs)
+			return nil
+		},
+	})
+	if err != nil {
+		return topic.Topic{}, err
+	}
+
+	return result, nil
+}
+
+func (h *TopicStore) CopyDefault(userID string) error {
+	conn, err := h.pool.Take(context.TODO())
+	if err != nil {
+		return err
+	}
+	defer h.pool.Put(conn)
+
+	query := fmt.Sprintf(`
+		INSERT INTO %s (user_id, name, exprs)
+		SELECT ?, name, exprs FROM %s WHERE user_id = ''
+		ON CONFLICT(user_id, name) DO NOTHING
+	`, h.tableName, h.tableName)
+
+	err = sqlitex.Execute(conn, query, &sqlitex.ExecOptions{
+		Args: []interface{}{userID},
 	})
 
 	return err

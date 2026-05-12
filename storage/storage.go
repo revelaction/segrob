@@ -22,6 +22,8 @@ type TopicReader interface {
 type TopicWriter interface {
 	// Write persists a topic to storage
 	Write(tp topic.Topic) error
+	Upsert(userID, name string, fn func(topic.Topic) (topic.Topic, error)) (topic.Topic, error)
+	CopyDefault(userID string) error
 }
 
 // TopicDeleter defines delete operations for topic storage
@@ -259,5 +261,9 @@ type CorpusRepository interface {
 // scanner (like filepath.Walk using filepath.SkipDir) is a Sentinel Error. If
 // the callback returns this specific error, FindCandidates safely halts SQLite
 // and returns the current newCursor instead of throwing it away.
-var StopScan = errors.New("stop scan")
+var ErrStopScan = errors.New("stop scan")
+
+// ErrNoChange signals that the mutation function made no changes to the topic.
+// The store skips the write and returns the current state.
+var ErrNoChange = errors.New("no change")
 
