@@ -6,7 +6,7 @@ import (
 )
 
 func corpusLsTopicCommand(tr storage.TopicRepository, opts CorpusLsTopicOptions, ui UI) error {
-	topicLib, err := tr.ReadAll()
+	topicLib, err := tr.ReadAll("")
 	if err != nil {
 		return err
 	}

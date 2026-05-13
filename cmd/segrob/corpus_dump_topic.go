@@ -9,7 +9,7 @@ import (
 )
 
 func corpusDumpTopicCommand(src storage.TopicReader, opts CorpusDumpTopicOptions, name string, ui UI) error {
-	tp, err := src.Read(name)
+	tp, err := src.Read("", name)
 	if err != nil {
 		return fmt.Errorf("failed to read topic %s: %w", name, err)
 	}

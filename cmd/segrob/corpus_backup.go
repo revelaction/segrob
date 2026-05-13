@@ -51,7 +51,7 @@ func corpusBackupCommand(
 	}
 
 	// Copy topics
-	topics, rErr := srcTopics.ReadAll()
+	topics, rErr := srcTopics.ReadAll("")
 	if rErr != nil {
 		return fmt.Errorf("failed to read topics: %w", rErr)
 	}

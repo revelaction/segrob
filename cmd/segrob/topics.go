@@ -35,7 +35,7 @@ func renderTopics(sentences []sent.Sentence, sentId int, topicRepo storage.Topic
 		return err
 	}
 
-	allTopics, err := topicRepo.ReadAll()
+	allTopics, err := topicRepo.ReadAll("")
 	if err != nil {
 		return err
 	}

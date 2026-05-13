@@ -12,10 +12,10 @@ import (
 // TopicReader defines read operations for topic storage
 type TopicReader interface {
 	// ReadAll returns all topics from storage
-	ReadAll() (topic.Library, error)
+	ReadAll(userID string) (topic.Library, error)
 
 	// Read returns a single topic by name
-	Read(name string) (topic.Topic, error)
+	Read(userID string, name string) (topic.Topic, error)
 }
 
 // TopicWriter defines write operations for topic storage

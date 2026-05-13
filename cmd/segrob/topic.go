@@ -9,7 +9,7 @@ import (
 // liveLsTopicCommand lists all topics
 func liveLsTopicCommand(tr storage.TopicRepository, opts LiveLsTopicOptions, ui UI) error {
 
-	topicLib, err := tr.ReadAll()
+	topicLib, err := tr.ReadAll("")
 	if err != nil {
 		return err
 	}

@@ -18,7 +18,7 @@ func corpusEditCommand(tr storage.TopicRepository, opts CorpusEditOptions, ui UI
 		}()
 	}
 
-	topicLib, rErr := tr.ReadAll()
+	topicLib, rErr := tr.ReadAll("")
 	if rErr != nil {
 		return rErr
 	}

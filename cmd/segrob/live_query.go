@@ -30,7 +30,7 @@ func liveQueryCommand(dr storage.DocRepository, tr storage.TopicRepository, opts
 		}()
 	}
 
-	topicLib, rErr := tr.ReadAll()
+	topicLib, rErr := tr.ReadAll("")
 	if rErr != nil {
 		return rErr
 	}

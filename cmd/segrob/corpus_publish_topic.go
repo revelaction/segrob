@@ -13,7 +13,7 @@ func corpusPublishTopicCommand(
 	ui UI,
 ) error {
 	// 1. Read all topics from corpus
-	topics, readErr := corpusTopics.ReadAll()
+	topics, readErr := corpusTopics.ReadAll("")
 	if readErr != nil {
 		return fmt.Errorf("failed to read topics from corpus: %w", readErr)
 	}

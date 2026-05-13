@@ -29,7 +29,7 @@ func NewCorpusTopicStore(pool *sqlitex.Pool) *TopicStore {
 	return &TopicStore{pool: pool, tableName: "corpus_topics"}
 }
 
-func (h *TopicStore) ReadAll() (topic.Library, error) {
+func (h *TopicStore) ReadAll(userID string) (topic.Library, error) {
 	conn, err := h.pool.Take(context.TODO())
 	if err != nil {
 		return nil, err
@@ -37,15 +37,17 @@ func (h *TopicStore) ReadAll() (topic.Library, error) {
 	defer h.pool.Put(conn)
 
 	var topics topic.Library
-	query := fmt.Sprintf("SELECT name, exprs FROM %s WHERE user_id = ''", h.tableName)
+	query := fmt.Sprintf("SELECT name, exprs FROM %s WHERE user_id = ?", h.tableName)
 	err = sqlitex.Execute(conn, query, &sqlitex.ExecOptions{
+		Args: []interface{}{userID},
 		ResultFunc: func(stmt *sqlite.Stmt) error {
 			name := stmt.ColumnText(0)
 			exprsJSON := stmt.ColumnText(1)
 
 			var exprs []topic.TopicExpr
-			if err := json.Unmarshal([]byte(exprsJSON), &exprs); err != nil {
-				return err
+			unmarshalErr := json.Unmarshal([]byte(exprsJSON), &exprs)
+			if unmarshalErr != nil {
+				return unmarshalErr
 			}
 
 			topics = append(topics, h.assembleTopic(name, exprs))
@@ -60,7 +62,7 @@ func (h *TopicStore) ReadAll() (topic.Library, error) {
 	return topics, nil
 }
 
-func (h *TopicStore) Read(name string) (topic.Topic, error) {
+func (h *TopicStore) Read(userID string, name string) (topic.Topic, error) {
 	conn, err := h.pool.Take(context.TODO())
 	if err != nil {
 		return topic.Topic{}, err
@@ -69,16 +71,17 @@ func (h *TopicStore) Read(name string) (topic.Topic, error) {
 
 	var t topic.Topic
 	found := false
-	query := fmt.Sprintf("SELECT name, exprs FROM %s WHERE user_id = '' AND name = ? LIMIT 1", h.tableName)
+	query := fmt.Sprintf("SELECT name, exprs FROM %s WHERE user_id = ? AND name = ? LIMIT 1", h.tableName)
 	err = sqlitex.Execute(conn, query, &sqlitex.ExecOptions{
-		Args: []interface{}{name},
+		Args: []interface{}{userID, name},
 		ResultFunc: func(stmt *sqlite.Stmt) error {
 			name := stmt.ColumnText(0)
 			exprsJSON := stmt.ColumnText(1)
 
 			var exprs []topic.TopicExpr
-			if err := json.Unmarshal([]byte(exprsJSON), &exprs); err != nil {
-				return err
+			unmarshalErr := json.Unmarshal([]byte(exprsJSON), &exprs)
+			if unmarshalErr != nil {
+				return unmarshalErr
 			}
 
 			t = h.assembleTopic(name, exprs)

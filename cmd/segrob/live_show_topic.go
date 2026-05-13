@@ -8,7 +8,7 @@ import (
 // liveShowTopicCommand prints the expressions of a topic
 func liveShowTopicCommand(tr storage.TopicRepository, opts LiveShowTopicOptions, name string, ui UI) error {
 
-	tp, err := tr.Read(name)
+	tp, err := tr.Read("", name)
 	if err != nil {
 		return err
 	}
