@@ -19,7 +19,9 @@ CREATE TABLE IF NOT EXISTS sentences (
     FOREIGN KEY (doc_id) REFERENCES docs(id)
 );
 
-CREATE INDEX IF NOT EXISTS idx_sentences_doc_id ON sentences(doc_id);
+-- Composite index: doc_id equality + sentence_id range/order
+CREATE INDEX IF NOT EXISTS idx_sentences_doc_sentence
+    ON sentences(doc_id, sentence_id);
 
 CREATE TABLE IF NOT EXISTS topics (
     id        INTEGER PRIMARY KEY AUTOINCREMENT,
