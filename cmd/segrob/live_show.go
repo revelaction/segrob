@@ -5,7 +5,7 @@ import (
 )
 
 func liveShowCommand(repo storage.DocRepository, opts ShowOptions, id string, ui UI) error {
-	sentences, err := repo.Nlp(id)
+	sentences, err := repo.Nlp(id, 0, nil)
 	if err != nil {
 		return err
 	}

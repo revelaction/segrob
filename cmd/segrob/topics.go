@@ -10,21 +10,20 @@ import (
 )
 
 func liveFindTopicsCommand(docRepo storage.DocRepository, topicRepo storage.TopicRepository, opts LiveFindTopicsOptions, docId string, sentId int, ui UI) error {
-	sentences, err := docRepo.Nlp(docId)
+	zero := 0
+	sentences, err := docRepo.Nlp(docId, sentId, &zero)
 	if err != nil {
 		return err
 	}
 
-	return renderTopics(sentences, sentId, topicRepo, opts, ui)
-}
-
-func renderTopics(sentences []sent.Sentence, sentId int, topicRepo storage.TopicRepository, opts LiveFindTopicsOptions, ui UI) error {
-	if sentId < 0 || sentId >= len(sentences) {
-		return fmt.Errorf("sentence index %d out of range (0-%d)", sentId, len(sentences)-1)
+	if len(sentences) == 0 {
+		return fmt.Errorf("sentence index %d not found", sentId)
 	}
 
-	s := sentences[sentId]
+	return renderTopics(sentences[0], topicRepo, opts, ui)
+}
 
+func renderTopics(s sent.Sentence, topicRepo storage.TopicRepository, opts LiveFindTopicsOptions, ui UI) error {
 	r := render.NewCLIRenderer()
 	r.HasColor = false
 

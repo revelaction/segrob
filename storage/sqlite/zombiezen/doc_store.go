@@ -97,16 +97,29 @@ func (h *DocStore) List() ([]sent.Meta, error) {
 	return metas, nil
 }
 
-func (h *DocStore) Nlp(id string) ([]sent.Sentence, error) {
+func (h *DocStore) Nlp(id string, sentenceStartIndex int, sentenceOffset *int) ([]sent.Sentence, error) {
 	conn, err := h.pool.Take(context.TODO())
 	if err != nil {
 		return nil, err
 	}
 	defer h.pool.Put(conn)
 
+	var queryBuilder strings.Builder
+	var args []interface{}
+
+	queryBuilder.WriteString("SELECT sentence_id, data FROM sentences WHERE doc_id = ? AND sentence_id >= ?")
+	args = append(args, id, sentenceStartIndex)
+
+	if sentenceOffset != nil {
+		queryBuilder.WriteString(" AND sentence_id <= ?")
+		args = append(args, sentenceStartIndex+*sentenceOffset)
+	}
+
+	queryBuilder.WriteString(" ORDER BY sentence_id")
+
 	var sentences []sent.Sentence
-	err = sqlitex.Execute(conn, "SELECT sentence_id, data FROM sentences WHERE doc_id = ? ORDER BY sentence_id", &sqlitex.ExecOptions{
-		Args: []interface{}{id},
+	err = sqlitex.Execute(conn, queryBuilder.String(), &sqlitex.ExecOptions{
+		Args: args,
 		ResultFunc: func(stmt *sqlite.Stmt) error {
 			sentenceID := stmt.ColumnInt(0)
 			data := stmt.ColumnText(1)

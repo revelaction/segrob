@@ -8,21 +8,22 @@ import (
 )
 
 func liveShowSentCommand(repo storage.DocRepository, opts LiveShowSentOptions, docId string, sentId int, ui UI) error {
-	sentences, err := repo.Nlp(docId)
+	zero := 0
+	sentences, err := repo.Nlp(docId, sentId, &zero)
 	if err != nil {
 		return err
 	}
 
-	if sentId < 0 || sentId >= len(sentences) {
-		return fmt.Errorf("sentence index %d out of bounds (0-%d)", sentId, len(sentences)-1)
+	if len(sentences) == 0 {
+		return fmt.Errorf("sentence index %d not found", sentId)
 	}
 
 	if opts.Stats {
-		printStats(sentences[sentId:sentId+1], ui)
+		printStats(sentences, ui)
 		return nil
 	}
 
-	s := sentences[sentId]
+	s := sentences[0]
 	r := render.NewCLIRenderer()
 	r.HasColor = false
 	prefix := fmt.Sprintf("✍  %d ", sentId)

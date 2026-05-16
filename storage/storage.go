@@ -60,7 +60,9 @@ type DocReader interface {
 	List() ([]sent.Meta, error)
 
 	// Nlp returns sentences for a document by ID. Labels are not loaded.
-	Nlp(id string) ([]sent.Sentence, error)
+	// sentenceOffset defines the inclusive range limit relative to sentenceStartIndex.
+	// If sentenceOffset is nil, retrieves all sentences from sentenceStartIndex to the end.
+	Nlp(id string, sentenceStartIndex int, sentenceOffset *int) ([]sent.Sentence, error)
 
 	// FindCandidates returns sentence candidates matching ALL given lemmas
 	// AND ALL labelIDs. The caller uses ListLabels() to obtain IDs.
