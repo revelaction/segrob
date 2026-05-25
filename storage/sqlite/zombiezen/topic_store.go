@@ -19,7 +19,6 @@ type TopicStore struct {
 
 var _ storage.TopicReader = (*TopicStore)(nil)
 var _ storage.TopicWriter = (*TopicStore)(nil)
-var _ storage.TopicDeleter = (*TopicStore)(nil)
 
 func NewLiveTopicStore(pool *sqlitex.Pool) *TopicStore {
 	return &TopicStore{pool: pool, tableName: "topics"}
@@ -218,16 +217,16 @@ func (h *TopicStore) CopyDefault(userID string) error {
 	return err
 }
 
-func (h *TopicStore) Delete(name string) error {
+func (h *TopicStore) Delete(userID string, name string) error {
 	conn, err := h.pool.Take(context.TODO())
 	if err != nil {
 		return err
 	}
 	defer h.pool.Put(conn)
 
-	query := fmt.Sprintf("DELETE FROM %s WHERE user_id = '' AND name = ?", h.tableName)
+	query := fmt.Sprintf("DELETE FROM %s WHERE user_id = ? AND name = ?", h.tableName)
 	err = sqlitex.Execute(conn, query, &sqlitex.ExecOptions{
-		Args: []interface{}{name},
+		Args: []interface{}{userID, name},
 	})
 
 	return err

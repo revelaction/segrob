@@ -151,11 +151,11 @@ func runLiveCommand(args []string, setup *Setup, ui UI) error {
 		if err != nil {
 			return err
 		}
-		deleter, err := setup.NewLiveTopicDeleter(opts.TopicPath)
+		repo, err := setup.NewLiveTopicRepository(opts.TopicPath)
 		if err != nil {
 			return err
 		}
-		return liveUnpublishTopicCommand(deleter, opts, name, ui)
+		return liveUnpublishTopicCommand(repo, opts, name, ui)
 
 	case "query":
 		opts, _, _, err := parseLiveQueryArgs(subArgs, ui)
