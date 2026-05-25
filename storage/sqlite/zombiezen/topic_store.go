@@ -128,7 +128,7 @@ func (h *TopicStore) Write(tp topic.Topic) error {
 	return err
 }
 
-// Upsert provides an atomic read-modify-write operation for a topic.
+// Upsert provides both an atomic read-modify-write operation and a direct write operation.
 // It can be used both to create a new topic and to update an existing one.
 //
 // If the topic does not exist for the given userID and name, it initializes a new
@@ -138,7 +138,7 @@ func (h *TopicStore) Write(tp topic.Topic) error {
 //
 // Example usage for adding an expression (Insert or Update):
 //
-//	updated, err := store.Upsert(userID, "my-topic", func(t topic.Topic) (topic.Topic, error) {
+//	updated, err := store.Upsert(userID, topic.Topic{Name: "my-topic"}, func(t topic.Topic) (topic.Topic, error) {
 //	    for _, existing := range t.Exprs {
 //	        if topic.EqualExpr(existing, newExpr) {
 //	            return t, storage.ErrNoChange
@@ -147,7 +147,11 @@ func (h *TopicStore) Write(tp topic.Topic) error {
 //	    t.Exprs = append(t.Exprs, newExpr)
 //	    return t, nil
 //	})
-func (h *TopicStore) Upsert(userID, name string, fn func(topic.Topic) (topic.Topic, error)) (result topic.Topic, err error) {
+//
+// If 'fn' is nil, it performs a direct write/overwrite using 'tp', skipping the SELECT.
+// If 'fn' is provided, it fetches the existing topic for the name in 'tp.Name' (or
+// initializes an empty one), passes it to 'fn' for mutation, and saves the result.
+func (h *TopicStore) Upsert(userID string, tp topic.Topic, fn func(topic.Topic) (topic.Topic, error)) (result topic.Topic, err error) {
 	conn, err := h.pool.Take(context.TODO())
 	if err != nil {
 		return topic.Topic{}, err
@@ -156,34 +160,37 @@ func (h *TopicStore) Upsert(userID, name string, fn func(topic.Topic) (topic.Top
 
 	defer sqlitex.Save(conn)(&err)
 
-	// Read current topic (zero-value if not found).
-	current := topic.Topic{Name: name}
-	readQuery := fmt.Sprintf(`SELECT exprs FROM %s WHERE user_id = ? AND name = ?`, h.tableName)
-	err = sqlitex.Execute(conn, readQuery, &sqlitex.ExecOptions{
-		Args: []interface{}{userID, name},
-		ResultFunc: func(stmt *sqlite.Stmt) error {
-			var exprs []topic.TopicExpr
-			unmarshalErr := json.Unmarshal([]byte(stmt.ColumnText(0)), &exprs)
-			if unmarshalErr != nil {
-				return unmarshalErr
-			}
-			current.Exprs = exprs
-			return nil
-		},
-	})
-	if err != nil {
-		return topic.Topic{}, err
+	var target topic.Topic
+
+	// Branch on the existence of the mutation function
+	if fn == nil {
+		// Pure Write: Skip SELECT. Just use the provided topic.
+		target = tp
+	} else {
+		// Mutate: Perform SELECT and apply the callback.
+		current := topic.Topic{Name: tp.Name}
+		readQuery := fmt.Sprintf(`SELECT exprs FROM %s WHERE user_id = ? AND name = ?`, h.tableName)
+		err = sqlitex.Execute(conn, readQuery, &sqlitex.ExecOptions{
+			Args: []interface{}{userID, tp.Name},
+			ResultFunc: func(stmt *sqlite.Stmt) error {
+				return json.Unmarshal([]byte(stmt.ColumnText(0)), &current.Exprs)
+			},
+		})
+		if err != nil {
+			return topic.Topic{}, err
+		}
+
+		target, err = fn(current)
+		if errors.Is(err, storage.ErrNoChange) {
+			return current, nil
+		}
+		if err != nil {
+			return topic.Topic{}, err
+		}
 	}
 
-	updated, err := fn(current)
-	if errors.Is(err, storage.ErrNoChange) {
-		return current, nil
-	}
-	if err != nil {
-		return topic.Topic{}, err
-	}
-
-	exprsJSON, err := json.Marshal(updated.Exprs)
+	// Single, unified write execution
+	exprsJSON, err := json.Marshal(target.Exprs)
 	if err != nil {
 		return topic.Topic{}, err
 	}
@@ -198,13 +205,12 @@ func (h *TopicStore) Upsert(userID, name string, fn func(topic.Topic) (topic.Top
 	`, h.tableName)
 
 	err = sqlitex.Execute(conn, upsertQuery, &sqlitex.ExecOptions{
-		Args: []interface{}{userID, updated.Name, string(exprsJSON)},
+		Args: []interface{}{userID, target.Name, string(exprsJSON)},
 		ResultFunc: func(stmt *sqlite.Stmt) error {
 			returnedName := stmt.ColumnText(0)
-			returnedExprsJSON := stmt.ColumnText(1)
-
+			
 			var returnedExprs []topic.TopicExpr
-			unmarshalErr := json.Unmarshal([]byte(returnedExprsJSON), &returnedExprs)
+			unmarshalErr := json.Unmarshal([]byte(stmt.ColumnText(1)), &returnedExprs)
 			if unmarshalErr != nil {
 				return unmarshalErr
 			}
