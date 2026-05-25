@@ -197,6 +197,25 @@ func (h *TopicStore) Upsert(userID string, tp topic.Topic, fn func(topic.Topic) 
 	return result, nil
 }
 
+func (h *TopicStore) Rename(userID string, oldName string, newName string) error {
+	conn, err := h.pool.Take(context.TODO())
+	if err != nil {
+		return err
+	}
+	defer h.pool.Put(conn)
+
+	query := fmt.Sprintf(`
+		UPDATE %s 
+		SET name = ?,
+		    updated = strftime('%%Y-%%m-%%dT%%H:%%M:%%SZ', 'now')
+		WHERE user_id = ? AND name = ?
+	`, h.tableName)
+
+	return sqlitex.Execute(conn, query, &sqlitex.ExecOptions{
+		Args: []interface{}{newName, userID, oldName},
+	})
+}
+
 func (h *TopicStore) CopyDefault(userID string) error {
 	conn, err := h.pool.Take(context.TODO())
 	if err != nil {

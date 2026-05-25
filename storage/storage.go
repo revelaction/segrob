@@ -21,6 +21,7 @@ type TopicReader interface {
 // TopicWriter defines write operations for topic storage
 type TopicWriter interface {
 	Upsert(userID string, tp topic.Topic, fn func(topic.Topic) (topic.Topic, error)) (topic.Topic, error)
+	Rename(userID string, oldName string, newName string) error
 	CopyDefault(userID string) error
 	// Delete removes a topic from storage by name
 	Delete(userID string, name string) error
