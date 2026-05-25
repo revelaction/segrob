@@ -20,8 +20,6 @@ type TopicReader interface {
 
 // TopicWriter defines write operations for topic storage
 type TopicWriter interface {
-	// Write persists a topic to storage
-	Write(tp topic.Topic) error
 	Upsert(userID string, tp topic.Topic, fn func(topic.Topic) (topic.Topic, error)) (topic.Topic, error)
 	CopyDefault(userID string) error
 }

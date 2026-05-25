@@ -80,20 +80,15 @@ func (h *Handler) Run() error {
 			tp = removeExprFromTopic(tp, expr)
 		}
 
-		werr := h.TopicWriter.Write(tp)
+		updated, werr := h.TopicWriter.Upsert("", tp, nil)
 		if werr != nil {
 			return werr
 		}
 
-		// reload the topic after write
+		// reload the topic from the returned value
 		for i, t := range h.Library {
 			if t.Name == tp.Name {
-				newTp, err := h.TopicReader.Read("", t.Name)
-				if err != nil {
-					return err
-				}
-
-				h.Library[i] = newTp
+				h.Library[i] = updated
 				break
 			}
 		}

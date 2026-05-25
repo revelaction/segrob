@@ -101,33 +101,6 @@ func (h *TopicStore) Read(userID string, name string) (topic.Topic, error) {
 	return t, nil
 }
 
-func (h *TopicStore) Write(tp topic.Topic) error {
-	conn, err := h.pool.Take(context.TODO())
-	if err != nil {
-		return err
-	}
-	defer h.pool.Put(conn)
-
-	exprsJSON, err := json.Marshal(tp.Exprs)
-	if err != nil {
-		return err
-	}
-
-	query := fmt.Sprintf(`
-		INSERT INTO %s (user_id, name, exprs, updated)
-		VALUES ('', ?, ?, strftime('%s', 'now'))
-		ON CONFLICT(user_id, name) DO UPDATE SET
-			exprs = excluded.exprs,
-			updated = excluded.updated
-	`, h.tableName, "%Y-%m-%dT%H:%M:%SZ")
-
-	err = sqlitex.Execute(conn, query, &sqlitex.ExecOptions{
-		Args: []interface{}{tp.Name, string(exprsJSON)},
-	})
-
-	return err
-}
-
 // Upsert provides both an atomic read-modify-write operation and a direct write operation.
 // It can be used both to create a new topic and to update an existing one.
 //

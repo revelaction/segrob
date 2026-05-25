@@ -28,10 +28,10 @@ func corpusPublishTopicCommand(
 		return printErr
 	}
 
-	// 2. Iterate and write to live (idempotent upsert logic built-in to Write)
+	// 2. Iterate and write to live (idempotent upsert logic built-in to Upsert)
 	publishedCount := 0
 	for _, tp := range topics {
-		writeErr := liveTopics.Write(tp)
+		_, writeErr := liveTopics.Upsert("", tp, nil)
 		if writeErr != nil {
 			return fmt.Errorf("failed to write topic %q to live: %w", tp.Name, writeErr)
 		}

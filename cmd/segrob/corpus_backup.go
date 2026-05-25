@@ -57,7 +57,7 @@ func corpusBackupCommand(
 	}
 
 	for _, tp := range topics {
-		wErr := dstTopics.Write(tp)
+		_, wErr := dstTopics.Upsert("", tp, nil)
 		if wErr != nil {
 			return fmt.Errorf("failed to write topic %s: %w", tp.Name, wErr)
 		}
