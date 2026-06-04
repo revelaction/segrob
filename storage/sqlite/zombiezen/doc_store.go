@@ -214,6 +214,7 @@ func (h *DocStore) FindCandidates(lemmas []string, labelIDs []int, after storage
 			}
 
 			s := sent.Sentence{
+				Rowid:      rowID,
 				DocId:      stmt.ColumnText(1),
 				SentenceId: stmt.ColumnInt(2),
 			}

@@ -3,6 +3,7 @@ package sentence
 // Sentence represents a distinct syntactic unit.
 // Identity = (DocId, Id)
 type Sentence struct {
+	Rowid      int64   `json:"rowid"`
 	SentenceId int     `json:"id"` // Sequential index in Doc (0, 1, ...)
 	DocId      string  `json:"doc_id"`
 	Tokens     []Token `json:"tokens"`
