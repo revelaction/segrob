@@ -78,6 +78,12 @@ type DocReader interface {
 
 	// Exists returns true if a document with the given ID is present in the docs table.
 	Exists(id string) (bool, error)
+
+	// SentenceRowidRange returns the minimum and maximum sentence_rowid
+	// for the given labelID. This defines the absolute boundaries for
+	// a book (label), allowing samplers to initialize random cursors
+	// and optimize FindCandidates scanning.
+	SentenceRowidRange(labelID int) (minRowid int64, maxRowid int64, err error)
 }
 
 // DocWriter defines write operations for document storage

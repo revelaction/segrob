@@ -527,6 +527,34 @@ func (h *DocStore) Exists(id string) (bool, error) {
 	return exists, err
 }
 
+// SentenceRowidRange returns the min and max rowid for a specific label.
+// It uses subqueries to exploit the existing idx_label_rowid index and
+// avoid the query planner pitfall of a full table scan.
+func (h *DocStore) SentenceRowidRange(labelID int) (minRowid int64, maxRowid int64, err error) {
+	conn, err := h.pool.Take(context.TODO())
+	if err != nil {
+		return 0, 0, err
+	}
+	defer h.pool.Put(conn)
+
+	err = sqlitex.Execute(conn,
+		`SELECT
+		  (SELECT MIN(sentence_rowid) FROM sentence_labels WHERE label_id = ?),
+		  (SELECT MAX(sentence_rowid) FROM sentence_labels WHERE label_id = ?)`,
+		&sqlitex.ExecOptions{
+			Args: []interface{}{labelID},
+			ResultFunc: func(stmt *sqlite.Stmt) error {
+				minRowid = stmt.ColumnInt64(0)
+				maxRowid = stmt.ColumnInt64(1)
+				return nil
+			},
+		})
+	if err != nil {
+		return 0, 0, err
+	}
+	return minRowid, maxRowid, nil
+}
+
 // DeleteLemmaOptimization removes sentence_lemmas rows for docID.
 func (h *DocStore) DeleteLemmaOptimization(docID string) error {
 	conn, err := h.pool.Take(context.TODO())
