@@ -88,16 +88,18 @@ func (s *sampler) Sample() ([]*match.SentenceMatch, error) {
 		}
 	}
 
-	// Final shuffle to mix matches from different expressions.
-	rand.Shuffle(len(results), func(i, j int) {
-		results[i], results[j] = results[j], results[i]
-	})
-
-	if len(results) > s.opts.Size {
-		results = results[:s.opts.Size]
+	// Final partial shuffle to randomly select 'Size' matches.
+	size := s.opts.Size
+	if size > len(results) {
+		size = len(results)
 	}
 
-	return results, nil
+	for i := 0; i < size; i++ {
+		j := i + rand.IntN(len(results)-i)
+		results[i], results[j] = results[j], results[i]
+	}
+
+	return results[:size], nil
 }
 
 // scanExpression scans the book for candidates matching the given expression,
