@@ -89,6 +89,12 @@ func (s *sampler) Sample() ([]*match.SentenceMatch, error) {
 	}
 
 	// Final partial shuffle to randomly select 'Size' matches.
+	// We use a partial Fisher-Yates shuffle which only shuffles the first
+	// 'k' positions (where k = size). Since each iteration selects a random
+	// element from the remaining pool [i, n) and swaps it into position i,
+	// stopping after 'k' iterations yields a uniformly random sample.
+	// This reduces the time complexity from O(n) (full shuffle) to O(k),
+	// which is a meaningful optimization when len(results) >> s.opts.Size.
 	size := s.opts.Size
 	if size > len(results) {
 		size = len(results)
