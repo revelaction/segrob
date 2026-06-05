@@ -47,6 +47,18 @@ type sampler struct {
 	opts Options
 }
 
+//
+// 1. Shuffle topic.Exprs
+// 2. M = MinExpressions (or len(exprs) if not set)
+// 3. [minRowid, maxRowid] = SentenceRowidRange(LabelID)
+// 4. results = []
+// 5. for i, expr in shuffled_exprs:
+//      a. randomCursor = rand(minRowid, maxRowid)
+//      b. fetch candidates (budget: CandidateBudget), match each:
+//         - on match: append to results
+//      c. if cursor exhausted and started > minRowid: wrap to minRowid, continue
+//      d. if i >= M and len(results) >= Size: break
+// 6. shuffle results, trim to Size
 func (s *sampler) Sample() ([]*match.SentenceMatch, error) {
 	if len(s.tp.Exprs) == 0 {
 		return nil, nil
