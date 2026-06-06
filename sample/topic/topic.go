@@ -172,6 +172,8 @@ func (s *sampler) scanRange(
 ) ([]*match.SentenceMatch, int, error) {
 
 	var matches []*match.SentenceMatch
+	// we shrink the batch size immediately so we don't waste memory and
+	// database resources fetching records we won't be allowed to process.
 	batchSize := maxBatchSize
 	if budget < batchSize {
 		batchSize = budget
@@ -210,6 +212,14 @@ func (s *sampler) scanRange(
 
 		cursor = newCursor
 
+        // ensures that subsequent queries respect the remaining budget. For
+        // example, if you start with a budget of 600 and a max batch size of
+        // 500, the first loop iteration fetches 500 records. You now have a
+        // remaining budget of 100. If we don't reduce the batchSize at the
+        // end of the loop, the next iteration will ask the database for
+        // another 500 records, over-fetching by 400. Adjusting it here
+        // guarantees the final query perfectly matches the exact remaining
+        // budget.
 		if batchSize > budget {
 			batchSize = budget
 		}
