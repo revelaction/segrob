@@ -96,12 +96,42 @@ func (s *sampler) Sample() ([]*match.SentenceMatch, error) {
 	var results []*match.SentenceMatch
 
 	for i, expr := range exprs {
-		exprMatches, err := s.scanExpression(expr, minRowid, maxRowid)
-		if err != nil {
-			return nil, fmt.Errorf("sample/topic: expr %d: %w", i, err)
-		}
+		lemmas := expr.Lemmas()
+		if len(lemmas) > 0 {
+			m := match.NewMatcher(expr)
 
-		results = append(results, exprMatches...)
+			// Pick a random entry point so each expression starts from a
+			// different position, avoiding positional bias across expressions.
+			randomCursor := minRowid + rand.Int64N(maxRowid-minRowid+1)
+
+			// Forward scan: from randomCursor to the end of the book.
+			forward, forwardFetched, err := s.scanRange(
+				lemmas, m,
+				storage.Cursor(randomCursor-1), maxRowid,
+				s.opts.CandidateBudget,
+			)
+			if err != nil {
+				return nil, fmt.Errorf("sample/topic: expr %d forward: %w", i, err)
+			}
+
+			results = append(results, forward...)
+
+			// Wrap scan: from the start of the book to randomCursor, spending
+			// only the budget not consumed by the forward scan.
+			remaining := s.opts.CandidateBudget - forwardFetched
+			if remaining > 0 {
+				wrap, _, err := s.scanRange(
+					lemmas, m,
+					storage.Cursor(minRowid-1), randomCursor,
+					remaining,
+				)
+				if err != nil {
+					return nil, fmt.Errorf("sample/topic: expr %d wrap: %w", i, err)
+				}
+
+				results = append(results, wrap...)
+			}
+		}
 
 		if i+1 >= minExprs && len(results) >= s.opts.Size {
 			break
@@ -126,54 +156,6 @@ func (s *sampler) Sample() ([]*match.SentenceMatch, error) {
 	}
 
 	return results[:size], nil
-}
-
-// scanExpression scans the book for candidates matching the given expression,
-// starting from a random cursor position within [minRowid, maxRowid].
-// It performs a forward scan and, if the budget is not exhausted, wraps
-// around to cover the beginning of the book.
-func (s *sampler) scanExpression(
-	expr t.TopicExpr,
-	minRowid int64,
-	maxRowid int64,
-) ([]*match.SentenceMatch, error) {
-
-	lemmas := expr.Lemmas()
-	if len(lemmas) == 0 {
-		return nil, nil
-	}
-
-	m := match.NewMatcher(expr)
-	budget := s.opts.CandidateBudget
-
-	randomCursor := minRowid + rand.Int64N(maxRowid-minRowid+1)
-
-	// Phase 1: Forward scan from randomCursor toward maxRowid.
-	forward, forwardFetched, err := s.scanRange(
-		lemmas, m,
-		storage.Cursor(randomCursor-1), maxRowid,
-		budget,
-	)
-	if err != nil {
-		return forward, err
-	}
-
-	// Phase 2: Wrap-around from minRowid to randomCursor.
-	// Only if the forward scan did not exhaust the budget.
-	remaining := budget - forwardFetched
-	if remaining > 0 {
-		wrap, _, err := s.scanRange(
-			lemmas, m,
-			storage.Cursor(minRowid-1), randomCursor,
-			remaining,
-		)
-		if err != nil {
-			return append(forward, wrap...), err
-		}
-		forward = append(forward, wrap...)
-	}
-
-	return forward, nil
 }
 
 // scanRange fetches candidates for the given lemmas, starting from cursor,
