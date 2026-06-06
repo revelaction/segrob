@@ -12,6 +12,14 @@ import (
 	t "github.com/revelaction/segrob/topic"
 )
 
+const (
+	// maxBatchSize limits the number of candidates fetched from storage in a
+	// single FindCandidates call. It protects against SQLite expression limits
+	// (massive IN clauses) and prevents excessive memory allocation spikes
+	// during JSON unmarshaling.
+	maxBatchSize = 500
+)
+
 // Options configures the topic sampling algorithm.
 type Options struct {
 	// Size is the target number of total matches to return.
@@ -182,7 +190,7 @@ func (s *sampler) scanRange(
 ) ([]*match.SentenceMatch, int, error) {
 
 	var matches []*match.SentenceMatch
-	batchSize := 500
+	batchSize := maxBatchSize
 	if budget < batchSize {
 		batchSize = budget
 	}
