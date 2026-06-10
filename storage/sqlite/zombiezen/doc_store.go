@@ -543,7 +543,7 @@ func (h *DocStore) SentenceRowidRange(labelID int) (minRowid int64, maxRowid int
 		  (SELECT MIN(sentence_rowid) FROM sentence_labels WHERE label_id = ?),
 		  (SELECT MAX(sentence_rowid) FROM sentence_labels WHERE label_id = ?)`,
 		&sqlitex.ExecOptions{
-			Args: []interface{}{labelID},
+			Args: []interface{}{labelID, labelID},
 			ResultFunc: func(stmt *sqlite.Stmt) error {
 				minRowid = stmt.ColumnInt64(0)
 				maxRowid = stmt.ColumnInt64(1)
