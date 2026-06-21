@@ -37,6 +37,21 @@ type Options struct {
 
 	// LabelID scopes the search to a specific book (label).
 	LabelID int
+
+	// BalancedRatio controls the trade-off between expression diversity
+	// and natural corpus distribution in the final selection.
+	//
+	// It specifies what fraction of Size is allocated equally across all
+	// matched expressions (the "balanced bucket"), while the remaining
+	// fraction is filled by random selection proportional to each
+	// expression's natural frequency (the "distribution bucket").
+	//
+	// Example: Size=50, BalancedRatio=0.6, 10 distinct expressions:
+	//   Balanced bucket:     30 slots → 3 per expression (diversity)
+	//   Distribution bucket: 20 slots → random, favoring common expressions
+	//
+	// A value of 0 disables balanced selection (pure distribution).
+	BalancedRatio float64
 }
 
 // New creates a sample.Sampler that dynamically extracts sentences
@@ -138,24 +153,7 @@ func (s *sampler) Sample() ([]*match.SentenceMatch, error) {
 		}
 	}
 
-	// Final partial shuffle to randomly select 'Size' matches.
-	// We use a partial Fisher-Yates shuffle which only shuffles the first
-	// 'k' positions (where k = size). Since each iteration selects a random
-	// element from the remaining pool [i, n) and swaps it into position i,
-	// stopping after 'k' iterations yields a uniformly random sample.
-	// This reduces the time complexity from O(n) (full shuffle) to O(k),
-	// which is a meaningful optimization when len(results) >> s.opts.Size.
-	size := s.opts.Size
-	if size > len(results) {
-		size = len(results)
-	}
-
-	for i := 0; i < size; i++ {
-		j := i + rand.IntN(len(results)-i)
-		results[i], results[j] = results[j], results[i]
-	}
-
-	return results[:size], nil
+	return selectBalanced(results, s.opts.Size, s.opts.BalancedRatio), nil
 }
 
 // scanRange fetches candidates for the given lemmas, starting from cursor,
@@ -226,4 +224,168 @@ func (s *sampler) scanRange(
 	}
 
 	return matches, fetched, nil
+}
+
+// selectBalanced picks `size` matches from collected results using a
+// two-bucket strategy that balances expression diversity against natural
+// corpus distribution.
+//
+//	Bucket 1 — Balanced (ratio × size slots):
+//	  Slots are divided equally among all distinct expressions. Every
+//	  expression that produced matches receives at least one slot (budget
+//	  permitting). If an expression has fewer matches than its quota,
+//	  the shortfall is redistributed round-robin to expressions with
+//	  surplus. This prevents common expressions from drowning out rare ones.
+//
+//	Bucket 2 — Distribution (remaining slots):
+//	  Filled by uniform random selection from matches not consumed by
+//	  bucket 1. Because common expressions naturally produce more matches,
+//	  they dominate this portion — preserving the corpus's frequency
+//	  signal for the learner.
+//
+// Example: size=50, ratio=0.6, 10 distinct expressions
+//
+//	Balanced:     30 slots → 3 per expression (guaranteed diversity)
+//	Distribution: 20 slots → random, favoring frequent expressions
+//
+// If ratio is 0, falls back to a partial Fisher-Yates (pure distribution).
+func selectBalanced(results []*match.SentenceMatch, size int, ratio float64) []*match.SentenceMatch {
+	if size > len(results) {
+		size = len(results)
+	}
+
+	if size == 0 {
+		return nil
+	}
+
+	// Fallback: ratio=0 disables balanced selection. Use a simple partial
+	// Fisher-Yates for backward compatibility (pure distribution).
+	if ratio <= 0 {
+		for i := 0; i < size; i++ {
+			j := i + rand.IntN(len(results)-i)
+			results[i], results[j] = results[j], results[i]
+		}
+		return results[:size]
+	}
+
+	// --- Group matches by expression ---
+
+	type exprGroup struct {
+		matches []*match.SentenceMatch
+		taken   int // how many matches have been selected
+	}
+
+	groupIndex := make(map[string]int)
+	var groups []*exprGroup
+
+	for _, m := range results {
+		i, ok := groupIndex[m.Expr]
+		if !ok {
+			i = len(groups)
+			groupIndex[m.Expr] = i
+			groups = append(groups, &exprGroup{})
+		}
+		groups[i].matches = append(groups[i].matches, m)
+	}
+
+	// Shuffle each group internally so picks within an expression are random.
+	for _, g := range groups {
+		rand.Shuffle(len(g.matches), func(i, j int) {
+			g.matches[i], g.matches[j] = g.matches[j], g.matches[i]
+		})
+	}
+
+	// Shuffle group order for fairness when distributing remainder quotas.
+	rand.Shuffle(len(groups), func(i, j int) {
+		groups[i], groups[j] = groups[j], groups[i]
+	})
+
+	n := len(groups)
+
+	// --- Bucket 1: Balanced allocation ---
+	//
+	// Divide the balanced budget equally, distributing the integer
+	// remainder to the first groups (which are already shuffled).
+	//
+	// Example: balancedBudget=12, n=5 → perExpr=2, remainder=2
+	//   Groups 0,1 get quota=3; groups 2,3,4 get quota=2. Total=12.
+	balancedBudget := int(float64(size) * ratio)
+	perExpr := balancedBudget / n
+	remainder := balancedBudget % n
+
+	var selected []*match.SentenceMatch
+	shortfall := 0
+
+	for i, g := range groups {
+		quota := perExpr
+		if i < remainder {
+			quota++
+		}
+
+		take := quota
+		if take > len(g.matches) {
+			shortfall += take - len(g.matches)
+			take = len(g.matches)
+		}
+
+		selected = append(selected, g.matches[:take]...)
+		g.taken = take
+	}
+
+	// Redistribute shortfall: when some expressions couldn't fill their
+	// quota (fewer matches than allocated), distribute the leftover slots
+	// to expressions that still have unused matches. Round-robin ensures
+	// no single expression absorbs all the surplus.
+	for shortfall > 0 {
+		advanced := false
+		for _, g := range groups {
+			if shortfall <= 0 {
+				break
+			}
+			if g.taken < len(g.matches) {
+				selected = append(selected, g.matches[g.taken])
+				g.taken++
+				shortfall--
+				advanced = true
+			}
+		}
+		if !advanced {
+			break
+		}
+	}
+
+	// --- Bucket 2: Distribution (natural frequency) ---
+	//
+	// Fill the remaining slots from matches not consumed by bucket 1.
+	// Common expressions naturally have more leftover matches, so they
+	// dominate this portion — preserving the corpus frequency signal.
+	distributionBudget := size - len(selected)
+	if distributionBudget > 0 {
+		var pool []*match.SentenceMatch
+		for _, g := range groups {
+			if g.taken < len(g.matches) {
+				pool = append(pool, g.matches[g.taken:]...)
+			}
+		}
+
+		if distributionBudget > len(pool) {
+			distributionBudget = len(pool)
+		}
+
+		// Partial Fisher-Yates on the remaining pool.
+		for i := 0; i < distributionBudget; i++ {
+			j := i + rand.IntN(len(pool)-i)
+			pool[i], pool[j] = pool[j], pool[i]
+		}
+
+		selected = append(selected, pool[:distributionBudget]...)
+	}
+
+	// Final shuffle to interleave balanced and distribution entries,
+	// removing any positional pattern from the two-phase selection.
+	rand.Shuffle(len(selected), func(i, j int) {
+		selected[i], selected[j] = selected[j], selected[i]
+	})
+
+	return selected
 }
