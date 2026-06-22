@@ -1,3 +1,4 @@
+// sample/topic/topic.go
 package topic
 
 import (
@@ -94,13 +95,16 @@ func (s *sampler) Sample() ([]*match.SentenceMatch, error) {
         minExprs = len(exprs)
     }
 
-    var results []*match.SentenceMatch
+    // Group results by expression right from the start.
+    results := make(map[string][]*match.SentenceMatch)
     matchedExprs := 0
+    totalMatches := 0
 
     for _, expr := range exprs {
         lemmas := expr.Lemmas()
         if len(lemmas) > 0 {
             m := match.NewMatcher(expr)
+            key := expr.String()
 
             // Pick a random entry point so each expression starts from a
             // different position, avoiding positional bias across expressions.
@@ -116,7 +120,10 @@ func (s *sampler) Sample() ([]*match.SentenceMatch, error) {
                 return nil, fmt.Errorf("sample/topic: expr %v forward: %w", expr, err)
             }
 
-            results = append(results, forward...)
+            if len(forward) > 0 {
+                results[key] = append(results[key], forward...)
+                totalMatches += len(forward)
+            }
             hasMatch := len(forward) > 0
 
             // Wrap scan: from the start of the book to randomCursor, spending
@@ -132,8 +139,9 @@ func (s *sampler) Sample() ([]*match.SentenceMatch, error) {
                     return nil, fmt.Errorf("sample/topic: expr %v wrap: %w", expr, err)
                 }
 
-                results = append(results, wrap...)
                 if len(wrap) > 0 {
+                    results[key] = append(results[key], wrap...)
+                    totalMatches += len(wrap)
                     hasMatch = true
                 }
             }
@@ -143,7 +151,7 @@ func (s *sampler) Sample() ([]*match.SentenceMatch, error) {
             }
         }
 
-        if matchedExprs >= minExprs && len(results) >= s.opts.Size {
+        if matchedExprs >= minExprs && totalMatches >= s.opts.Size {
             break
         }
     }
@@ -215,7 +223,7 @@ func (s *sampler) scanRange(
 // selectDistributed picks `size` matches from collected results using a
 // two-phase construction algorithm that guarantees expression diversity.
 //
-//  1. Group all results by expression into a map of slices.
+//  1. Iterate through the map of matches grouped by expression.
 //  2. For each expression, shuffle its matches. Take up to `minPerExpr`
 //     matches and append them directly to the final result. Append any
 //     leftover matches for that expression to a flat `pool` slice.
@@ -226,26 +234,25 @@ func (s *sampler) scanRange(
 //     these slots, preserving the corpus frequency signal.
 //  5. Append the pool picks to the final result, and do a final shuffle
 //     to interleave protected and unprotected matches.
-func selectDistributed(results []*match.SentenceMatch, size int, minPerExpr int) []*match.SentenceMatch {
-    if size > len(results) {
-        size = len(results)
+func selectDistributed(results map[string][]*match.SentenceMatch, size int, minPerExpr int) []*match.SentenceMatch {
+    totalMatches := 0
+    for _, matches := range results {
+        totalMatches += len(matches)
     }
 
-    if size == 0 {
+    if totalMatches == 0 {
         return nil
     }
 
-    // 1. Group matches by expression natively into a map of slices.
-    exprMap := make(map[string][]*match.SentenceMatch)
-    for _, m := range results {
-        exprMap[m.Expr] = append(exprMap[m.Expr], m)
+    if size > totalMatches {
+        size = totalMatches
     }
 
     var selected []*match.SentenceMatch
     var pool []*match.SentenceMatch
 
-    // 2. Allocate protected slots and build the unprotected pool.
-    for _, matches := range exprMap {
+    // 1 & 2. Allocate protected slots and build the unprotected pool.
+    for _, matches := range results {
         // Shuffle within the expression to randomize protected picks.
         rand.Shuffle(len(matches), func(i, j int) {
             matches[i], matches[j] = matches[j], matches[i]
