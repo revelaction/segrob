@@ -25,9 +25,10 @@ type Options struct {
     // Size is the target number of total matches to return.
     Size int
 
-    // MinExpressions is the minimum number of topic expressions to query
-    // before the algorithm is allowed to stop early. This guarantees that
-    // rare expressions get a chance even when common ones produce many matches.
+    // MinExpressions is the minimum number of topic expressions that must
+    // yield matches before the algorithm is allowed to stop early. This
+    // guarantees that rare expressions get a chance even when common ones
+    // produce many matches.
     MinExpressions int
 
     // MinSizePerExpression guarantees that up to this many matches are
