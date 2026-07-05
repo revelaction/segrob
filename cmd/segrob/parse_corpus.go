@@ -920,7 +920,7 @@ func parseCorpusShowTopicArgs(args []string, ui UI) (CorpusShowTopicOptions, str
 }
 
 type CorpusIngestTopicOptions struct {
-	Dir    string // positional arg: directory with JSON topic files
+	File   string // positional arg: JSON file with all topics
 	DbPath string // --db / SEGROB_CORPUS_DB
 }
 
@@ -928,7 +928,7 @@ func parseCorpusIngestTopicArgs(args []string, ui UI) (CorpusIngestTopicOptions,
 	fs := flag.NewFlagSet("corpus ingest-topic", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
 
-	const ingestTopicSynopsis = "[options] <dir>"
+	const ingestTopicSynopsis = "[options] <file>"
 
 	var opts CorpusIngestTopicOptions
 	fs.StringVar(&opts.DbPath, "db", os.Getenv("SEGROB_CORPUS_DB"), "")
@@ -936,9 +936,9 @@ func parseCorpusIngestTopicArgs(args []string, ui UI) (CorpusIngestTopicOptions,
 	fs.Usage = func() {
 		w := fs.Output()
 		fprintUsage(w, fs, ingestTopicSynopsis)
-		_, _ = fmt.Fprintf(w, "  Ingest topics from a directory of JSON files into the corpus database.\n")
+		_, _ = fmt.Fprintf(w, "  Ingest all topics from a JSON file into the corpus database.\n")
 		_, _ = fmt.Fprintf(w, "\nArguments:\n")
-		_, _ = fmt.Fprintf(w, helpArgFmt, "dir", "Directory containing JSON topic files")
+		_, _ = fmt.Fprintf(w, helpArgFmt, "file", "JSON file containing all topics")
 		_, _ = fmt.Fprintf(w, "\nOptions:\n")
 		printOpt(w, "--db", "FILE", "Target corpus SQLite database file (or SEGROB_CORPUS_DB)")
 	}
@@ -955,21 +955,10 @@ func parseCorpusIngestTopicArgs(args []string, ui UI) (CorpusIngestTopicOptions,
 
 	if fs.NArg() != 1 {
 		fprintUsageError(ui.Err, fs, ingestTopicSynopsis)
-		return opts, errors.New("requires exactly one directory argument")
+		return opts, errors.New("requires exactly one file argument")
 	}
 
-	dir := fs.Arg(0)
-	info, err := os.Stat(dir)
-	if err != nil {
-		fprintUsageError(ui.Err, fs, ingestTopicSynopsis)
-		return opts, fmt.Errorf("directory not found: %s", dir)
-	}
-	if !info.IsDir() {
-		fprintUsageError(ui.Err, fs, ingestTopicSynopsis)
-		return opts, fmt.Errorf("argument is not a directory: %s", dir)
-	}
-
-	opts.Dir = dir
+	opts.File = fs.Arg(0)
 
 	if opts.DbPath == "" {
 		fprintUsageError(ui.Err, fs, ingestTopicSynopsis)
@@ -983,11 +972,11 @@ type CorpusDumpTopicOptions struct {
 	DbPath string // --db / SEGROB_CORPUS_DB
 }
 
-func parseCorpusDumpTopicArgs(args []string, ui UI) (CorpusDumpTopicOptions, string, error) {
+func parseCorpusDumpTopicArgs(args []string, ui UI) (CorpusDumpTopicOptions, error) {
 	fs := flag.NewFlagSet("corpus dump-topic", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
 
-	const dumpTopicSynopsis = "[options] <name>"
+	const dumpTopicSynopsis = "[options]"
 
 	var opts CorpusDumpTopicOptions
 	fs.StringVar(&opts.DbPath, "db", os.Getenv("SEGROB_CORPUS_DB"), "")
@@ -995,8 +984,7 @@ func parseCorpusDumpTopicArgs(args []string, ui UI) (CorpusDumpTopicOptions, str
 	fs.Usage = func() {
 		w := fs.Output()
 		fprintUsage(w, fs, dumpTopicSynopsis)
-		_, _ = fmt.Fprintf(w, "  Output the JSON expressions of a named corpus topic.\n\nArguments:\n")
-		_, _ = fmt.Fprintf(w, helpArgFmt, "name", "Topic name to dump")
+		_, _ = fmt.Fprintf(w, "  Output all corpus topics as a single JSON file.\n")
 		_, _ = fmt.Fprintf(w, "\nOptions:\n")
 		printOpt(w, "--db", "PATH", "Corpus SQLite file (or SEGROB_CORPUS_DB)")
 	}
@@ -1005,22 +993,22 @@ func parseCorpusDumpTopicArgs(args []string, ui UI) (CorpusDumpTopicOptions, str
 		if errors.Is(err, flag.ErrHelp) {
 			fs.SetOutput(ui.Out)
 			fs.Usage()
-			return opts, "", err
+			return opts, err
 		}
 		fprintUsageError(ui.Err, fs, dumpTopicSynopsis)
-		return opts, "", err
+		return opts, err
 	}
 
 	if opts.DbPath == "" {
 		fprintUsageError(ui.Err, fs, dumpTopicSynopsis)
-		return opts, "", errors.New("corpus database must be specified via --db or SEGROB_CORPUS_DB")
+		return opts, errors.New("corpus database must be specified via --db or SEGROB_CORPUS_DB")
 	}
-	if fs.NArg() != 1 {
+	if fs.NArg() != 0 {
 		fprintUsageError(ui.Err, fs, dumpTopicSynopsis)
-		return opts, "", errors.New("corpus dump-topic requires exactly one argument: <name>")
+		return opts, errors.New("corpus dump-topic does not take positional arguments")
 	}
 
-	return opts, fs.Arg(0), nil
+	return opts, nil
 }
 
 type CorpusBackupOptions struct {

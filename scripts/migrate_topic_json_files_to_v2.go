@@ -7,33 +7,29 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 
 	"github.com/revelaction/segrob/topic"
 )
 
-// oldTopicExpr mirrors the legacy slice-alias format for unmarshalling only.
 type oldTopicExpr []topic.TopicExprItem
 
 func main() {
 	inDir := "corpus/topic"
-	outDir := "corpus/topic_v2"
-
-	if err := os.MkdirAll(outDir, 0755); err != nil {
-		panic(err)
-	}
+	outFile := "corpus/topics.json"
 
 	files, err := os.ReadDir(inDir)
 	if err != nil {
 		panic(err)
 	}
 
+	var topics []topic.Topic
 	for _, file := range files {
 		if filepath.Ext(file.Name()) != ".json" {
 			continue
 		}
 
 		inPath := filepath.Join(inDir, file.Name())
-		outPath := filepath.Join(outDir, file.Name())
 
 		b, err := os.ReadFile(inPath)
 		if err != nil {
@@ -42,25 +38,30 @@ func main() {
 
 		var oldExprs []oldTopicExpr
 		if err := json.Unmarshal(b, &oldExprs); err != nil {
-			fmt.Printf("Skipping %s (already migrated or invalid?)\n", inPath)
+			fmt.Printf("Skipping %s (invalid format?)\n", inPath)
 			continue
 		}
 
 		exprs := make([]topic.TopicExpr, 0, len(oldExprs))
 		for _, oe := range oldExprs {
-			exprs = append(exprs, topic.TopicExpr{Items: oe, Flagged: false})
+			exprs = append(exprs, topic.TopicExpr{Items: []topic.TopicExprItem(oe), Flagged: false})
 		}
 
 		exprs = topic.Deduplicate(exprs)
 
-		out, err := json.MarshalIndent(exprs, "", "  ")
-		if err != nil {
-			panic(err)
-		}
-
-		if err := os.WriteFile(outPath, out, 0644); err != nil {
-			panic(err)
-		}
-		fmt.Printf("Migrated %s to %s\n", inPath, outPath)
+		name := file.Name()[:len(file.Name())-len(filepath.Ext(file.Name()))]
+		topics = append(topics, topic.Topic{Name: name, Exprs: exprs})
 	}
+
+	sort.Slice(topics, func(i, j int) bool { return topics[i].Name < topics[j].Name })
+
+	out, err := topic.Library(topics).MarshalIndent()
+	if err != nil {
+		panic(err)
+	}
+
+	if err := os.WriteFile(outFile, out, 0644); err != nil {
+		panic(err)
+	}
+	fmt.Printf("Migrated %d topics from %s to %s\n", len(topics), inDir, outFile)
 }

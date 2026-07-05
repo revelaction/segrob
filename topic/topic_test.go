@@ -1,6 +1,7 @@
 package topic
 
 import (
+	"strings"
 	"testing"
 )
 
@@ -171,5 +172,102 @@ func TestDeduplicateMultiItemExpr(t *testing.T) {
 	result := Deduplicate(exprs)
 	if len(result) != 2 {
 		t.Fatalf("expected 2, got %d", len(result))
+	}
+}
+
+func TestMarshalIndentEmpty(t *testing.T) {
+	out, err := Library{}.MarshalIndent()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	expected := "[\n]\n"
+	if string(out) != expected {
+		t.Fatalf("expected %q, got %q", expected, string(out))
+	}
+}
+
+func TestMarshalIndentSingleTopicNoExprs(t *testing.T) {
+	lib := Library{{Name: "vacio", Exprs: nil}}
+	out, err := lib.MarshalIndent()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.Contains(string(out), `"name": "vacio"`) {
+		t.Fatal("expected name")
+	}
+	if !strings.Contains(string(out), `"exprs": []`) {
+		t.Fatal("expected empty exprs")
+	}
+}
+
+func TestMarshalIndentSingleTopicWithExprs(t *testing.T) {
+	lib := Library{{
+		Name: "casa",
+		Exprs: []TopicExpr{
+			{Items: []TopicExprItem{{Lemma: "edificio"}}, Flagged: false},
+		},
+	}}
+	out, err := lib.MarshalIndent()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.Contains(string(out), `"name": "casa"`) {
+		t.Fatal("expected name")
+	}
+	if !strings.Contains(string(out), `"lemma":"edificio"`) {
+		t.Fatal("expected lemma in compact expression")
+	}
+}
+
+func TestMarshalIndentMultipleTopics(t *testing.T) {
+	lib := Library{
+		{Name: "zeta", Exprs: []TopicExpr{{Items: []TopicExprItem{{Lemma: "z"}}}}},
+		{Name: "alfa", Exprs: []TopicExpr{{Items: []TopicExprItem{{Lemma: "a"}}}}},
+	}
+	out, err := lib.MarshalIndent()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	alfaPos := strings.Index(string(out), `"name": "alfa"`)
+	zetaPos := strings.Index(string(out), `"name": "zeta"`)
+	if alfaPos == -1 || zetaPos == -1 {
+		t.Fatal("expected both topics")
+	}
+	// MarshalIndent does NOT sort; caller sorts — alfaPos > zetaPos is correct
+	// (alfa appears second in input, so its byte offset is higher in output)
+	if alfaPos < zetaPos {
+		t.Fatal("unexpected: alfa emitted before zeta despite zeta-first input")
+	}
+}
+
+func TestMarshalIndentFlaggedTrue(t *testing.T) {
+	lib := Library{{
+		Name: "tagged",
+		Exprs: []TopicExpr{
+			{Items: []TopicExprItem{{Lemma: "x"}}, Flagged: true},
+		},
+	}}
+	out, err := lib.MarshalIndent()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.Contains(string(out), `"flagged":true`) {
+		t.Fatal("expected flagged:true")
+	}
+}
+
+func TestMarshalIndentFlaggedOmitted(t *testing.T) {
+	lib := Library{{
+		Name: "clean",
+		Exprs: []TopicExpr{
+			{Items: []TopicExprItem{{Lemma: "y"}}, Flagged: false},
+		},
+	}}
+	out, err := lib.MarshalIndent()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if strings.Contains(string(out), `"flagged":false`) {
+		t.Fatal("expected flagged:false to be omitted")
 	}
 }

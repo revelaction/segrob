@@ -1,7 +1,10 @@
 package topic
 
 import (
+	"bytes"
+	"encoding/json"
 	"errors"
+	"fmt"
 	"strconv"
 	"strings"
 	"unicode"
@@ -19,7 +22,7 @@ type Topic struct {
 
 type TopicExpr struct {
 	Items   []TopicExprItem `json:"items"`
-	Flagged bool            `json:"flagged"`
+	Flagged bool            `json:"flagged,omitempty"`
 }
 
 func (m TopicExpr) String() string {
@@ -202,4 +205,50 @@ func Deduplicate(exprs []TopicExpr) []TopicExpr {
 		}
 	}
 	return result
+}
+
+// MarshalIndent renders a Library as indented JSON where each TopicExpr is
+// kept on a single compact line. json.MarshalIndent cannot do this on its
+// own: its Indent pass re-formats the entire byte stream by tracking JSON
+// structure alone, with no awareness of where a nested object begins or
+// ends, so expressions would be exploded across multiple lines regardless
+// of any per-type MarshalJSON.
+func (l Library) MarshalIndent() ([]byte, error) {
+	var buf bytes.Buffer
+	buf.WriteString("[\n")
+	for i, t := range l {
+		buf.WriteString("  {\n")
+		name, err := json.Marshal(t.Name)
+		if err != nil {
+			return nil, err
+		}
+		fmt.Fprintf(&buf, "    \"name\": %s,\n", name)
+
+		if len(t.Exprs) == 0 {
+			buf.WriteString("    \"exprs\": []\n")
+		} else {
+			buf.WriteString("    \"exprs\": [\n")
+			for j, e := range t.Exprs {
+				exprJSON, err := json.Marshal(e)
+				if err != nil {
+					return nil, err
+				}
+				buf.WriteString("      ")
+				buf.Write(exprJSON)
+				if j < len(t.Exprs)-1 {
+					buf.WriteByte(',')
+				}
+				buf.WriteByte('\n')
+			}
+			buf.WriteString("    ]\n")
+		}
+
+		buf.WriteString("  }")
+		if i < len(l)-1 {
+			buf.WriteByte(',')
+		}
+		buf.WriteByte('\n')
+	}
+	buf.WriteString("]\n")
+	return buf.Bytes(), nil
 }
