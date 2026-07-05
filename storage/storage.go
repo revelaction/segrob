@@ -2,8 +2,8 @@ package storage
 
 import (
 	"encoding/json"
-	"time"
 	"errors"
+	"time"
 
 	sent "github.com/revelaction/segrob/sentence"
 	"github.com/revelaction/segrob/topic"
@@ -257,9 +257,8 @@ type CorpusRepository interface {
 	CorpusWriter
 }
 
-
 // sentinel error so callers can safely halt iteration
-// 
+//
 // the standard library pattern for cleanly terminating a callback-driven
 // scanner (like filepath.Walk using filepath.SkipDir) is a Sentinel Error. If
 // the callback returns this specific error, FindCandidates safely halts SQLite
@@ -269,4 +268,3 @@ var ErrStopScan = errors.New("stop scan")
 // ErrNoChange signals that the mutation function made no changes to the topic.
 // The store skips the write and returns the current state.
 var ErrNoChange = errors.New("no change")
-

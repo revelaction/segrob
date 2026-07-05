@@ -30,12 +30,12 @@ func printOpt(w io.Writer, flags, meta, desc string) {
 }
 
 func fprintUsage(w io.Writer, fs *flag.FlagSet, synopsis string) {
-    _, _ = fmt.Fprintf(w, "Usage: %s %s %s\n\n", os.Args[0], fs.Name(), synopsis)
+	_, _ = fmt.Fprintf(w, "Usage: %s %s %s\n\n", os.Args[0], fs.Name(), synopsis)
 }
 
 func fprintUsageError(w io.Writer, fs *flag.FlagSet, synopsis string) {
-    fprintUsage(w, fs, synopsis)
-    _, _ = fmt.Fprintf(w, "Run '%s %s --help' for more information.\n\n", os.Args[0], fs.Name())
+	fprintUsage(w, fs, synopsis)
+	_, _ = fmt.Fprintf(w, "Run '%s %s --help' for more information.\n\n", os.Args[0], fs.Name())
 }
 
 // ShowOptions defines shared pagination and source settings for "show" commands (live and corpus).

@@ -83,7 +83,7 @@ func (h *Handler) Run() error {
 
 		// If there is an ArgExpr, add its matcher
 		var argMatcher *match.Matcher
-		if len(expr) > 0 {
+		if len(expr.Items) > 0 {
 			argMatcher = match.NewMatcher(expr)
 		}
 
@@ -287,7 +287,7 @@ func (h *Handler) completeTopic(token string) (s []prompt.Suggest) {
 func (h *Handler) completeExpressionItem(token string) (s []prompt.Suggest) {
 	for _, topic := range h.TopicLibrary {
 		for _, expr := range topic.Exprs {
-			for _, exprItem := range expr {
+			for _, exprItem := range expr.Items {
 				// Lemma
 				if strings.HasPrefix(exprItem.Lemma, token) {
 					s = append(s, prompt.Suggest{Text: expr.String(), Description: topic.Name})
@@ -312,7 +312,7 @@ func (h *Handler) parse(in string) (topic.Topic, topic.TopicExpr, error) {
 	tokens := strings.Fields(in)
 
 	if len(tokens) == 0 {
-		return tp, nil, errors.New("no topic given to refine")
+		return tp, topic.TopicExpr{}, errors.New("no topic given to refine")
 	}
 
 	isFirstTopic := false
@@ -333,13 +333,13 @@ func (h *Handler) parse(in string) (topic.Topic, topic.TopicExpr, error) {
 
 	if len(expr) == 0 {
 		if !isFirstTopic {
-			return tp, nil, errors.New("there are no topic and no expr")
+			return tp, topic.TopicExpr{}, errors.New("there are no topic and no expr")
 		}
 	}
 
 	exp, parseErr := topic.Parse(expr)
 	if parseErr != nil {
-		return tp, nil, parseErr
+		return tp, topic.TopicExpr{}, parseErr
 	}
 
 	return tp, exp, nil

@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/revelaction/segrob/storage"
+	tpc "github.com/revelaction/segrob/topic"
 )
 
 func corpusPublishTopicCommand(
@@ -31,6 +32,7 @@ func corpusPublishTopicCommand(
 	// 2. Iterate and write to live (idempotent upsert logic built-in to Upsert)
 	publishedCount := 0
 	for _, tp := range topics {
+		tp.Exprs = tpc.Deduplicate(tp.Exprs)
 		_, writeErr := liveTopics.Upsert("", tp, nil)
 		if writeErr != nil {
 			return fmt.Errorf("failed to write topic %q to live: %w", tp.Name, writeErr)

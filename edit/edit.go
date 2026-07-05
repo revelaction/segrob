@@ -161,7 +161,7 @@ func (h *Handler) parse(in string) (topic.Topic, topic.TopicExpr, int, error) {
 
 	action := actionAdd
 	if len(tokens) == 0 {
-		return tp, nil, action, errors.New("no topic given to refine")
+		return tp, topic.TopicExpr{}, action, errors.New("no topic given to refine")
 	}
 
 	lastToken := tokens[len(tokens)-1]
@@ -179,17 +179,17 @@ func (h *Handler) parse(in string) (topic.Topic, topic.TopicExpr, int, error) {
 	}
 
 	if tp.Name == "" {
-		return tp, nil, action, errors.New("there is no such topic: " + tokens[0] + ".")
+		return tp, topic.TopicExpr{}, action, errors.New("there is no such topic: " + tokens[0] + ".")
 	}
 
 	expr := tokens[1:]
 	if len(expr) == 0 {
-		return tp, nil, action, errors.New("no expression given")
+		return tp, topic.TopicExpr{}, action, errors.New("no expression given")
 	}
 
 	exp, parseErr := topic.Parse(expr)
 	if parseErr != nil {
-		return tp, nil, action, parseErr
+		return tp, topic.TopicExpr{}, action, parseErr
 	}
 
 	return tp, exp, action, nil

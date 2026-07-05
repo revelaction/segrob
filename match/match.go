@@ -42,7 +42,7 @@ func (sm *SentenceMatch) AllTokens() []sent.Token {
 // MatchSentence matches the expression against a single sentence.
 // Returns nil if the expression does not match.
 func (m *Matcher) MatchSentence(sentence sent.Sentence) *SentenceMatch {
-	if len(m.Expr) == 0 {
+	if len(m.Expr.Items) == 0 {
 		return nil
 	}
 
@@ -66,7 +66,7 @@ func matchExpr(sentence []sent.Token, expr topic.TopicExpr) [][]sent.Token {
 	// After processing item i, each chain contains i+1 tokens.
 	var candidates [][]sent.Token
 
-	for i, item := range expr {
+	for i, item := range expr.Items {
 		if i == 0 {
 			// First item: independent match, each hit starts a new chain
 			for _, t := range sentence {

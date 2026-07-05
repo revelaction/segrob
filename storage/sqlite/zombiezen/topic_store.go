@@ -180,7 +180,7 @@ func (h *TopicStore) Upsert(userID string, tp topic.Topic, fn func(topic.Topic) 
 		Args: []interface{}{userID, target.Name, string(exprsJSON)},
 		ResultFunc: func(stmt *sqlite.Stmt) error {
 			returnedName := stmt.ColumnText(0)
-			
+
 			var returnedExprs []topic.TopicExpr
 			unmarshalErr := json.Unmarshal([]byte(stmt.ColumnText(1)), &returnedExprs)
 			if unmarshalErr != nil {

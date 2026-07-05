@@ -251,7 +251,7 @@ func (r *CLIRenderer) Topic(exprs []topic.TopicExpr) {
 	for _, expr := range exprs {
 		exprSlice := []string{}
 
-		for _, item := range expr {
+		for _, item := range expr.Items {
 			if item.Near > 0 {
 				exprSlice = append(exprSlice, strconv.Itoa(item.Near))
 			}

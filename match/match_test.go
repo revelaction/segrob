@@ -20,9 +20,7 @@ func TestMatchSentenceEmptyExpr(t *testing.T) {
 }
 
 func TestMatchSentenceSingleLemma(t *testing.T) {
-	expr := topic.TopicExpr{
-		{Lemma: "casa"},
-	}
+	expr := topic.TopicExpr{Items: []topic.TopicExprItem{{Lemma: "casa"}}}
 	m := NewMatcher(expr)
 
 	s := sent.Sentence{
@@ -52,9 +50,7 @@ func TestMatchSentenceSingleLemma(t *testing.T) {
 }
 
 func TestMatchSentenceNoMatch(t *testing.T) {
-	expr := topic.TopicExpr{
-		{Lemma: "perro"},
-	}
+	expr := topic.TopicExpr{Items: []topic.TopicExprItem{{Lemma: "perro"}}}
 	m := NewMatcher(expr)
 
 	s := sent.Sentence{
@@ -71,10 +67,10 @@ func TestMatchSentenceNoMatch(t *testing.T) {
 }
 
 func TestMatchSentenceNearChain(t *testing.T) {
-	expr := topic.TopicExpr{
+	expr := topic.TopicExpr{Items: []topic.TopicExprItem{
 		{Lemma: "tomar"},
 		{Lemma: "mano", Near: 3},
-	}
+	}}
 	m := NewMatcher(expr)
 
 	s := sent.Sentence{
@@ -100,10 +96,10 @@ func TestMatchSentenceNearChain(t *testing.T) {
 }
 
 func TestMatchSentenceNearTooFar(t *testing.T) {
-	expr := topic.TopicExpr{
+	expr := topic.TopicExpr{Items: []topic.TopicExprItem{
 		{Lemma: "tomar"},
 		{Lemma: "mano", Near: 2},
-	}
+	}}
 	m := NewMatcher(expr)
 
 	s := sent.Sentence{
@@ -122,9 +118,7 @@ func TestMatchSentenceNearTooFar(t *testing.T) {
 }
 
 func TestMatchSentenceTagMatch(t *testing.T) {
-	expr := topic.TopicExpr{
-		{Tag: "VerbForm=Inf"},
-	}
+	expr := topic.TopicExpr{Items: []topic.TopicExprItem{{Tag: "VerbForm=Inf"}}}
 	m := NewMatcher(expr)
 
 	s := sent.Sentence{
@@ -140,9 +134,7 @@ func TestMatchSentenceTagMatch(t *testing.T) {
 }
 
 func TestMatchSentenceOrLemma(t *testing.T) {
-	expr := topic.TopicExpr{
-		{Lemma: "casa|hogar"},
-	}
+	expr := topic.TopicExpr{Items: []topic.TopicExprItem{{Lemma: "casa|hogar"}}}
 	m := NewMatcher(expr)
 
 	s := sent.Sentence{

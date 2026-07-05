@@ -3,10 +3,10 @@ package zombiezen
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
-	"errors"
 
 	sent "github.com/revelaction/segrob/sentence"
 	"github.com/revelaction/segrob/storage"
@@ -207,7 +207,7 @@ func (h *DocStore) FindCandidates(lemmas []string, labelIDs []int, after storage
 	err = sqlitex.Execute(conn, bulkQuery, &sqlitex.ExecOptions{
 		ResultFunc: func(stmt *sqlite.Stmt) error {
 			rowID := stmt.ColumnInt64(0)
-			
+
 			// Cursor is safely updated BEFORE evaluating the callback
 			if storage.Cursor(rowID) > newCursor {
 				newCursor = storage.Cursor(rowID)
@@ -226,7 +226,7 @@ func (h *DocStore) FindCandidates(lemmas []string, labelIDs []int, after storage
 			return onCandidate(s)
 		},
 	})
-	
+
 	if err != nil {
 		// Intercept the graceful stop signal and return the safely updated cursor
 		if errors.Is(err, storage.ErrStopScan) {

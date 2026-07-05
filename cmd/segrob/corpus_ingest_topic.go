@@ -78,6 +78,7 @@ func corpusIngestTopicCommand(dst storage.TopicWriter, opts CorpusIngestTopicOpt
 	}
 
 	for _, tp := range topics {
+		tp.Exprs = tpc.Deduplicate(tp.Exprs)
 		_, err = dst.Upsert("", tp, nil)
 		if err != nil {
 			return fmt.Errorf("failed to ingest topic %s: %w", tp.Name, err)
