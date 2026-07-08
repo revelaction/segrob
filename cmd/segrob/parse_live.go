@@ -70,6 +70,11 @@ type LiveUnpublishTopicOptions struct {
 	TopicPath string // --topic-path / -t
 }
 
+type LiveDumpTopicOptions struct {
+	DbPath string // --db / SEGROB_LIVE_DB
+	UserID string // --user, -u
+}
+
 func parseLiveShowArgs(args []string, ui UI) (ShowOptions, string, error) {
 	fs := flag.NewFlagSet("live show", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
@@ -676,4 +681,47 @@ func parseLiveUnpublishTopicArgs(args []string, ui UI) (LiveUnpublishTopicOption
 	name := fs.Arg(0)
 
 	return opts, name, nil
+}
+
+func parseLiveDumpTopicArgs(args []string, ui UI) (LiveDumpTopicOptions, error) {
+	fs := flag.NewFlagSet("live dump-topic", flag.ContinueOnError)
+	fs.SetOutput(io.Discard)
+
+	const synopsis = "[options]"
+
+	var opts LiveDumpTopicOptions
+	fs.StringVar(&opts.DbPath, "db", os.Getenv("SEGROB_LIVE_DB"), "")
+	fs.StringVar(&opts.UserID, "user", "", "")
+	fs.StringVar(&opts.UserID, "u", "", "")
+
+	fs.Usage = func() {
+		w := fs.Output()
+		fprintUsage(w, fs, synopsis)
+		_, _ = fmt.Fprintf(w, "  Output all live topics as a single JSON file.\n")
+		_, _ = fmt.Fprintf(w, "\nOptions:\n")
+		printOpt(w, "--db", "PATH", "Live SQLite file (or SEGROB_LIVE_DB)")
+		printOpt(w, "-u, --user", "ID", "User ID to filter topics (default: \"\")")
+	}
+
+	err := fs.Parse(args)
+	if err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			fs.SetOutput(ui.Out)
+			fs.Usage()
+			return opts, err
+		}
+		fprintUsageError(ui.Err, fs, synopsis)
+		return opts, err
+	}
+
+	if opts.DbPath == "" {
+		fprintUsageError(ui.Err, fs, synopsis)
+		return opts, errors.New("live database must be specified via --db or SEGROB_LIVE_DB")
+	}
+	if fs.NArg() != 0 {
+		fprintUsageError(ui.Err, fs, synopsis)
+		return opts, errors.New("live dump-topic does not take positional arguments")
+	}
+
+	return opts, nil
 }

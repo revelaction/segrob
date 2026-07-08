@@ -23,6 +23,7 @@ func printLiveUsage(w io.Writer) {
 	_, _ = fmt.Fprintf(w, helpCmdFmt, "ls-topic", "List all unique topics in the repository.")
 	_, _ = fmt.Fprintf(w, helpCmdFmt, "show-topic", "Show expressions for a specific topic.")
 	_, _ = fmt.Fprintf(w, helpCmdFmt, "unpublish-topic", "Remove a topic from the live topics repository.")
+	_, _ = fmt.Fprintf(w, helpCmdFmt, "dump-topic", "Output all live topics of a user as a single JSON file.")
 
 	_, _ = fmt.Fprintf(w, "\nSubcommands: Other\n")
 	_, _ = fmt.Fprintf(w, helpCmdFmt, "init", "Initialize a new SQLite database with the required schema.")
@@ -171,6 +172,17 @@ func runLiveCommand(args []string, setup *Setup, ui UI) error {
 			return err
 		}
 		return liveQueryCommand(dr, tr, opts, ui)
+
+	case "dump-topic":
+		opts, err := parseLiveDumpTopicArgs(subArgs, ui)
+		if err != nil {
+			return err
+		}
+		src, err := setup.NewLiveTopicRepository(opts.DbPath)
+		if err != nil {
+			return err
+		}
+		return liveDumpTopicCommand(src, opts, ui)
 
 	default:
 		printLiveUsage(ui.Err)

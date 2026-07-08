@@ -48,6 +48,7 @@ var liveSubcommands = []string{
 	"show",
 	"show-sent",
 	"show-topic",
+	"dump-topic",
 	"query",
 }
 
