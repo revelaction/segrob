@@ -131,8 +131,8 @@ Topics are sets of expressions used for semantic search.
 ### 4.1. Managing Topics in Corpus
 
 ```bash
-# Ingest topics from a directory of JSON files
-segrob corpus ingest-topic /path/to/topics
+# Ingest all topics from a single JSON file
+segrob corpus ingest-topic /path/to/topics.json
 
 # List and show topics in the corpus
 segrob corpus ls-topic
@@ -141,8 +141,8 @@ segrob corpus show-topic <topic_name>
 # Edit topics interactively
 segrob corpus edit
 
-# Dump a topic to JSON for external backup/editing
-segrob corpus dump-topic <topic_name> > topic.json
+# Dump all topics to JSON for external backup/editing
+segrob corpus dump-topic > topics.json
 ```
 
 ### 4.2. Publishing Topics to Live
@@ -184,16 +184,46 @@ All live commands accept `--db` to point to the SQLite file, defaulting to `SEGR
 
 ## 5. Backup Workflow
 
-Create a gzipped backup of the corpus staging database for safety or portability.
+The backup command produces a gzipped SQLite file containing the two staging tables: `corpus` and `corpus_topics`.
+
+By default the heavy `nlp` column (raw NLP JSON payload) is **excluded** to keep backups compact. Use `--with-nlp` to include it.
 
 ```bash
-# Basic backup (auto-generates a timestamped file like corpus.db-20260330T161922Z.gz in the current directory)
+# Basic backup (corpus + corpus_topics, nlp excluded)
+# Auto-generates a timestamped file like corpus.db-20260330T161922Z.gz in the current directory
 segrob corpus backup
 
-# Full backup (includes NLP data)
+# Full backup (corpus + corpus_topics + nlp data)
 segrob corpus backup --with-nlp
 
 # Backup to an explicit, exact path (no timestamp is appended)
 segrob corpus backup -o backups/corpus_lite.gz
+```
+
+---
+
+## 6. Topics Backup
+
+Topic data is lightweight (name and expressions only, no heavy text or NLP payloads). Segrob can dump all topics to a pretty-printed JSON file from either the corpus staging or the live production database. Both commands write to stdout — redirect to a file to save the backup.
+
+The output is deterministically ordered (topics sorted alphabetically by name, expressions deduplicated), producing stable diffs — ideal for tracking in git.
+
+### 6.1. From Corpus
+
+```bash
+# Dump all corpus topics as indented JSON
+segrob corpus dump-topic > topics_backup.json
+```
+
+### 6.2. From Live (with optional user filter)
+
+The live version supports filtering by user ID, so you can export only one user's topics:
+
+```bash
+# Dump all live topics
+segrob live dump-topic > topics_backup.json
+
+# Dump topics for a specific user only
+segrob live dump-topic -u <user_id> > topics_backup.json
 ```
 
