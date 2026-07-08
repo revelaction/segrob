@@ -6,6 +6,28 @@ The system uses a two-stage architecture:
 1. **Corpus Staging**: Where documents are ingested, text and NLP are curated, and topics are defined.
 2. **Live Production**: The optimized database used by query and find commands.
 
+## Contents
+
+- [0. Environment Configuration](#0-environment-configuration)
+- [1. Initial Setup](#1-initial-setup)
+- [2. Document Lifecycle](#2-document-lifecycle)
+  - [2.1. Ingestion](#21-ingestion)
+  - [2.2. Text Curation (TxtAck)](#22-text-curation-txtack)
+  - [2.3. NLP Processing (NlpAck)](#23-nlp-processing-nlpack)
+  - [2.4. Publication](#24-publication)
+- [3. Labels Workflow](#3-labels-workflow)
+  - [3.1. Managing Labels in Corpus](#31-managing-labels-in-corpus)
+  - [3.2. Synchronizing Labels to Live](#32-synchronizing-labels-to-live)
+- [4. Topics Workflow](#4-topics-workflow)
+  - [4.1. Managing Topics in Corpus](#41-managing-topics-in-corpus)
+  - [4.2. Publishing Topics to Live](#42-publishing-topics-to-live)
+  - [4.3. Live Topic Operations](#43-live-topic-operations)
+- [5. Backup Workflow](#5-backup-workflow)
+- [6. Topics Backup](#6-topics-backup)
+  - [6.1. From Corpus](#61-from-corpus)
+  - [6.2. From Live (with optional user filter)](#62-from-live-with-optional-user-filter)
+  - [6.3. Restoring Topics](#63-restoring-topics)
+
 ---
 
 ## 0. Environment Configuration
@@ -19,6 +41,8 @@ export SEGROB_NLP_SCRIPT="/path/to/nlp.py" # Path to your NLP processing script
 ```
 
 When these are set, the `--db`, `--from`, `--to`, and `--nlp-script` flags become optional. The examples below assume these variables are configured.
+
+Verify your configuration with `segrob env` — it prints the current values (or `(not set)` for missing variables).
 
 ---
 
