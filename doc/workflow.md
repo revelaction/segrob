@@ -15,7 +15,6 @@ To reduce noise and avoid repeating paths in every command, set the following en
 ```bash
 export SEGROB_CORPUS_DB="corpus.db"      # Path to the staging database
 export SEGROB_LIVE_DB="segrob.db"        # Path to the production database
-export SEGROB_TOPIC_DB="segrob.db"       # Path to topics (usually the same as live)
 export SEGROB_NLP_SCRIPT="/path/to/nlp.py" # Path to your NLP processing script
 ```
 
@@ -153,6 +152,33 @@ Topics must be published to the live database to be used by `live find` or `live
 ```bash
 segrob corpus publish-topic
 ```
+
+### 4.3. Live Topic Operations
+
+Once topics are published, the live database offers inspection, search, and management commands:
+
+```bash
+# List all topic names in the live database
+segrob live ls-topic
+
+# Show expressions for a specific topic
+segrob live show-topic <topic_name>
+
+# Show topics associated with a specific sentence
+segrob live find-topics <doc_id> <sentence_id>
+
+# Enter interactive query mode (searches both docs and topics)
+segrob live query
+
+# Dump all live topics as a single JSON file (optionally filtered by user)
+segrob live dump-topic
+segrob live dump-topic -u <user_id> > topics.json
+
+# Remove a topic from the live database
+segrob live unpublish-topic <topic_name>
+```
+
+All live commands accept `--db` to point to the SQLite file, defaulting to `SEGROB_LIVE_DB`.
 
 ---
 

@@ -56,22 +56,22 @@ func runLiveCommand(args []string, setup *Setup, ui UI) error {
 		return liveLsCommand(repo, opts, ui)
 
 	case "ls-topic":
-		opts, _, err := parseLiveLsTopicArgs(subArgs, ui)
+		opts, err := parseLiveLsTopicArgs(subArgs, ui)
 		if err != nil {
 			return err
 		}
-		repo, err := setup.NewLiveTopicRepository(opts.TopicPath)
+		repo, err := setup.NewLiveTopicRepository(opts.DbPath)
 		if err != nil {
 			return err
 		}
 		return liveLsTopicCommand(repo, opts, ui)
 
 	case "show-topic":
-		opts, name, _, err := parseLiveShowTopicArgs(subArgs, ui)
+		opts, name, err := parseLiveShowTopicArgs(subArgs, ui)
 		if err != nil {
 			return err
 		}
-		repo, err := setup.NewLiveTopicRepository(opts.TopicPath)
+		repo, err := setup.NewLiveTopicRepository(opts.DbPath)
 		if err != nil {
 			return err
 		}
@@ -93,11 +93,11 @@ func runLiveCommand(args []string, setup *Setup, ui UI) error {
 		if err != nil {
 			return err
 		}
-		dr, err := setup.NewDocRepository(opts.DocPath)
+		dr, err := setup.NewDocRepository(opts.DbPath)
 		if err != nil {
 			return err
 		}
-		tr, err := setup.NewLiveTopicRepository(opts.TopicPath)
+		tr, err := setup.NewLiveTopicRepository(opts.DbPath)
 		if err != nil {
 			return err
 		}
@@ -152,22 +152,22 @@ func runLiveCommand(args []string, setup *Setup, ui UI) error {
 		if err != nil {
 			return err
 		}
-		repo, err := setup.NewLiveTopicRepository(opts.TopicPath)
+		repo, err := setup.NewLiveTopicRepository(opts.DbPath)
 		if err != nil {
 			return err
 		}
 		return liveUnpublishTopicCommand(repo, opts, name, ui)
 
 	case "query":
-		opts, _, _, err := parseLiveQueryArgs(subArgs, ui)
+		opts, err := parseLiveQueryArgs(subArgs, ui)
 		if err != nil {
 			return err
 		}
-		dr, err := setup.NewDocRepository(opts.DocPath)
+		dr, err := setup.NewDocRepository(opts.DbPath)
 		if err != nil {
 			return err
 		}
-		tr, err := setup.NewLiveTopicRepository(opts.TopicPath)
+		tr, err := setup.NewLiveTopicRepository(opts.DbPath)
 		if err != nil {
 			return err
 		}
