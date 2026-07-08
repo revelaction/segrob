@@ -7,6 +7,7 @@ import (
 
 var commands = []string{
 	"corpus",
+	"env",
 	"live",
 	"bash",
 	"version",

@@ -57,6 +57,9 @@ func runCommand(cmd string, args []string, ui UI) (err error) {
 	case "version":
 		return versionCommand(ui)
 
+	case "env":
+		return envCommand(ui)
+
 	case "help":
 		if len(args) > 0 {
 			return runCommand(args[0], append(args[1:], "--help"), ui)

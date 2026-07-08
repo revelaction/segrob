@@ -179,6 +179,7 @@ func setupUsage(fs *flag.FlagSet) {
 		_, _ = fmt.Fprintf(w, helpCmdFmt, "live", "Manage the live production database.")
 		_, _ = fmt.Fprintf(w, helpCmdFmt, "bash", "Output bash completion script.")
 		_, _ = fmt.Fprintf(w, helpCmdFmt, "version", "Show version information.")
+		_, _ = fmt.Fprintf(w, helpCmdFmt, "env", "Show SEGROB environment variables.")
 		_, _ = fmt.Fprintf(w, helpCmdFmt, "help", "Show help for a command.")
 
 		_, _ = fmt.Fprintf(w, "\nVersion: %s, commit %s\n", BuildTag, BuildCommit)

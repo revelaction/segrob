@@ -100,29 +100,23 @@ func (h *TopicStore) Read(userID string, name string) (topic.Topic, error) {
 	return t, nil
 }
 
-// Upsert provides both an atomic read-modify-write operation and a direct write operation.
-// It can be used both to create a new topic and to update an existing one.
+// Upsert provides both an atomic read-modify-write operation and a direct overwrite
+// operation. Two modes:
 //
-// If the topic does not exist for the given userID and name, it initializes a new
-// topic.Topic with that name and empty expressions. The provided mutation function 'fn'
-// is then called with this (possibly empty) topic. If 'fn' returns storage.ErrNoChange,
-// the operation is aborted and the current state is returned.
+//   - Mutation mode (fn != nil): Fetches the existing topic for userID + tp.Name (or
+//     initializes an empty one if none exists), passes it to fn for mutation, and saves
+//     the result. If fn returns storage.ErrNoChange the write is skipped.
 //
-// Example usage for adding an expression (Insert or Update):
+//     Example — append an expression:
+//     store.Upsert(userID, topic.Topic{Name: "my-topic"}, func(t topic.Topic) (topic.Topic, error) {
+//         t.Exprs = append(t.Exprs, newExpr)
+//         return t, nil
+//     })
 //
-//	updated, err := store.Upsert(userID, topic.Topic{Name: "my-topic"}, func(t topic.Topic) (topic.Topic, error) {
-//	    for _, existing := range t.Exprs {
-//	        if topic.EqualExpr(existing, newExpr) {
-//	            return t, storage.ErrNoChange
-//	        }
-//	    }
-//	    t.Exprs = append(t.Exprs, newExpr)
-//	    return t, nil
-//	})
-//
-// If 'fn' is nil, it performs a direct write/overwrite using 'tp', skipping the SELECT.
-// If 'fn' is provided, it fetches the existing topic for the name in 'tp.Name' (or
-// initializes an empty one), passes it to 'fn' for mutation, and saves the result.
+//   - Overwrite mode (fn == nil): Takes tp verbatim and writes it via INSERT … ON CONFLICT
+//     DO UPDATE, which fully replaces the exprs column when a row with the same user_id +
+//     name already exists. No SELECT reads the current row. Intended for bulk ingestion
+//     where the input is the sole source of truth for every topic it contains.
 func (h *TopicStore) Upsert(userID string, tp topic.Topic, fn func(topic.Topic) (topic.Topic, error)) (result topic.Topic, err error) {
 	conn, err := h.pool.Take(context.TODO())
 	if err != nil {

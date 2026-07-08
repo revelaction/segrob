@@ -131,7 +131,10 @@ Topics are sets of expressions used for semantic search.
 ### 4.1. Managing Topics in Corpus
 
 ```bash
-# Ingest all topics from a single JSON file
+# Ingest all topics from a single JSON file.
+# Each topic in the file fully replaces any existing row with the same name.
+# Topics already in the DB but absent from the file are left untouched.
+# All corpus topics use user_id="" (global scope).
 segrob corpus ingest-topic /path/to/topics.json
 
 # List and show topics in the corpus
@@ -150,6 +153,10 @@ segrob corpus dump-topic > topics.json
 Topics must be published to the live database to be used by `live find` or `live query`:
 
 ```bash
+# Copy all topics from corpus to live.
+# Each topic fully replaces any existing row with the same name in the live DB.
+# Idempotent: safe to re-run; topics in live but absent from corpus are left untouched.
+# Published topics retain user_id="" from the corpus.
 segrob corpus publish-topic
 ```
 
@@ -179,6 +186,22 @@ segrob live unpublish-topic <topic_name>
 ```
 
 All live commands accept `--db` to point to the SQLite file, defaulting to `SEGROB_LIVE_DB`.
+
+### 4.4. Restoring Topics
+
+To restore global topics from a dump file (created with `corpus dump-topic` or `live dump-topic`):
+
+```bash
+# 1. Ingest the dump into the corpus staging DB
+#    Each topic in the file fully replaces any existing row with the same name.
+seprob corpus ingest-topic topics.json
+
+# 2. Publish from corpus to the live DB
+#    Idempotent: safe to re-run.
+seprob corpus publish-topic
+```
+
+This is the canonical path for global topics — both commands operate on `user_id=""`.
 
 ---
 
