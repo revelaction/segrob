@@ -187,24 +187,6 @@ segrob live unpublish-topic <topic_name>
 
 All live commands accept `--db` to point to the SQLite file, defaulting to `SEGROB_LIVE_DB`.
 
-### 4.4. Restoring Topics
-
-To restore global topics from a dump file (created with `corpus dump-topic` or `live dump-topic`):
-
-```bash
-# 1. Ingest the dump into the corpus staging DB
-#    Each topic in the file fully replaces any existing row with the same name.
-seprob corpus ingest-topic topics.json
-
-# 2. Publish from corpus to the live DB
-#    Idempotent: safe to re-run.
-seprob corpus publish-topic
-```
-
-This is the canonical path for global topics — both commands operate on `user_id=""`.
-
----
-
 ## 5. Backup Workflow
 
 The backup command produces a gzipped SQLite file containing the two staging tables: `corpus` and `corpus_topics`.
@@ -249,4 +231,20 @@ segrob live dump-topic > topics_backup.json
 # Dump topics for a specific user only
 segrob live dump-topic -u <user_id> > topics_backup.json
 ```
+
+### 6.3. Restoring Topics
+
+To restore global topics from a dump file (created with `corpus dump-topic` or `live dump-topic`):
+
+```bash
+# 1. Ingest the dump into the corpus staging DB
+#    Each topic in the file fully replaces any existing row with the same name.
+segrob corpus ingest-topic topics.json
+
+# 2. Publish from corpus to the live DB
+#    Idempotent: safe to re-run.
+segrob corpus publish-topic
+```
+
+This is the canonical path for global topics — both commands operate on `user_id=""`.
 
