@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
 )
@@ -184,28 +183,4 @@ func setupUsage(fs *flag.FlagSet) {
 
 		_, _ = fmt.Fprintf(w, "\nVersion: %s, commit %s\n", BuildTag, BuildCommit)
 	}
-}
-
-func validatePaths(path1, path2 string) error {
-	if path1 == "" || path2 == "" {
-		return nil
-	}
-
-	i1, err := os.Stat(path1)
-	if err != nil {
-		return nil // Let factory handle missing paths
-	}
-	i2, err := os.Stat(path2)
-	if err != nil {
-		return nil
-	}
-
-	if !i1.IsDir() && !i2.IsDir() {
-		a1, _ := filepath.Abs(path1)
-		a2, _ := filepath.Abs(path2)
-		if a1 != a2 {
-			return fmt.Errorf("using two different SQLite files is not supported: %s and %s", path1, path2)
-		}
-	}
-	return nil
 }
